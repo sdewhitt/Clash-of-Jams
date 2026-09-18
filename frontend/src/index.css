@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Tailwind v4 reads these and generates matching utilities,
+ * so `--color-surface` below is usable as `bg-surface`, `text-surface`, etc.
+ */
+@theme {
+  --color-base: #0b0a12;
+  --color-surface: #14121f;
+  --color-surface-2: #1d1a2c;
+  --color-line: #2c2840;
+
+  --color-ink: #f2f0f7;
+  --color-muted: #a09cb5;
+  --color-faint: #6e6987;
+
+  --color-accent: #a855f7;
+  --color-accent-soft: #c084fc;
+  --color-cadence: #22d3ee;
+
+  --color-perfect: #4ade80;
+  --color-good: #facc15;
+  --color-miss: #f87171;
+
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+
+  --radius-panel: 0.875rem;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-base text-ink font-sans antialiased;
+    margin: 0;
+    min-height: 100dvh;
+  }
+
+  /* Accessibility requirement: no flashing/animation for users who opt out. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent-soft;
+  }
+}
