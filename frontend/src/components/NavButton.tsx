@@ -12,7 +12,6 @@ export function NavButton({children, onClick, className = "",}: NavButtonProps) 
                 bg-accent
                 hover:bg-accent-soft
                 hover:-translate-y-1
-                hover:shadow-xl
                 active:scale-95
                 text-ink
                 text-xl
