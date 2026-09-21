@@ -1,0 +1,200 @@
+rules_version = '2';
+
+// Starting-point security rules for Clash of Jams.
+//
+// These enforce ownership and the design document's "no client writes to
+// derived state" stance: elo, match outcomes and run validation are written by
+// server-side code (Cloud Functions / Admin SDK), which bypasses these rules.
+// Review before going anywhere near real users.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
+    }
+
+    function scenarioAuthor(scenarioId) {
+      return get(/databases/$(database)/documents/scenarios/$(scenarioId)).data.authorUid;
+    }
+
+    // Public profiles are readable; only the owner edits their own, and only
+    // an admin can flip the moderation flags.
+    match /users/{uid} {
+      allow read: if resource.data.isProfilePublic == true || isSelf(uid) || isAdmin();
+      allow create: if isSelf(uid);
+      allow update: if isAdmin()
+        || (isSelf(uid)
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.isBanned == resource.data.isBanned
+            && request.resource.data.isSocialRestricted == resource.data.isSocialRestricted);
+      allow delete: if isAdmin();
+
+      // Ratings are readable for leaderboards but only the server writes them.
+      match /skillRatings/{instrument} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+    }
+
+    // Reservations are public so the sign-up form can check availability, and
+    // a user may only claim one that points at themselves.
+    match /usernames/{usernameLower} {
+      allow read: if true;
+      allow create: if isSelf(request.resource.data.uid);
+      allow update: if false;
+      allow delete: if isSelf(resource.data.uid) || isAdmin();
+    }
+
+    match /userSettings/{uid} {
+      allow read, write: if isSelf(uid);
+    }
+
+    match /scenarios/{scenarioId} {
+      allow read: if resource.data.visibility != 'private'
+        || isSelf(resource.data.authorUid)
+        || isAdmin();
+      allow create: if isSelf(request.resource.data.authorUid);
+      allow update, delete: if isSelf(resource.data.authorUid) || isAdmin();
+
+      // Versions are immutable once written — edits create a new version.
+      match /versions/{versionId} {
+        allow read: if get(/databases/$(database)/documents/scenarios/$(scenarioId)).data.visibility != 'private'
+          || isSelf(scenarioAuthor(scenarioId))
+          || isAdmin();
+        allow create: if isSelf(scenarioAuthor(scenarioId));
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    match /mediaAssets/{assetId} {
+      allow read: if signedIn();
+      allow create: if isSelf(request.resource.data.ownerUid);
+      allow update, delete: if isSelf(resource.data.ownerUid) || isAdmin();
+    }
+
+    // A client may submit its own run as 'pending'; only the server accepts it.
+    match /runs/{runId} {
+      allow read: if signedIn();
+      allow create: if isSelf(request.resource.data.userUid)
+        && request.resource.data.validation == 'pending';
+      allow update, delete: if isAdmin();
+    }
+
+    match /matches/{matchId} {
+      allow read: if signedIn();
+      allow create: if isSelf(request.resource.data.hostUid);
+      // State transitions and the winner are decided server-side.
+      allow update, delete: if false;
+
+      match /participants/{uid} {
+        allow read: if signedIn();
+        // A player may join and toggle their own readiness; outcomes are server-written.
+        allow create: if isSelf(uid);
+        allow update: if isSelf(uid)
+          && request.resource.data.outcome == resource.data.outcome
+          && request.resource.data.eloDelta == resource.data.eloDelta;
+        allow delete: if isSelf(uid) || isAdmin();
+      }
+    }
+
+    match /friendships/{pairId} {
+      allow read: if signedIn()
+        && (isSelf(resource.data.idA) || isSelf(resource.data.idB));
+      allow create: if isSelf(request.resource.data.requestedByUid)
+        && request.resource.data.idA < request.resource.data.idB
+        && (isSelf(request.resource.data.idA) || isSelf(request.resource.data.idB));
+      allow update, delete: if isSelf(resource.data.idA) || isSelf(resource.data.idB) || isAdmin();
+    }
+
+    match /communities/{communityId} {
+      allow read: if resource.data.isPublic == true || signedIn();
+      allow create: if isSelf(request.resource.data.ownerUid);
+      allow update, delete: if isSelf(resource.data.ownerUid) || isAdmin();
+
+      match /members/{uid} {
+        allow read: if signedIn();
+        allow create: if isSelf(uid) && request.resource.data.role == 'member';
+        allow update, delete: if isSelf(uid)
+          || isSelf(get(/databases/$(database)/documents/communities/$(communityId)).data.ownerUid)
+          || isAdmin();
+      }
+    }
+
+    match /playlists/{playlistId} {
+      allow read: if resource.data.isPublic == true || isSelf(resource.data.ownerUid);
+      allow create: if isSelf(request.resource.data.ownerUid);
+      allow update, delete: if isSelf(resource.data.ownerUid) || isAdmin();
+
+      match /items/{itemId} {
+        allow read: if get(/databases/$(database)/documents/playlists/$(playlistId)).data.isPublic == true
+          || isSelf(get(/databases/$(database)/documents/playlists/$(playlistId)).data.ownerUid);
+        allow write: if isSelf(get(/databases/$(database)/documents/playlists/$(playlistId)).data.ownerUid);
+      }
+    }
+
+    // Document id is "{scenarioId}_{reviewerUid}", which is what makes one
+    // review per user per scenario impossible to work around.
+    match /scenarioReviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSelf(request.resource.data.reviewerUid)
+        && reviewId == request.resource.data.scenarioId + '_' + request.resource.data.reviewerUid;
+      allow update: if isSelf(resource.data.reviewerUid);
+      allow delete: if isSelf(resource.data.reviewerUid) || isAdmin();
+    }
+
+    match /userReports/{reportId} {
+      allow read: if isSelf(resource.data.reporterUid) || isAdmin();
+      allow create: if isSelf(request.resource.data.reporterUid)
+        && request.resource.data.state == 'open';
+      allow update, delete: if isAdmin();
+    }
+
+    match /moderationActions/{actionId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isSelf(request.resource.data.moderatorUid);
+      allow update, delete: if false;
+    }
+
+    match /matchInvitations/{invitationId} {
+      allow read: if isSelf(resource.data.fromUid) || isSelf(resource.data.toUid);
+      allow create: if isSelf(request.resource.data.fromUid);
+      allow update: if isSelf(resource.data.toUid) || isSelf(resource.data.fromUid);
+      allow delete: if isSelf(resource.data.fromUid) || isAdmin();
+    }
+
+    match /recordingShares/{shareId} {
+      allow read: if resource.data.visibility != 'private' || isSelf(resource.data.ownerUid);
+      allow create: if isSelf(request.resource.data.ownerUid);
+      allow update, delete: if isSelf(resource.data.ownerUid) || isAdmin();
+    }
+
+    match /importJobs/{jobId} {
+      allow read: if isSelf(resource.data.ownerUid) || isAdmin();
+      allow create: if isSelf(request.resource.data.ownerUid)
+        && request.resource.data.state == 'queued';
+      // The worker advances the job server-side.
+      allow update, delete: if isAdmin();
+    }
+
+    // Schema bookkeeping written by scripts/init-firestore.ts.
+    match /_schema/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
