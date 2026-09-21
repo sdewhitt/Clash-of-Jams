@@ -1,5 +1,11 @@
+*.env.*
 *.env
+!*.env.example
 *.venv
+
+# Firebase emulator output
+*-debug.log
+.firebase/
 
 CLAUDE.md
 AGENTS.md
