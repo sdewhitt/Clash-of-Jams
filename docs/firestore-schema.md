@@ -10,8 +10,8 @@ The authoritative definitions live in code, not here:
 | `frontend/src/lib/schema/types.ts`       | One TypeScript interface per document shape                      |
 | `frontend/src/lib/schema/collections.ts` | Collection paths, derived-id helpers, default-document factories |
 | `frontend/scripts/init-firestore.ts`     | Writes one template document per collection and reads it back    |
-| `firestore.rules`                        | Ownership and moderation rules                                   |
-| `firestore.indexes.json`                 | Composite indexes for the queries listed below                   |
+| `firebase/firestore.rules`               | Ownership and moderation rules                                   |
+| `firebase/firestore.indexes.json`        | Composite indexes for the queries listed below                   |
 
 ## Running the init script
 
@@ -33,13 +33,31 @@ Every template document uses a `seed_` id prefix, so re-running overwrites the
 same documents instead of accumulating new ones, and `--purge` removes exactly
 what the script wrote.
 
-**Writes need permission.** The rules in `firestore.rules` deny the seed writes
+**Writes need permission.** The rules in `firebase/firestore.rules` deny the seed writes
 on purpose (they are not owned by any signed-in user). Pick one:
 
 - run against the emulator (`--emulator`), which is the normal path for testing;
 - leave the database in test mode while seeding;
 - set `FIREBASE_SEED_EMAIL` / `FIREBASE_SEED_PASSWORD` to an account whose
   `users/{uid}.role` is `admin`, and relax the seed-owned paths accordingly.
+
+## Deploying rules and indexes
+
+The CLI looks for `firebase.json` in the directory it runs from, so these run
+from `firebase/`, not the repo root. The package is `firebase-tools` — plain
+`npx firebase` picks up the Firebase SDK in `frontend/`, which has no binary.
+
+```bash
+cd firebase
+npx -y firebase-tools login
+npx -y firebase-tools deploy --only firestore:indexes
+npx -y firebase-tools deploy --only firestore:rules
+npx -y firebase-tools firestore:indexes        # check build progress
+npx -y firebase-tools emulators:start --only firestore
+```
+
+Index builds are asynchronous: the deploy returns before they finish, and until
+they do, the leaderboard and browse queries fail with a "needs an index" error.
 
 ## Collections
 
@@ -95,7 +113,7 @@ query(
 
 Scoping to `scenarioVersionId` rather than `scenarioId` is what makes the
 ranking meaningful — every run on one board was scored against identical notes.
-The composite indexes in `firestore.indexes.json` back this and the other
+The composite indexes in `firebase/firestore.indexes.json` back this and the other
 listed queries.
 
 **Musical content is embedded.** `NoteChart` → `ChartPart` → `ExpectedNote` all
@@ -119,7 +137,7 @@ later cannot silently rewrite old scores.
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1. Usernames unique                           | `usernames/{usernameLower}` reservation; claim it in the same transaction as the profile write. Profanity filtering is a separate check at sign-up. |
 | 2. Scenario version numbers unique            | `versionNumber` is assigned from `scenarios/{id}.currentVersionNumber + 1` inside a transaction that also advances the parent.                      |
-| 3. One review per user per scenario           | The review's document id is `{scenarioId}_{uid}`, and `firestore.rules` requires the id to match the body.                                          |
+| 3. One review per user per scenario           | The review's document id is `{scenarioId}_{uid}`, and `firebase/firestore.rules` requires the id to match the body.                                 |
 | 4. Foreign keys required                      | Every reference field is non-optional in `types.ts`; the factories in `collections.ts` cannot produce a document that omits one.                    |
 | 5. Match finalization and elo commit together | Both are server-side writes in a single Firestore transaction — the client is denied writes to `matches/{id}` and to any `skillRatings` document.   |
 
