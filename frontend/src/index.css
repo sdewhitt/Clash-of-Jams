@@ -1,30 +1,89 @@
 @import 'tailwindcss';
 
-/* Tailwind v4 reads these and generates matching utilities (bg-surface, text-muted, ...). */
-@theme {
+/*
+  'Light Mode' associated with the Clash of Jams application
+*/
+:root {
   --color-base: #0b0a12;
   --color-surface: #14121f;
   --color-line: #2c2840;
 
   --color-ink: #f2f0f7;
+  --color-inverse-ink:#07060b;
   --color-muted: #a09cb5;
   --color-faint: #6e6987;
 
+  --color-accent-base: #7b2fc7;
   --color-accent: #a855f7;
   --color-accent-soft: #c084fc;
+  --color-accent-softer-x2: #d7afff;
+}
+
+/*
+  'Dark Mode' associated with the Clash of Jams application
+*/
+[data-theme="dark"] {
+  --color-base: #050505;
+  --color-surface: #111111;
+  --color-line: #2a2a2a;
+  --color-ink: #ffffff;
+  --color-inverse-ink:#07060b;
+  --color-muted: #a3a3a3;
+  --color-faint: #737373;
+  --color-accent-base: #7b2fc7;
+  --color-accent: #3b82f6;
+  --color-accent-soft: #60a5fa;
+  --color-accent-softer-x2: #d7afff;
+}
+
+/*
+  Neon theme
+*/
+[data-theme="neon"] {
+  --color-base: #080014;
+  --color-surface: #140021;
+  --color-line: #3b155c;
+  --color-ink: #ffffff;
+  --color-inverse-ink:#07060b;
+  --color-muted: #d8b4fe;
+  --color-faint: #a855f7;
+  --color-accent-base: #7b2fc7;
+  --color-accent: #ec4899;
+  --color-accent-soft: #f472b6;
+  --color-accent-softer-x2: #d7afff;
+}
+
+/* Tailwind v4 reads these and generates matching utilities (bg-surface, text-muted, ...). */
+@theme {
+  --color-base: var(--color-base);
+  --color-surface: var(--color-surface);
+  --color-line: var(--color-line);
+
+  --color-ink: var(--color-ink);
+  --color-inverse-ink: var(--color-inverse-ink);
+  --color-muted: var(--color-muted);
+  --color-faint: var(--color-faint);
+
+  --color-accent-base: var(--color-accent-base);
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-accent-softer-x2: var(--color-accent-softer-x2);
 
   --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: default;
   }
 
   body {
     @apply bg-base text-ink font-sans antialiased;
     margin: 0;
     min-height: 100dvh;
+
+    background-color: var(--color-base);
+    color: var(--color-ink);
   }
 
   :focus-visible {
