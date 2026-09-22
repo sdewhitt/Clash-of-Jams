@@ -84,21 +84,21 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                     "
                 >
                     <button
-                        className="py-1 hover:bg-accent-softer-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-accent-soft-x2 hover:text-black transition-colors"
                         onClick={() => navPortal("/profile")}
                     >
                         My Profile
                     </button>
                     <div className="mx-1 border-t-4 border-accent"></div>
                     <button
-                        className="py-1 hover:bg-accent-softer-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-accent-soft-x2 hover:text-black transition-colors"
                         onClick={() => navPortal("/friends")}
                     >
                         My Friends
                     </button>
                     <div className="mx-1 border-t-4 border-accent"></div>
                     <button
-                        className="py-1 hover:bg-accent-softer-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-accent-soft-x2 hover:text-black transition-colors"
                         onClick={() => navPortal("/friends")}
                     >
                         Sign Out

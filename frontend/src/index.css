@@ -16,7 +16,7 @@
   --color-accent-base: #7b2fc7;
   --color-accent: #a855f7;
   --color-accent-soft: #c084fc;
-  --color-accent-softer-x2: #d7afff;
+  --color-accent-soft-x2: #d7afff;
 }
 
 /*
@@ -33,7 +33,7 @@
   --color-accent-base: #7b2fc7;
   --color-accent: #3b82f6;
   --color-accent-soft: #60a5fa;
-  --color-accent-softer-x2: #d7afff;
+  --color-accent-soft-x2: #d7afff;
 }
 
 /*
@@ -50,7 +50,7 @@
   --color-accent-base: #7b2fc7;
   --color-accent: #ec4899;
   --color-accent-soft: #f472b6;
-  --color-accent-softer-x2: #d7afff;
+  --color-accent-soft-x2: #d7afff;
 }
 
 /* Tailwind v4 reads these and generates matching utilities (bg-surface, text-muted, ...). */
@@ -67,7 +67,7 @@
   --color-accent-base: var(--color-accent-base);
   --color-accent: var(--color-accent);
   --color-accent-soft: var(--color-accent-soft);
-  --color-accent-softer-x2: var(--color-accent-softer-x2);
+  --color-accent-soft-x2: var(--color-accent-soft-x2);
 
   --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
