@@ -68,11 +68,29 @@ pointing at a service account key, or Application Default Credentials from
 `gcloud auth application-default login`. To work without either, set
 `AUTH_DISABLED=true` and every request is attributed to `AUTH_DEV_UID`.
 
+## Field names
+
+Python is snake_case, the TypeScript interfaces and the Firestore documents are
+camelCase. `ApiModel` in `app/schemas.py` bridges the two with an alias
+generator, so `author_difficulty` here is `authorDifficulty` on the wire and in
+the OpenAPI schema. Subclass it for anything a route accepts or returns, and
+write the fields in snake_case:
+
+```python
+class ScenarioCreate(ApiModel):
+    author_difficulty: int = 1  # clients send authorDifficulty
+```
+
+Validation accepts either spelling, so Python callers keep using keyword
+arguments. Serialization is the asymmetric half: FastAPI renders responses by
+alias, but a bare `model_dump()` returns snake_case — code writing a model to
+Firestore wants `model_dump(by_alias=True)`.
+
 ## Adding a router
 
 1. New module in `app/routers/`, with `router = APIRouter(prefix=..., tags=[...])`.
-2. Request/response models in `app/schemas.py`, field names matching
-   `frontend/src/lib/schema/types.ts` so payloads round-trip unrenamed.
+2. Request/response models in `app/schemas.py`, subclassing `ApiModel` so the
+   wire names match `frontend/src/lib/schema/types.ts` (see Field names).
 3. `app.include_router(...)` in `app/main.py`, under `settings.api_prefix`.
 
 ## Next

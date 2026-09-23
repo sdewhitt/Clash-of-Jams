@@ -1,35 +1,33 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
 
-import { authErrorMessage, sendResetEmail, signIn } from '@/lib/auth/account'
+import { USERNAME_PATTERN, authErrorMessage, signUp } from '@/lib/auth/account'
 import { useAuth } from '@/lib/auth/useAuth'
 
-export function Login() {
+const FIELD_CLASS =
+  'rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint'
+
+export function SignUp() {
   const navigate = useNavigate()
-  const location = useLocation()
   const { user, loading } = useAuth()
 
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // Where RequireAuth bounced the user from, if anywhere.
-  const from = (location.state as { from?: string } | null)?.from ?? '/home'
-
   if (loading) return null
-  if (user) return <Navigate to={from} replace />
+  if (user) return <Navigate to="/home" replace />
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
-    setNotice(null)
     setBusy(true)
     try {
-      await signIn(email, password)
-      navigate(from, { replace: true })
+      await signUp({ email, password, username })
+      navigate('/home', { replace: true })
     } catch (caught) {
       setError(authErrorMessage(caught))
     } finally {
@@ -37,27 +35,31 @@ export function Login() {
     }
   }
 
-  async function handleReset() {
-    setError(null)
-    setNotice(null)
-    if (!email) {
-      setError('Enter your email address first.')
-      return
-    }
-    try {
-      await sendResetEmail(email)
-      setNotice('Password reset email sent.')
-    } catch (caught) {
-      setError(authErrorMessage(caught))
-    }
-  }
-
   return (
     <div className="flex min-h-dvh items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-2xl font-semibold tracking-tight">Clash of Jams</h1>
+        <h1 className="mb-8 text-2xl font-semibold tracking-tight">Create your account</h1>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="text-muted">Username</span>
+            <input
+              type="text"
+              name="username"
+              required
+              minLength={3}
+              maxLength={20}
+              pattern={USERNAME_PATTERN.source.slice(1, -1)}
+              autoComplete="username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              className={FIELD_CLASS}
+            />
+            <span className="text-xs text-faint">
+              3-20 characters: letters, numbers and underscores. This is permanent for now.
+            </span>
+          </label>
+
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="text-muted">Email</span>
             <input
@@ -67,7 +69,7 @@ export function Login() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint"
+              className={FIELD_CLASS}
             />
           </label>
 
@@ -77,40 +79,31 @@ export function Login() {
               type="password"
               name="password"
               required
-              autoComplete="current-password"
+              minLength={6}
+              autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint"
+              className={FIELD_CLASS}
             />
           </label>
 
           {error && <p className="text-sm text-accent-soft">{error}</p>}
-          {notice && <p className="text-sm text-muted">{notice}</p>}
 
           <button
             type="submit"
             disabled={busy}
             className="mt-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition-colors hover:bg-accent-soft disabled:opacity-60"
           >
-            {busy ? 'Signing in…' : 'Sign in'}
+            {busy ? 'Creating account…' : 'Create account'}
           </button>
         </form>
 
-        <div className="mt-6 flex items-center justify-between text-sm">
-          <Link
-            to="/signup"
-            className="text-muted underline-offset-4 hover:text-ink hover:underline"
-          >
-            Create an account
+        <p className="mt-6 text-sm text-muted">
+          Already have an account?{' '}
+          <Link to="/login" className="underline-offset-4 hover:text-ink hover:underline">
+            Sign in
           </Link>
-          <button
-            type="button"
-            onClick={handleReset}
-            className="text-muted underline-offset-4 hover:text-ink hover:underline"
-          >
-            Forgot password?
-          </button>
-        </div>
+        </p>
       </div>
     </div>
   )
