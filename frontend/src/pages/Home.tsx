@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router"
 import { NavButton } from "../components/NavButton";
 import { ProfileButton } from "../components/ProfileButton"
+import { useAuth } from "@/lib/auth/useAuth"
 
 export function Home() {
   const navigate = useNavigate()
+  const { user, profile } = useAuth()
 
   function navPortal(location: string) {
     navigate(location)
@@ -15,8 +17,8 @@ export function Home() {
         <h1 className="ml-12 text-4xl font-bold">Clash of Jams</h1>
         <div className="mr-6">
           <ProfileButton
-            username="Steve"
-            userAvatar="../../favicon.svg"
+            username={profile?.displayName ?? user?.email ?? "…"}
+            userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
           />
         </div>
       </header>

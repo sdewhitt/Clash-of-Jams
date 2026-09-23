@@ -1,7 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 
+import { RequireAuth } from '@/components/RequireAuth'
+import { AuthProvider } from '@/lib/auth/AuthProvider'
 import { Home } from '@/pages/Home'
 import { Login } from '@/pages/Login'
+import { SignUp } from '@/pages/SignUp'
 import { UserProfile } from '@/pages/UserProfile'
 import { MyFriends } from '@/pages/friends/MyFriends'
 import { FindFriends } from '@/pages/friends/FindFriends'
@@ -11,23 +14,33 @@ import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
 
+/** Everything behind RequireAuth; /login and /signup are the only public routes. */
+const PROTECTED_ROUTES = [
+  { path: '/home', element: <Home /> },
+  { path: '/profile', element: <UserProfile /> },
+  { path: '/friends/my_friends', element: <MyFriends /> },
+  { path: '/friends/find_friends', element: <FindFriends /> },
+  { path: '/settings', element: <Settings /> },
+  { path: '/tuner', element: <Tuner /> },
+  { path: '/scenario_editor', element: <ScenarioEditor /> },
+  { path: '/scenario_search', element: <ScenarioSearch /> },
+  { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
+]
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/profile" element={<UserProfile />} />
-        <Route path="/friends/my_friends" element={<MyFriends />} />
-        <Route path="/friends/find_friends" element={<FindFriends />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/tuner" element={<Tuner />} />
-        <Route path="/scenario_editor" element={<ScenarioEditor />} />
-        <Route path="/scenario_search" element={<ScenarioSearch />} />
-        <Route path="/multiplayer_connect" element={<MultiplayerConnect />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
+          {PROTECTED_ROUTES.map(({ path, element }) => (
+            <Route key={path} path={path} element={<RequireAuth>{element}</RequireAuth>} />
+          ))}
+          <Route path="*" element={<Navigate to="/home" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
