@@ -3,7 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { Home } from '@/pages/Home'
 import { Login } from '@/pages/Login'
 import { UserProfile } from '@/pages/UserProfile'
-import { Friends } from '@/pages/Friends'
+import { MyFriends } from '@/pages/friends/MyFriends'
+import { FindFriends } from '@/pages/friends/FindFriends'
 import { Settings } from '@/pages/Settings'
 import { Tuner } from '@/pages/Tuner'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
@@ -18,7 +19,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/home" element={<Home />} />
         <Route path="/profile" element={<UserProfile />} />
-        <Route path="/friends" element={<Friends />} />
+        <Route path="/friends/my_friends" element={<MyFriends />} />
+        <Route path="/friends/find_friends" element={<FindFriends />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/tuner" element={<Tuner />} />
         <Route path="/scenario_editor" element={<ScenarioEditor />} />
