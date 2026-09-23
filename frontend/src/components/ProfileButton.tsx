@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router";
 import { useState } from "react";
 
+import { signOutCurrentUser } from "@/lib/auth/account";
+
 type ProfileButtonProps = {
     username: string;
     userAvatar: string;
@@ -12,6 +14,12 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
 
     function navPortal(location: string) {
         navigate(location);
+    }
+
+    async function handleSignOut() {
+        await signOutCurrentUser();
+        // Replace so the back button does not land on a guarded page.
+        navigate("/login", { replace: true });
     }
 
     return (
@@ -100,7 +108,7 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                     <div className="mx-1 border-t-4 border-contrast"></div>
                     <button
                         className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
-                        onClick={() => navPortal("/friends")}
+                        onClick={handleSignOut}
                     >
                         Sign Out
                     </button>
