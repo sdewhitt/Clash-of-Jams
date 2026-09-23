@@ -31,9 +31,9 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                         items-center
                         indent-5
                         outline-3
-                        ${isOpen ? "outline-accent" : "outline-accent-soft"}
-                        ${isOpen ? "bg-accent-soft" : "bg-accent"}
-                        group-hover:bg-accent-soft
+                        ${isOpen ? "outline-contrast" : "outline-contrast-soft"}
+                        ${isOpen ? "bg-contrast-soft" : "bg-contrast"}
+                        group-hover:bg-contrast-soft
                         transition-colors
                         truncate
                         ${isOpen ? "rounded-t-lg" : "rounded-r-lg"}
@@ -49,9 +49,9 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                         h-12
                         w-12
                         outline-3
-                        ${isOpen ? "outline-accent" : "outline-accent-soft"}
-                        ${isOpen ? "bg-accent-soft" : "bg-accent"}
-                        group-hover:bg-accent-soft
+                        ${isOpen ? "outline-contrast" : "outline-contrast-soft"}
+                        ${isOpen ? "bg-contrast-soft" : "bg-contrast"}
+                        group-hover:bg-contrast-soft
                         transition-colors
                         overflow-hidden
                         rounded-full
@@ -76,29 +76,29 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                         flex
                         flex-col
                         outline-3
-                        outline-accent
+                        outline-contrast
                         overflow-hidden
                         rounded-b-lg
-                        bg-accent-soft
+                        bg-contrast-soft
                         pb-1
                     "
                 >
                     <button
-                        className="py-1 hover:bg-accent-soft-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
                         onClick={() => navPortal("/profile")}
                     >
                         My Profile
                     </button>
-                    <div className="mx-1 border-t-4 border-accent"></div>
+                    <div className="mx-1 border-t-4 border-contrast"></div>
                     <button
-                        className="py-1 hover:bg-accent-soft-x2 hover:text-black transition-colors"
-                        onClick={() => navPortal("/friends")}
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
+                        onClick={() => navPortal("/friends/my_friends")}
                     >
                         My Friends
                     </button>
-                    <div className="mx-1 border-t-4 border-accent"></div>
+                    <div className="mx-1 border-t-4 border-contrast"></div>
                     <button
-                        className="py-1 hover:bg-accent-soft-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
                         onClick={() => navPortal("/friends")}
                     >
                         Sign Out
