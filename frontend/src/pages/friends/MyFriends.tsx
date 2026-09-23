@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router"
 import { useEffect, useState } from "react";
-import { ProfileButton } from "../../components/ProfileButton"
+import { BackButton } from "@/components/BackButton"
+import { ProfileButton } from "@/components/ProfileButton"
 
 export function MyFriends() {
     const navigate = useNavigate()
@@ -21,8 +22,11 @@ export function MyFriends() {
     
     return (
         <main className="h-screen flex flex-col overflow-hidden">
-            <header className="flex items-center justify-between bg-accent-base border-b-2 border-accent pt-6 pb-6">
-                <h1 className="ml-12 text-4xl font-bold text-ink">Jamming With Your Friends</h1>
+            <header className="flex items-center justify-between bg-accent-base border-b-2 border-accent py-6">
+                <div className="flex ml-12">
+                    <BackButton></BackButton>
+                    <h1 className="ml-4 text-4xl font-bold text-ink">Jamming With Your Friends</h1>
+                </div>
                 <div className="mr-6">
                     <ProfileButton
                     username="Steve"
