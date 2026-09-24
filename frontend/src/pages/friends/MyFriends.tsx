@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router"
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
+import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 
 export function MyFriends() {
     const navigate = useNavigate()
+    const { user, profile } = useAuth()
     const [search, setSearch] = useState<string>("");
     const [friendSearch, setFriendSearch] = useState<string>("");
     {/*Add a variable to track search state to determine whether or not there are any results to customize look of page*/}
@@ -29,8 +31,8 @@ export function MyFriends() {
                 </div>
                 <div className="mr-6">
                     <ProfileButton
-                    username="Steve"
-                    userAvatar="../../favicon.svg"
+                        username={profile?.displayName ?? user?.email ?? "…"}
+                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
                     />
                 </div>
             </header>

@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router"
+import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 
 export function FindFriends() {  
     const navigate = useNavigate()
+    const { user, profile } = useAuth()
 
     function navPortal(location: string) {
         navigate(location)
@@ -18,8 +20,8 @@ export function FindFriends() {
                 </div>
                 <div className="mr-6">
                     <ProfileButton
-                    username="Steve"
-                    userAvatar="../../favicon.svg"
+                        username={profile?.displayName ?? user?.email ?? "…"}
+                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
                     />
                 </div>
             </header>
