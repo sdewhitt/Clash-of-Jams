@@ -1,9 +1,12 @@
 import { useNavigate } from "react-router"
-import { useEffect, useState } from "react";
-import { ProfileButton } from "../../components/ProfileButton"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/lib/auth/useAuth"
+import { BackButton } from "@/components/BackButton"
+import { ProfileButton } from "@/components/ProfileButton"
 
 export function MyFriends() {
     const navigate = useNavigate()
+    const { user, profile } = useAuth()
     const [search, setSearch] = useState<string>("");
     const [friendSearch, setFriendSearch] = useState<string>("");
     {/*Add a variable to track search state to determine whether or not there are any results to customize look of page*/}
@@ -21,12 +24,15 @@ export function MyFriends() {
     
     return (
         <main className="h-screen flex flex-col overflow-hidden">
-            <header className="flex items-center justify-between bg-accent-base border-b-2 border-accent pt-6 pb-6">
-                <h1 className="ml-12 text-4xl font-bold text-ink">Jamming With Your Friends</h1>
+            <header className="flex items-center justify-between bg-accent-base border-b-2 border-accent py-6">
+                <div className="flex ml-12">
+                    <BackButton></BackButton>
+                    <h1 className="ml-4 text-4xl font-bold text-ink">Jamming With Your Friends</h1>
+                </div>
                 <div className="mr-6">
                     <ProfileButton
-                    username="Steve"
-                    userAvatar="../../favicon.svg"
+                        username={profile?.displayName ?? user?.email ?? "…"}
+                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
                     />
                 </div>
             </header>

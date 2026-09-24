@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
-
 import { authErrorMessage, sendResetEmail, signIn } from '@/lib/auth/account'
 import { useAuth } from '@/lib/auth/useAuth'
 

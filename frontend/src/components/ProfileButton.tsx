@@ -39,6 +39,7 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                         items-center
                         indent-5
                         outline-3
+                        text-ink
                         ${isOpen ? "outline-contrast" : "outline-contrast-soft"}
                         ${isOpen ? "bg-contrast-soft" : "bg-contrast"}
                         group-hover:bg-contrast-soft
