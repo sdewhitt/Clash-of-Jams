@@ -1,0 +1,35 @@
+[project]
+name = "clash-of-jams-backend"
+version = "0.0.0"
+description = "FastAPI backend for Clash of Jams"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.121",
+    "uvicorn[standard]>=0.40",
+    "pydantic>=2.12",
+    "pydantic-settings>=2.13",
+    "firebase-admin>=7.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4",
+    "httpx2>=0.28",
+    "ruff>=0.16",
+]
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
