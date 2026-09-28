@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router"
-import { NavButton } from "../components/NavButton";
-import { ProfileButton } from "../components/ProfileButton"
+import { NavButton } from "@/components/NavButton";
+import { ProfileButton } from "@/components/ProfileButton"
 import { useAuth } from "@/lib/auth/useAuth"
 
 export function Home() {
