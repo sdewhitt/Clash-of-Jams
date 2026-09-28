@@ -28,16 +28,129 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/scenarios/$(scenarioId)).data.authorUid;
     }
 
+    // --- Document shapes -------------------------------------------------
+    //
+    // Mirrors frontend/src/lib/schema/types.ts for the base collections, so a
+    // write with a missing, extra or wrongly typed field is rejected instead of
+    // stored. request.resource.data is the whole post-write document, so these
+    // hold for partial updates too. Keep them in step with types.ts.
+
+    function isStringOrNull(v) {
+      return v == null || v is string;
+    }
+
+    function isNumberOrNull(v) {
+      return v == null || v is number;
+    }
+
+    // serverTimestamp() resolves to request.time, so this pins a creation time
+    // to the server clock rather than whatever the client sent.
+    function stampedNow(v) {
+      return v is timestamp && v == request.time;
+    }
+
+    function unchanged(field) {
+      return request.resource.data[field] == resource.data[field];
+    }
+
+    function hasExactly(d, fields) {
+      return d.keys().hasAll(fields) && d.keys().hasOnly(fields);
+    }
+
+    function isValidUser(d) {
+      return hasExactly(d, ['uid', 'username', 'usernameLower', 'displayName', 'avatarUrl', 'bio',
+            'role', 'isBanned', 'isSocialRestricted', 'isProfilePublic', 'createdAt', 'updatedAt'])
+        && d.uid is string
+        && d.username is string
+        && d.usernameLower == d.username.lower()
+        && d.displayName is string
+        && isStringOrNull(d.avatarUrl)
+        && d.bio is string
+        && d.role in ['user', 'moderator', 'admin']
+        && d.isBanned is bool
+        && d.isSocialRestricted is bool
+        && d.isProfilePublic is bool
+        && d.createdAt is timestamp
+        && d.updatedAt is timestamp;
+    }
+
+    function isValidScenario(d, scenarioId) {
+      return hasExactly(d, ['id', 'authorUid', 'title', 'description', 'instrument', 'visibility',
+            'tags', 'authorDifficulty', 'crowdDifficulty', 'avgRating', 'ratingCount', 'playCount',
+            'currentVersionId', 'currentVersionNumber', 'createdAt', 'updatedAt'])
+        && d.id == scenarioId
+        && d.authorUid is string
+        && d.title is string && d.title.size() >= 1 && d.title.size() <= 120
+        && d.description is string
+        && d.instrument in ['piano', 'guitar', 'woodwind', 'vocals', 'midi']
+        && d.visibility in ['private', 'unlisted', 'public']
+        && d.tags is list
+        && d.authorDifficulty is int && d.authorDifficulty >= 1 && d.authorDifficulty <= 10
+        && isNumberOrNull(d.crowdDifficulty)
+        && isNumberOrNull(d.avgRating)
+        && d.ratingCount is int
+        && d.playCount is int
+        && isStringOrNull(d.currentVersionId)
+        && d.currentVersionNumber is int
+        && d.createdAt is timestamp
+        && d.updatedAt is timestamp;
+    }
+
+    function isValidScenarioVersion(d, scenarioId, versionId) {
+      return hasExactly(d, ['id', 'scenarioId', 'versionNumber', 'chart', 'scoringRules',
+            'durationMs', 'mediaAssetIds', 'createdByUid', 'createdAt'])
+        && d.id == versionId
+        && d.scenarioId == scenarioId
+        && d.versionNumber is int && d.versionNumber >= 1
+        && d.chart is map
+        && d.scoringRules is map
+        && d.durationMs is number
+        && d.mediaAssetIds is list
+        && d.createdByUid is string
+        && d.createdAt is timestamp;
+    }
+
+    function isValidRun(d, runId) {
+      return hasExactly(d, ['id', 'userUid', 'scenarioId', 'scenarioVersionId', 'instrument',
+            'partId', 'speedMultiplier', 'scoringRules', 'finalScore', 'breakdown', 'validation',
+            'matchId', 'matchParticipantUid', 'playedAt'])
+        && d.id == runId
+        && d.userUid is string
+        && d.scenarioId is string
+        && d.scenarioVersionId is string
+        && d.instrument in ['piano', 'guitar', 'woodwind', 'vocals', 'midi']
+        && d.partId is string
+        && d.speedMultiplier is number
+        && d.scoringRules is map
+        && d.finalScore is number
+        && d.breakdown is map
+        && d.validation in ['pending', 'accepted', 'rejected']
+        && isStringOrNull(d.matchId)
+        && isStringOrNull(d.matchParticipantUid)
+        && d.playedAt is timestamp;
+    }
+
     // Public profiles are readable; only the owner edits their own, and only
     // an admin can flip the moderation flags.
     match /users/{uid} {
       allow read: if resource.data.isProfilePublic == true || isSelf(uid) || isAdmin();
-      allow create: if isSelf(uid);
-      allow update: if isAdmin()
-        || (isSelf(uid)
-            && request.resource.data.role == resource.data.role
-            && request.resource.data.isBanned == resource.data.isBanned
-            && request.resource.data.isSocialRestricted == resource.data.isSocialRestricted);
+      // A new account always starts as an unrestricted standard user; roles
+      // and moderation flags are granted later, by an admin.
+      allow create: if isSelf(uid)
+        && isValidUser(request.resource.data)
+        && request.resource.data.uid == uid
+        && request.resource.data.role == 'user'
+        && request.resource.data.isBanned == false
+        && request.resource.data.isSocialRestricted == false
+        && stampedNow(request.resource.data.createdAt);
+      allow update: if isValidUser(request.resource.data)
+        && unchanged('uid')
+        && unchanged('createdAt')
+        && (isAdmin()
+          || (isSelf(uid)
+              && unchanged('role')
+              && unchanged('isBanned')
+              && unchanged('isSocialRestricted')));
       allow delete: if isAdmin();
 
       // Ratings are readable for leaderboards but only the server writes them.
@@ -61,18 +174,43 @@ service cloud.firestore {
     }
 
     match /scenarios/{scenarioId} {
-      allow read: if resource.data.visibility != 'private'
+      // A missing document reads as empty (not denied), so a deleted scenario
+      // or a stale link resolves cleanly; it discloses nothing but absence.
+      allow read: if resource == null
+        || resource.data.visibility != 'private'
         || isSelf(resource.data.authorUid)
         || isAdmin();
-      allow create: if isSelf(request.resource.data.authorUid);
-      allow update, delete: if isSelf(resource.data.authorUid) || isAdmin();
+      // Aggregates (ratings, plays, crowd difficulty) are derived server-side,
+      // so a client creates them at their defaults and never edits them.
+      allow create: if isSelf(request.resource.data.authorUid)
+        && isValidScenario(request.resource.data, scenarioId)
+        && request.resource.data.crowdDifficulty == null
+        && request.resource.data.avgRating == null
+        && request.resource.data.ratingCount == 0
+        && request.resource.data.playCount == 0
+        && stampedNow(request.resource.data.createdAt);
+      allow update: if isValidScenario(request.resource.data, scenarioId)
+        && unchanged('authorUid')
+        && unchanged('createdAt')
+        && (isAdmin()
+          || (isSelf(resource.data.authorUid)
+              && unchanged('crowdDifficulty')
+              && unchanged('avgRating')
+              && unchanged('ratingCount')
+              && unchanged('playCount')));
+      allow delete: if isSelf(resource.data.authorUid) || isAdmin();
 
       // Versions are immutable once written — edits create a new version.
       match /versions/{versionId} {
         allow read: if get(/databases/$(database)/documents/scenarios/$(scenarioId)).data.visibility != 'private'
           || isSelf(scenarioAuthor(scenarioId))
           || isAdmin();
-        allow create: if isSelf(scenarioAuthor(scenarioId));
+        // getAfter, not get: a new scenario and its first version are written
+        // in one batch, and get() would not see the scenario yet.
+        allow create: if isSelf(getAfter(/databases/$(database)/documents/scenarios/$(scenarioId)).data.authorUid)
+          && isValidScenarioVersion(request.resource.data, scenarioId, versionId)
+          && isSelf(request.resource.data.createdByUid)
+          && stampedNow(request.resource.data.createdAt);
         allow update, delete: if isAdmin();
       }
     }
@@ -87,7 +225,9 @@ service cloud.firestore {
     match /runs/{runId} {
       allow read: if signedIn();
       allow create: if isSelf(request.resource.data.userUid)
-        && request.resource.data.validation == 'pending';
+        && isValidRun(request.resource.data, runId)
+        && request.resource.data.validation == 'pending'
+        && stampedNow(request.resource.data.playedAt);
       allow update, delete: if isAdmin();
     }
 
