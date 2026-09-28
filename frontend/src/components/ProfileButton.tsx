@@ -26,7 +26,7 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
         <div className="relative w-40">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="group relative flex w-full items-center"
+                className="group relative flex w-full items-center cursor-pointer"
                 aria-expanded={isOpen}
                 aria-label="Open User Profile Menu"
             >
@@ -93,21 +93,21 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                     "
                 >
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
                         onClick={() => navPortal("/profile")}
                     >
                         My Profile
                     </button>
                     <div className="mx-1 border-t-4 border-contrast"></div>
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
                         onClick={() => navPortal("/friends/my_friends")}
                     >
                         My Friends
                     </button>
                     <div className="mx-1 border-t-4 border-contrast"></div>
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
                         onClick={handleSignOut}
                     >
                         Sign Out

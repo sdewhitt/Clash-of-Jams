@@ -20,6 +20,7 @@ export function BackButton() {
                 px-4
                 py-2
                 rounded-xl
+                cursor-pointer
                 transition-all
                 duration-200
                 aria-label="To Previous Page"
