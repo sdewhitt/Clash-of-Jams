@@ -79,6 +79,16 @@ class Scenario(ApiModel):
     created_at: datetime
 
 
+class Role(StrEnum):
+    USER = "user"
+    MODERATOR = "moderator"
+    ADMIN = "admin"
+
+
+# Mirrors isAdmin() in firebase/firestore.rules.
+ADMIN_ROLES = frozenset({Role.ADMIN, Role.MODERATOR})
+
+
 class CurrentUser(BaseModel):
     """The caller, as resolved from their Firebase ID token.
 
@@ -88,6 +98,11 @@ class CurrentUser(BaseModel):
 
     uid: str
     email: str | None = None
+    role: Role = Role.USER
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role in ADMIN_ROLES
 
 
 class HealthResponse(ApiModel):

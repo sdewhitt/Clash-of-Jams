@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 
-import { authErrorMessage, sendResetEmail, signIn } from '@/lib/auth/account'
+import { authErrorMessage, sendResetEmail, signIn, signInWithGoogle } from '@/lib/auth/account'
 import { useAuth } from '@/lib/auth/useAuth'
 
 export function Login() {
@@ -29,6 +29,20 @@ export function Login() {
     setBusy(true)
     try {
       await signIn(email, password)
+      navigate(from, { replace: true })
+    } catch (caught) {
+      setError(authErrorMessage(caught))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleGoogle() {
+    setError(null)
+    setNotice(null)
+    setBusy(true)
+    try {
+      await signInWithGoogle()
       navigate(from, { replace: true })
     } catch (caught) {
       setError(authErrorMessage(caught))
@@ -95,6 +109,15 @@ export function Login() {
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={busy}
+          className="mt-3 w-full rounded-lg border border-line bg-surface px-4 py-2.5 font-medium text-ink transition-colors hover:bg-accent-base disabled:opacity-60"
+        >
+          Continue with Google
+        </button>
 
         <div className="mt-6 flex items-center justify-between text-sm">
           <Link
