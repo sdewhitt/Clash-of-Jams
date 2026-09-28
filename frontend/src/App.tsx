@@ -6,8 +6,10 @@ import { Home } from '@/pages/Home'
 import { Login } from '@/pages/Login'
 import { SignUp } from '@/pages/SignUp'
 import { UserProfile } from '@/pages/UserProfile'
-import { MyFriends } from '@/pages/friends/MyFriends'
-import { FindFriends } from '@/pages/friends/FindFriends'
+import { MyFriends } from '@/pages/social/MyFriends'
+import { FindFriends } from '@/pages/social/FindFriends'
+import { MyCommunities } from '@/pages/social/MyCommunities'
+import { FindCommunities } from '@/pages/social/FindCommunities'
 import { Settings } from '@/pages/Settings'
 import { Tuner } from '@/pages/Tuner'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
@@ -20,6 +22,8 @@ const PROTECTED_ROUTES = [
   { path: '/profile', element: <UserProfile /> },
   { path: '/friends/my_friends', element: <MyFriends /> },
   { path: '/friends/find_friends', element: <FindFriends /> },
+  { path: '/friends/my_communities', element: <MyCommunities /> },
+  { path: '/friends/find_communities', element: <FindCommunities /> },
   { path: '/settings', element: <Settings /> },
   { path: '/tuner', element: <Tuner /> },
   { path: '/scenario_editor', element: <ScenarioEditor /> },
