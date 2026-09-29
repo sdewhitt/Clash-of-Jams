@@ -23,10 +23,10 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
     }
 
     return (
-        <div className="relative w-40">
+        <div className="relative w-50">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="group relative flex w-full items-center"
+                className="group relative flex w-full items-center cursor-pointer"
                 aria-expanded={isOpen}
                 aria-label="Open User Profile Menu"
             >
@@ -39,6 +39,7 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                         items-center
                         indent-5
                         outline-3
+                        text-ink
                         ${isOpen ? "outline-contrast" : "outline-contrast-soft"}
                         ${isOpen ? "bg-contrast-soft" : "bg-contrast"}
                         group-hover:bg-contrast-soft
@@ -80,7 +81,7 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                         z-20
                         mt-1
                         ml-10
-                        w-9/12
+                        w-12/15
                         flex
                         flex-col
                         outline-3
@@ -92,21 +93,28 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                     "
                 >
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
                         onClick={() => navPortal("/profile")}
                     >
                         My Profile
                     </button>
                     <div className="mx-1 border-t-4 border-contrast"></div>
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
                         onClick={() => navPortal("/friends/my_friends")}
                     >
                         My Friends
                     </button>
                     <div className="mx-1 border-t-4 border-contrast"></div>
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors"
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
+                        onClick={() => navPortal("/friends/my_communities")}
+                    >
+                        My Communities
+                    </button>
+                    <div className="mx-1 border-t-4 border-contrast"></div>
+                    <button
+                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
                         onClick={handleSignOut}
                     >
                         Sign Out

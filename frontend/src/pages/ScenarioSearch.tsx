@@ -72,6 +72,7 @@ export function ScenarioSearch() {
                     </section>
                 </div>
             </div>
+
         </main>
     )
 }

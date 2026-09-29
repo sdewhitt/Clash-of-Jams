@@ -19,6 +19,7 @@ export function NavButton({children, onClick, className = "",}: NavButtonProps) 
                 px-8
                 py-4
                 rounded-xl
+                cursor-pointer
                 transition-all
                 duration-200
                 ${className}
