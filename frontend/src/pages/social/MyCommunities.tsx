@@ -8,11 +8,11 @@ export function MyCommunities() {
     const navigate = useNavigate()
     const { user, profile } = useAuth()
     const [search, setSearch] = useState<string>("");
-    const [friendSearch, setFriendSearch] = useState<string>("");
+    const [communitySearch, setCommunitySearch] = useState<string>("");
     {/*Add a variable to track search state to determine whether or not there are any results to customize look of page*/}
     
     useEffect(() => {
-        const handler = setTimeout(() => setFriendSearch(search), 500);
+        const handler = setTimeout(() => setCommunitySearch(search), 500);
         return () => clearTimeout(handler);
     }, [search]);
 
@@ -24,7 +24,7 @@ export function MyCommunities() {
     
     return (
         <main className="h-screen flex flex-col overflow-hidden">
-            <header className="flex items-center justify-between bg-accent-base border-b-2 border-accent py-6">
+            <header className="flex items-center justify-between bg-linear-to-r from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 border-b-2 border-accent py-6">
                 <div className="flex ml-12">
                     <BackButton></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Jamming With Your Community</h1>
