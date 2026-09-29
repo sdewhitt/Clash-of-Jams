@@ -64,6 +64,7 @@ class ScenarioCreate(ApiModel):
     author_difficulty: int = Field(default=1, ge=1, le=10)
 
 
+
 class Scenario(ApiModel):
     """A scenario as returned by the API — scenarios/{scenarioId}."""
 
@@ -77,6 +78,12 @@ class Scenario(ApiModel):
     author_difficulty: int
     play_count: int = 0
     created_at: datetime
+    avg_rating: float | None
+    crowd_difficulty: float | None
+    rating_count: int
+    current_version_id: str | None
+    current_version_number: int
+    updated_at: datetime
 
 
 class CurrentUser(BaseModel):
