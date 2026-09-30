@@ -16,6 +16,7 @@ import { Tuner } from '@/pages/Tuner'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
+import { AudioLab } from '@/pages/AudioLab'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
@@ -31,6 +32,7 @@ const PROTECTED_ROUTES = [
   { path: '/scenario_editor', element: <ScenarioEditor /> },
   { path: '/scenario_search', element: <ScenarioSearch /> },
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
+  { path: '/audio_lab', element: <AudioLab /> },
 ]
 
 export default function App() {
