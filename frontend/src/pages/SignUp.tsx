@@ -87,12 +87,12 @@ export function SignUp() {
             />
           </label>
 
-          {error && <p className="text-sm text-accent-soft">{error}</p>}
+          {error && <p className="text-sm text-accent-middle">{error}</p>}
 
           <button
             type="submit"
             disabled={busy}
-            className="mt-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition-colors hover:bg-accent-soft disabled:opacity-60"
+            className="mt-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition-colors hover:bg-accent-middle disabled:opacity-60"
           >
             {busy ? 'Creating account…' : 'Create account'}
           </button>
