@@ -17,13 +17,14 @@
   --color-accent-base-middle: #7b2fc7;
   --color-accent-base-end: #461873;
   
-  --color-accent: #a855f7;
-  --color-accent-soft: #c084fc;
-  --color-accent-soft-x2: #d7afff;
+  --color-accent-start: #9c32ff;
+  --color-accent-middle: #5a3e76;
+  --color-accent-end: #a650fc;
 
-  --color-contrast: #5755f7;
-  --color-contrast-soft: #7774fb;
-  --color-contrast-soft-x2: #a7a6ff;
+  --color-contrast-start: #5755f7;
+  --color-contrast-middle: #45446c;
+  --color-contrast-end: #7774fb;
+  
 }
 
 /*
@@ -81,13 +82,14 @@
   --color-accent-base-start: var(--color-accent-base-start);
   --color-accent-base-middle: var(--color-accent-base-middle);
   --color-accent-base-end: var(--color-accent-base-end);
-  --color-accent: var(--color-accent);
-  --color-accent-soft: var(--color-accent-soft);
-  --color-accent-soft-x2: var(--color-accent-soft-x2);
 
-  --color-contrast: var(--color-contrast);
-  --color-contrast-soft: var(--color-contrast-soft);
-  --color-contrast-soft-x2: var(--color-contrast-soft-x2);
+  --color-accent-start: var(--color-accent-start);
+  --color-accent-middle: var(--color-accent-middle);
+  --color-accent-end: var(--color-accent-end);
+
+  --color-contrast-start: var(--color-contrast-start);
+  --color-contrast-middle: var(--color-contrast-middle);
+  --color-contrast-end: var(--color-contrast-end);
 
   --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
@@ -114,6 +116,6 @@
   }
 
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-accent-soft;
+    @apply outline-2 outline-offset-2 outline-accent-middle;
   }
 }
