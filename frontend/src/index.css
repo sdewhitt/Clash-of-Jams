@@ -4,9 +4,9 @@
   'Light Mode' associated with the Clash of Jams application
 */
 :root {
-  --color-base: #0b0a12;
-  --color-surface: #14121f;
-  --color-line: #2c2840;
+  --color-base-start: #0b0a12;
+  --color-base-middle: #2c2840;
+  --color-base-end: #14121f;
 
   --color-ink: #f2f0f7;
   --color-inverse-ink:#07060b;
@@ -16,6 +16,7 @@
   --color-accent-base-start: #321251;
   --color-accent-base-middle: #7b2fc7;
   --color-accent-base-end: #461873;
+  
   --color-accent: #a855f7;
   --color-accent-soft: #c084fc;
   --color-accent-soft-x2: #d7afff;
@@ -68,9 +69,9 @@
 
 /* Tailwind v4 reads these and generates matching utilities (bg-surface, text-muted, ...). */
 @theme {
-  --color-base: var(--color-base);
-  --color-surface: var(--color-surface);
-  --color-line: var(--color-line);
+  --color-base-start: var(--color-base-start);
+  --color-base-middle: var(--color-base-middle);
+  --color-base-end: var(--color-base-end);
 
   --color-ink: var(--color-ink);
   --color-inverse-ink: var(--color-inverse-ink);
@@ -97,12 +98,19 @@
   }
 
   body {
-    @apply bg-base text-ink font-sans antialiased;
+    @apply bg-linear-to-bl
+      from-base-start
+      from-10%
+      via-base-middle
+      via-70%
+      to-base-end
+      to-90%
+      text-ink
+      font-sans
+      antialiased;
+
     margin: 0;
     min-height: 100dvh;
-
-    background-color: var(--color-base);
-    color: var(--color-ink);
   }
 
   :focus-visible {

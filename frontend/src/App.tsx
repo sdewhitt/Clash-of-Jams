@@ -5,7 +5,8 @@ import { AuthProvider } from '@/lib/auth/AuthProvider'
 import { Home } from '@/pages/Home'
 import { Login } from '@/pages/Login'
 import { SignUp } from '@/pages/SignUp'
-import { UserProfile } from '@/pages/UserProfile'
+import { UserProfile } from '@/pages/user-profiles/UserProfile'
+import { EditProfile } from '@/pages/user-profiles/EditProfile'
 import { MyFriends } from '@/pages/social/MyFriends'
 import { FindFriends } from '@/pages/social/FindFriends'
 import { MyCommunities } from '@/pages/social/MyCommunities'
@@ -20,6 +21,7 @@ import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
 const PROTECTED_ROUTES = [
   { path: '/home', element: <Home /> },
   { path: '/profile', element: <UserProfile /> },
+  { path: '/profile/edit_profile', element: <EditProfile /> },
   { path: '/friends/my_friends', element: <MyFriends /> },
   { path: '/friends/find_friends', element: <FindFriends /> },
   { path: '/friends/my_communities', element: <MyCommunities /> },
