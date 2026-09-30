@@ -81,7 +81,6 @@ def list_filter_items() -> FilterResponse:
     filter_response = FilterResponse()
 
     for s in scenario_list:
-        filter_response.instruments.add(s.instrument)
         if filter_response.max_difficulty is None or s.author_difficulty > filter_response.max_difficulty:
             filter_response.max_difficulty = s.author_difficulty
         if filter_response.min_difficulty is None or s.author_difficulty < filter_response.min_difficulty:

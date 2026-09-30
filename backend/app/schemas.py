@@ -92,7 +92,6 @@ class ScenarioWithAuthor(ApiModel):
 
 
 class FilterResponse(ApiModel):
-    instruments: set[Instrument] = set()
     max_plays: int | None = None
     min_plays: int | None = None
     max_rating: float | None = None # TODO: once ratings are implemented we need to fill this in dynamically
