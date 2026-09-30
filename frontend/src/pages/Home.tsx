@@ -13,7 +13,7 @@ export function Home() {
 
   return (
     <main className="h-screen flex flex-col overflow-hidden">
-      <header className="flex items-center justify-between bg-accent-base border-b-2 border-accent pt-6 pb-6">
+      <header className="flex items-center justify-between bg-linear-to-r from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 border-b-4 border-accent-start pt-6 pb-6">
         <h1 className="ml-12 text-4xl font-bold">Clash of Jams</h1>
         <div className="mr-6">
           <ProfileButton
@@ -38,7 +38,7 @@ export function Home() {
             <NavButton onClick={() => navPortal('/settings')}>Settings</NavButton>
           </nav>
 
-          <section className="aspect-video w-full rounded-xl border-3 border-accent bg-accent-base overflow-hidden">
+          <section className="aspect-video w-full rounded-xl border-4 border-accent-start bg-linear-to-br from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 overflow-hidden">
             <img
               src="../../favicon.svg"
               alt="Clash of Jams Preview"

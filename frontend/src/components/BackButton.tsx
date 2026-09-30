@@ -7,11 +7,15 @@ export function BackButton() {
         <button
             onClick={() => navigate(-1)}
             className={`
-                bg-contrast
+                bg-linear-to-b
+                from-contrast-start
+                from-50
+                via-contrast-middle
+                to-contrast-end
+                to-70
                 outline-3
-                outline-contrast-soft
-                hover:outline-contrast
-                hover:bg-contrast-soft
+                outline-contrast-middle
+                hover:brightness-125
                 hover:-translate-x-1
                 active:scale-95
                 text-ink

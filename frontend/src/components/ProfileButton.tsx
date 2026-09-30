@@ -38,11 +38,16 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                         flex
                         items-center
                         indent-5
+                        bg-linear-to-b 
+                        from-contrast-start 
+                        from-50 
+                        via-contrast-middle 
+                        to-contrast-end
+                        to-70
                         outline-3
+                        outline-contrast-middle
                         text-ink
-                        ${isOpen ? "outline-contrast" : "outline-contrast-soft"}
-                        ${isOpen ? "bg-contrast-soft" : "bg-contrast"}
-                        group-hover:bg-contrast-soft
+                        group-hover:brightness-125
                         transition-colors
                         truncate
                         ${isOpen ? "rounded-t-lg" : "rounded-r-lg"}
@@ -57,10 +62,15 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                         left-0
                         h-12
                         w-12
+                        bg-linear-to-b 
+                        from-contrast-start 
+                        from-50 
+                        via-contrast-middle 
+                        to-contrast-end
+                        to-70
                         outline-3
-                        ${isOpen ? "outline-contrast" : "outline-contrast-soft"}
-                        ${isOpen ? "bg-contrast-soft" : "bg-contrast"}
-                        group-hover:bg-contrast-soft
+                        outline-contrast-middle
+                        group-hover:brightness-125
                         transition-colors
                         overflow-hidden
                         rounded-full
@@ -84,40 +94,96 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
                         w-12/15
                         flex
                         flex-col
+                        bg-contrast-start
                         outline-3
-                        outline-contrast
+                        outline-contrast-middle
                         overflow-hidden
                         rounded-b-lg
-                        bg-contrast-soft
                         pb-1
                     "
                 >
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
+                        className="group relative py-1 overflow-hidden cursor-pointer transition-all"
                         onClick={() => navPortal("/profile")}
                     >
-                        My Profile
+                        <span
+                            className="
+                            absolute inset-0
+                            bg-linear-to-b
+                            from-contrast-start from-50
+                            via-contrast-middle
+                            to-contrast-end to-70
+                            brightness-85
+                            group-hover:brightness-125
+                            transition-[filter]
+                            "
+                        />
+                        <span className="relative text-ink group-hover:brightness-125">
+                            My Profile
+                        </span>
                     </button>
-                    <div className="mx-1 border-t-4 border-contrast"></div>
+                    <div className="mx-1 border-t-4 border-contrast-middle"></div>
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
+                        className="group relative py-1 overflow-hidden cursor-pointer transition-all"
                         onClick={() => navPortal("/friends/my_friends")}
                     >
-                        My Friends
+                        <span
+                            className="
+                            absolute inset-0
+                            bg-linear-to-b
+                            from-contrast-start from-50
+                            via-contrast-middle
+                            to-contrast-end to-70
+                            brightness-85
+                            group-hover:brightness-125
+                            transition-[filter]
+                            "
+                        />
+                        <span className="relative text-ink group-hover:brightness-125">
+                            My Friends
+                        </span>
                     </button>
-                    <div className="mx-1 border-t-4 border-contrast"></div>
+                    <div className="mx-1 border-t-4 border-contrast-middle"></div>
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
+                        className="group relative py-1 overflow-hidden cursor-pointer transition-all"
                         onClick={() => navPortal("/friends/my_communities")}
                     >
-                        My Communities
+                        <span
+                            className="
+                            absolute inset-0
+                            bg-linear-to-b
+                            from-contrast-start from-50
+                            via-contrast-middle
+                            to-contrast-end to-70
+                            brightness-85
+                            group-hover:brightness-125
+                            transition-[filter]
+                            "
+                        />
+                        <span className="relative text-ink group-hover:brightness-125">
+                            My Communities
+                        </span>
                     </button>
-                    <div className="mx-1 border-t-4 border-contrast"></div>
+                    <div className="mx-1 border-t-4 border-contrast-middle"></div>
                     <button
-                        className="py-1 hover:bg-contrast-soft-x2 hover:text-black transition-colors cursor-pointer"
+                        className="group relative py-1 overflow-hidden cursor-pointer transition-all"
                         onClick={handleSignOut}
                     >
-                        Sign Out
+                        <span
+                            className="
+                            absolute inset-0
+                            bg-linear-to-b
+                            from-contrast-start from-50
+                            via-contrast-middle
+                            to-contrast-end to-70
+                            brightness-85
+                            group-hover:brightness-125
+                            transition-[filter]
+                            "
+                        />
+                        <span className="relative text-ink group-hover:brightness-125">
+                            Sign Out
+                        </span>
                     </button>
                 </div>
             )}

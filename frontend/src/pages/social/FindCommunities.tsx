@@ -13,7 +13,7 @@ export function FindCommunities() {
 
     return (
         <main className="h-screen flex flex-col overflow-hidden">
-            <header className="flex items-center justify-between bg-accent-base border-b-2 border-accent pt-6 pb-5">
+            <header className="flex items-center justify-between bg-linear-to-r from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 border-b-4 border-accent-start pt-6 pb-5">
                 <div className="flex ml-12">
                     <BackButton></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Find Communities</h1>
