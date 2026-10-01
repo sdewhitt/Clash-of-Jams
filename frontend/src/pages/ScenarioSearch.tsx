@@ -1,5 +1,3 @@
-import { useNavigate } from "react-router"
-import { NavButton } from "@/components/NavButton";
 import { BackButton } from "@/components/BackButton";
 import { ProfileButton } from "@/components/ProfileButton"
 import { useAuth } from "@/lib/auth/useAuth"
@@ -13,7 +11,6 @@ export function ScenarioSearch() {
     
     // make edits here to make the API call
 
-    const navigate = useNavigate()
     const { user, profile } = useAuth()
     
     const [search, setSearch] = useState('')

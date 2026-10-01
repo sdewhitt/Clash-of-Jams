@@ -8,7 +8,7 @@ export function MyCommunities() {
     const navigate = useNavigate()
     const { user, profile } = useAuth()
     const [search, setSearch] = useState<string>("");
-    const [communitySearch, setCommunitySearch] = useState<string>("");
+    const [, setCommunitySearch] = useState<string>("");
     {/*Add a variable to track search state to determine whether or not there are any results to customize look of page*/}
     
     useEffect(() => {

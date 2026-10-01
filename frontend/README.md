@@ -5,10 +5,19 @@ form and an empty home route. No backend.
 
 ## Running it
 
+Use Node.js 22.22.0 or newer (required by React Router).
+
 ```bash
-npm install
+npm ci
 npm run dev      # http://localhost:5173
 ```
+
+The lockfile includes a scoped override of Firestore's `@grpc/grpc-js` dependency
+to 1.14.5, which patches its certificate-authentication and error-disclosure
+advisories. Firestore 4.17.2 otherwise selects the vulnerable 1.9.x series.
+Keep the override until Firebase includes a patched gRPC dependency, then
+remove it and verify `npm audit` again. Avoid `npm audit fix --force`, which can
+downgrade Firebase to an older major version.
 
 | Script              | What it does                                |
 | ------------------- | ------------------------------------------- |
