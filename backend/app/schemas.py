@@ -86,6 +86,20 @@ class Scenario(ApiModel):
     updated_at: datetime
 
 
+class ScenarioWithAuthor(ApiModel):
+    scenario: Scenario
+    author_name: str
+
+
+class FilterResponse(ApiModel):
+    max_plays: int | None = None
+    min_plays: int | None = None
+    max_rating: float | None = None # TODO: once ratings are implemented we need to fill this in dynamically
+    min_rating: float | None = None
+    max_difficulty: float | None = None # TODO: for now this is the difficulty set by the author.  I would like to make this the avg_rating eventually
+    min_difficulty: float | None = None
+
+
 class CurrentUser(BaseModel):
     """The caller, as resolved from their Firebase ID token.
 
