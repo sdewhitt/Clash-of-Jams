@@ -107,7 +107,7 @@ export const DEFAULT_SCORING_RULES: ScoringRules = {
 }
 
 /** Starting elo for a player who has never been rated on an instrument. */
-export const STARTING_ELO = 1000
+export const STARTING_ELO = 400
 
 /** Matches played before a rating stops being provisional. */
 export const PROVISIONAL_MATCHES = 10
