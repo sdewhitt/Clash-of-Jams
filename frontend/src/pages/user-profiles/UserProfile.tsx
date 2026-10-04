@@ -6,7 +6,18 @@ import { ProfileButton } from "@/components/ProfileButton"
 
 export function UserProfile() {
     const navigate = useNavigate()
-    const { user, profile } = useAuth()
+    const { user, profile, loading } = useAuth()
+    
+    if (loading) { 
+        return ( 
+            <main className="h-screen flex items-center justify-center"> 
+                <div className="flex flex-col items-center gap-4"> 
+                <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin" /> 
+                    <p className="text-xl font-semibold text-ink"> Loading profile... </p> 
+                </div> 
+            </main> 
+        ); 
+    }
 
     function navPortal(location: string) {
         navigate(location)
@@ -19,9 +30,9 @@ export function UserProfile() {
                 items-center
                 justify-between
                 bg-linear-to-r
-                from-accent-base-start from-10 
-                via-accent-base-middle via-80 
-                to-accent-base-end to-90 
+                from-accent-base-start
+                via-accent-base-middle
+                to-accent-base-end
                 border-b-4
                 border-accent-start
                 py-6`
@@ -43,9 +54,9 @@ export function UserProfile() {
                     relative
                     w-full 
                     bg-linear-to-b
-                    from-accent-start from-50
+                    from-accent-start
                     via-accent-middle
-                    to-accent-end to-70
+                    to-accent-end
                     outline-4
                     outline-accent-end
                     rounded-lg
@@ -63,7 +74,7 @@ export function UserProfile() {
                         />
                         <div className="h-full w-full flex flex-col justify-center">
                             <h2 className="text-ink text-6xl mx-4">{profile?.displayName ?? user?.email ?? "…"}</h2>
-                            <div className=" border-t-4 border-contrast-start"></div>
+                            <div className="border-t-4 border-contrast-start" />
                             <h3 className="text-ink text-2xl mx-8">{profile?.displayName ?? user?.email ?? "…"}</h3>
                         </div>
                     </div>
@@ -97,21 +108,6 @@ export function UserProfile() {
                     mb-8`
                 }>
                     Activity
-                </div>
-
-                <div className={` 
-                    w-full 
-                    bg-linear-to-b
-                    from-accent-start from-50
-                    via-accent-middle
-                    to-accent-end to-70
-                    outline-4
-                    outline-accent-end
-                    rounded-lg
-                    py-8
-                    mb-8`
-                }>
-                    Application Settings
                 </div>
             </div>
         </main>

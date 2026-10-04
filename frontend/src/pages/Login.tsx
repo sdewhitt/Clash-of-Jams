@@ -94,9 +94,9 @@ export function Login() {
               mx-2
               rounded-lg 
               bg-linear-to-b
-              from-accent-start from-50
+              from-accent-start
               via-accent-middle
-              to-accent-end to-70
+              to-accent-end
               font-medium
               text-ink
               hover:brightness-125
@@ -118,9 +118,9 @@ export function Login() {
             className={`
               text-ink 
               bg-linear-to-b
-              from-accent-start from-50
+              from-accent-start
               via-accent-middle
-              to-accent-end to-70
+              to-accent-end
               hover:brightness-125
               hover:scale-105
               hover:underline
@@ -137,9 +137,9 @@ export function Login() {
             className={`
               text-ink 
               bg-linear-to-b
-              from-accent-start from-50
+              from-accent-start
               via-accent-middle
-              to-accent-end to-70
+              to-accent-end
               hover:brightness-125
               hover:scale-105
               hover:underline

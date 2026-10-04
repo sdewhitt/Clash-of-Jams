@@ -21,9 +21,6 @@ export function ScenarioSearch() {
     const [scenarios, setScenarios] = useState<Scenario[]>([])
 
     useEffect(() => {
-
-
-
         const handler = setTimeout(() =>
             apiFetch<Scenario[]>("/scenarios/public").then(setScenarios).catch(console.error), 500
         );
@@ -38,9 +35,9 @@ export function ScenarioSearch() {
                 items-center
                 justify-between
                 bg-linear-to-r 
-                from-accent-base-start from-10 
-                via-accent-base-middle via-80 
-                to-accent-base-end to-90 
+                from-accent-base-start from-10%
+                via-accent-base-middle via-70%
+                to-accent-base-end to-90%
                 border-b-4
                 border-accent-start 
                 pt-6 
@@ -77,9 +74,9 @@ export function ScenarioSearch() {
                             items-center 
                             px-4 py-5 
                             bg-linear-to-b
-                            from-accent-start from-50
+                            from-accent-start
                             via-accent-middle
-                            to-accent-end to-70
+                            to-accent-end
                             brightness-110
                             border-b-3
                             border-accent-start
@@ -98,9 +95,9 @@ export function ScenarioSearch() {
                             min-h-0 
                             overflow-y-auto 
                             bg-linear-to-br
-                            from-accent-start from-50
+                            from-accent-start
                             via-accent-middle
-                            to-accent-end to-70
+                            to-accent-end
                             brightness-90
                             px-4 
                             py-4

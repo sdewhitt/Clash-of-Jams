@@ -19,9 +19,9 @@ export function ScenarioEditor() {
                     items-center 
                     justify-between 
                     bg-linear-to-r 
-                    from-accent-base-start from-10 
-                    via-accent-base-middle via-80 
-                    to-accent-base-end to-90 
+                    from-accent-base-start from-10% 
+                    via-accent-base-middle via-70%
+                    to-accent-base-end to-90%
                     border-b-4
                     border-accent-start
                     py-6
