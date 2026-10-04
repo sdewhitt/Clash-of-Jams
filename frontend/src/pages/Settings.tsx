@@ -1,15 +1,9 @@
-import { useNavigate } from "react-router"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "../components/ProfileButton"
 
 export function Settings() {
-    const navigate = useNavigate()
     const { user, profile } = useAuth()
-
-    function navPortal(location: string) {
-        navigate(location)
-    }
 
     return (
         <main className="h-screen flex flex-col">

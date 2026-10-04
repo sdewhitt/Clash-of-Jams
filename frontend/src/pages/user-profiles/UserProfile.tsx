@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router"
-import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
