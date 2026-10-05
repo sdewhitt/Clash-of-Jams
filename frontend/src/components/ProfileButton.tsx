@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import { useState } from "react";
+import { useTheme } from "@/context/ThemeContext";
 
 import { signOutCurrentUser } from "@/lib/auth/account";
 
@@ -10,6 +11,7 @@ type ProfileButtonProps = {
 
 export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const { setTheme } = useTheme();
     const navigate = useNavigate();
 
     function navPortal(location: string) {
@@ -18,7 +20,7 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
 
     async function handleSignOut() {
         await signOutCurrentUser();
-        // Replace so the back button does not land on a guarded page.
+        setTheme("default")
         navigate("/login", { replace: true });
     }
 

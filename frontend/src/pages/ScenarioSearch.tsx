@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-
+import { useNavigate } from "react-router"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { RangeSlider } from "@/components/RangeSlider"
@@ -47,6 +47,12 @@ const controlClass =
 
 export function ScenarioSearch() {
     const { user, profile } = useAuth()
+
+    const navigate = useNavigate()
+
+    function navPortal(location: string) {
+        navigate(location)
+    }
 
     // Filter and sort state is wired to the controls but not applied to the list yet.
     const [search, setSearch] = useState("")
@@ -155,7 +161,7 @@ export function ScenarioSearch() {
                 pb-6
             `}>
                 <div className="flex ml-12">
-                    <BackButton></BackButton>
+                    <BackButton onClick={() => navPortal('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Scenario Search</h1>
                 </div>
                 <div className="mr-6">

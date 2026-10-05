@@ -4,8 +4,8 @@ import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 
 export function UserProfile() {
-    const navigate = useNavigate()
     const { user, profile, loading } = useAuth()
+    const navigate = useNavigate()
     
     if (loading) { 
         return ( 
@@ -37,7 +37,7 @@ export function UserProfile() {
                 py-6`
             }>
                 <div className="flex ml-12">
-                    <BackButton></BackButton>
+                    <BackButton onClick={() => navPortal('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">My Profile</h1>
                 </div>
 

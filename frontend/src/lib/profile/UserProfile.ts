@@ -1,4 +1,5 @@
 import { doc, serverTimestamp, updateDoc, } from 'firebase/firestore';
+import { type Theme } from "@/context/ThemeContext";
 import { isUsernameAvailable } from '../auth/account';
 import { AuthError } from '../auth/account';
 import { db } from '@/lib/firebase';
@@ -70,11 +71,20 @@ export async function processAvatar(file: File): Promise<string> {
     });
 }
 
-export async function updateUserAvatar( uid: string, avatarUrl: string ) {    
+export async function updateUserAvatar( uid: string, avatarUrl: string ) {
     const userRef = doc(db, "users", uid);
 
     await updateDoc(userRef, {
         avatarUrl: avatarUrl,
+        updatedAt: serverTimestamp(),
+    });
+}
+
+export async function updateUserTheme( uid: string, userTheme: Theme ) {
+    const userRef = doc(db, "userSettings", uid);
+
+    await updateDoc(userRef, {
+        theme: userTheme,
         updatedAt: serverTimestamp(),
     });
 }

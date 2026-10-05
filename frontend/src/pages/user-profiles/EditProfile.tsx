@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/useAuth"
+import { useNavigate } from "react-router"
 import type { User } from 'firebase/auth'
 import type { UserProfile } from '@/lib/schema/types'
 import { BackButton } from "@/components/BackButton"
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { SettingsButton } from "@/components/SettingsButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { updateUserAvatar } from "@/lib/profile/UserProfile";
+import { updateUserAvatar, updateUserTheme } from "@/lib/profile/UserProfile";
 import { getAvatars, type Avatar } from "@/lib/profile/Avatar";
+import { getUserSettings, type userSettings } from "@/lib/profile/UserSettings";
+import { useTheme, type Theme } from "@/context/ThemeContext";
 
 type ProfileSection =
     | "profile"
@@ -28,7 +31,22 @@ type ProfileEditContentProps = {
 function ProfileEditContent({ selectedSetting, user, profile, draftUsername, draftAvatar, setDraftUsername, setDraftAvatar } : ProfileEditContentProps) {
     const [avatars, setAvatars] = useState<Avatar[]>([]);
     const [showAllAvatars, setShowAllAvatars] = useState(false);
-    const [avatarsLoading, setAvatarsLoading] = useState(true);
+    const [, setAvatarsLoading] = useState(true);
+    const [userSettings, setUserSettings] = useState<userSettings>();
+    const [draftTheme, setDraftTheme] = useState<Theme>()
+    const { setTheme } = useTheme()
+
+    async function loadUserSettings() {
+        try {
+            if (!user) {
+                return;
+            }
+            const settings = await getUserSettings(user.uid);
+            setUserSettings(settings)
+        } catch (error) {
+            console.error("Failed to load user settings:", error);
+        }
+    }
 
     useEffect(() => {
         async function loadAvatars() {
@@ -43,7 +61,18 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         }
 
         loadAvatars();
+        loadUserSettings();
     }, []);
+
+    useEffect(() => {
+        setDraftTheme(userSettings?.theme as Theme)
+    }, [userSettings]);
+
+    const handleThemeChange = async (uid: string, chosenTheme: Theme) => {
+        setTheme(chosenTheme);
+        await updateUserTheme(uid, chosenTheme);
+        loadUserSettings();
+    };
 
     const displayedAvatars = showAllAvatars ? avatars : avatars.slice(0, 4);
     
@@ -187,8 +216,113 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
             );
         case "applicationTheme":
             return (
-                <div>
-                    Hello
+                <div className="flex flex-col m-4 p-4 bg-linear-to-b from-accent-start via-accent-middle to-accent-end outline-3 outline-accent-middle rounded-lg">
+                    <h1 className="text-2xl text-ink font-bold ml-8 mb-2 text-start">
+                        Theme
+                    </h1>
+
+                    <div className="bg-linear-to-b from-contrast-start via-contrast-middle to-contrast-end outline-3 outline-contrast-middle rounded-lg p-4">
+                        <img
+                            src={`/${draftTheme}_mode.png`}
+                            alt={`${draftTheme} Mode`}
+                            className="w-4/5 mx-auto"
+                        />
+
+                        <div className="flex w-4/5 mx-auto">
+                            <button
+                                onClick={() => setDraftTheme("default")}
+                                className="flex-auto whitespace-nowrap transition hover:bg-accent-start hover:underline rounded-bl-lg px-2 py-2"
+                            >
+                                Light
+                            </button>
+
+                            <button
+                                onClick={() => setDraftTheme("dark")}
+                                className="flex-auto whitespace-nowrap transition hover:bg-accent-start hover:underline px-2 py-2"
+                            >
+                                Dark
+                            </button>
+
+                            <button
+                                onClick={() => setDraftTheme("neon")}
+                                className="flex-auto whitespace-nowrap transition hover:bg-accent-start hover:underline px-2 py-2"
+                            >
+                                Neon
+                            </button>
+
+                            <button
+                                onClick={() => setDraftTheme("deuteranopia")}
+                                className="flex-auto whitespace-nowrap transition hover:bg-accent-start hover:underline px-2 py-2"
+                            >
+                                Deuteranopia
+                            </button>
+
+                            <button
+                                onClick={() => setDraftTheme("protanopia")}
+                                className="flex-auto whitespace-nowrap transition hover:bg-accent-start hover:underline px-2 py-2"
+                            >
+                                Protanopia
+                            </button>
+
+                            <button
+                                onClick={() => setDraftTheme("tritanopia")}
+                                className="flex-auto whitespace-nowrap transition hover:bg-accent-start hover:underline px-2 py-2"
+                            >
+                                Tritanopia
+                            </button>
+
+                            <button
+                                onClick={() => setDraftTheme("high-contrast")}
+                                className="flex-auto whitespace-nowrap transition hover:bg-accent-start hover:underline rounded-br-lg px-2 py-2"
+                            >
+                                High-Contrast
+                            </button>
+                        </div>
+                    </div>
+
+                    {user && (
+                        <div className="flex justify-end gap-4 mt-6">
+                            <button
+                                type="button"
+                                className="
+                                    w-48
+                                    rounded-lg
+                                    bg-linear-to-b
+                                    from-contrast-start
+                                    via-contrast-middle
+                                    to-contrast-end
+                                    hover:scale-105
+                                    active:scale-95
+                                    py-2
+                                "
+                                onClick={() =>
+                                    setDraftTheme(userSettings?.theme as Theme ?? "default")
+                                }
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                className="
+                                    w-48
+                                    rounded-lg
+                                    bg-linear-to-b
+                                    from-contrast-start
+                                    via-contrast-middle
+                                    to-contrast-end
+                                    hover:scale-105
+                                    active:scale-95
+                                    py-2
+                                "
+                                onClick={() =>
+                                    handleThemeChange(user.uid, draftTheme ?? "default")
+                                }
+                            >
+                                Save
+                            </button>
+                        </div>
+                    )}
                 </div>
             );
         case "scenarioTheme":
@@ -205,6 +339,11 @@ export function EditProfile() {
     const [draftUsername, setDraftUsername] = useState(""); 
     const [draftAvatar, setDraftAvatar] = useState("../../favicon.svg");
     const [selectedSetting, setSelectedSetting] = useState<ProfileSection>("profile");
+    const navigate = useNavigate()
+
+    function navPortal(location: string) {
+        navigate(location)
+    }
 
     useEffect(
         () => { 
@@ -229,7 +368,7 @@ export function EditProfile() {
         <main className="h-screen flex flex-col">
             <header className="flex items-center justify-between bg-linear-to-r from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 border-b-4 border-accent-start py-6">
                 <div className="flex ml-12">
-                    <BackButton></BackButton>
+                    <BackButton onClick={() => navPortal('/profile')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Edit Profile</h1>
                 </div>
 

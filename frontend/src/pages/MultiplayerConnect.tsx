@@ -1,9 +1,15 @@
+import { useNavigate } from "react-router"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "../components/ProfileButton"
 
 export function MultiplayerConnect() {
     const { user, profile } = useAuth()
+    const navigate = useNavigate()
+
+    function navPortal(location: string) {
+        navigate(location)
+    }
 
     return (
         <main className="h-screen flex flex-col">
@@ -22,7 +28,7 @@ export function MultiplayerConnect() {
                 `}
             >
                 <div className="flex ml-12">
-                    <BackButton></BackButton>
+                    <BackButton onClick={() => navPortal('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Multiplayer Connect</h1>
                 </div>
 
