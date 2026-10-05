@@ -100,6 +100,22 @@ class FilterResponse(ApiModel):
     min_difficulty: float | None = None
 
 
+class ReviewUpsert(ApiModel):
+    comment: str = Field(default="", max_length=200)
+    rating: int = Field(ge=1, le=5)
+
+
+class ScenarioReview(ApiModel):
+    id: str
+    scenario_id: str
+    reviewer_uid: str
+    rating: int # 1-5 stars
+    comment: str
+    created_at: datetime
+    updated_at: datetime
+
+
+
 class CurrentUser(BaseModel):
     """The caller, as resolved from their Firebase ID token.
 
