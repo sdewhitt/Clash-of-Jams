@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(scenarios.router, prefix=settings.api_prefix)
-    #app.include_router(ratings.router, prefix=settings.api_prefix)
+    app.include_router(ratings.router, prefix=settings.api_prefix)
 
     return app
 

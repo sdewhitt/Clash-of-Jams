@@ -5,13 +5,10 @@ from fastapi import APIRouter, HTTPException, status
 from app.dependencies import CurrentUserDep
 from app.schemas import Scenario, ScenarioReview, ReviewUpsert, Visibility
 from app.firebase import get_firestore_client, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
+
 
 router = APIRouter(prefix="/ratings", tags=["ratings"])
-
-# needed api routes:
-
-# fetch the current rating for the current user and scenario 
-
 db = get_firestore_client()
 
 @firestore.transactional
@@ -91,9 +88,12 @@ def get_user_scenario_review(scenario_id: str, user: CurrentUserDep) -> Scenario
 
 @router.get("/{scenario_id}", response_model=list[ScenarioReview])
 def get_scenario_reviews(scenario_id: str) -> list[ScenarioReview]:
-    # note: only see review
-    return []
+    docs = (
+        db.collection("scenarioReviews")
+        .where(filter=FieldFilter("scenarioId", "==", scenario_id))
+        .order_by("createdAt", direction=firestore.Query.DESCENDING)
+        .limit(50)
+        .stream()
+    )
 
-
-
-# i think we just do add / update rating within one route.  We will receive a rating 
+    return [ScenarioReview(**doc.to_dict()) for doc in docs]
