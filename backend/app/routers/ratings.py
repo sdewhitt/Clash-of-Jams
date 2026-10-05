@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.dependencies import CurrentUserDep
 from app.schemas import Scenario, ScenarioReview, ReviewUpsert, Visibility
-from app.firebase import get_firestore_client
+from app.firebase import get_firestore_client, firestore
 
 router = APIRouter(prefix="/ratings", tags=["ratings"])
 
@@ -14,11 +14,11 @@ router = APIRouter(prefix="/ratings", tags=["ratings"])
 
 db = get_firestore_client()
 
-# upsert review
-@router.put("/{scenario_id}", response_model=ScenarioReview)
-def upsert_review(scenario_id: str, user: CurrentUserDep, payload: ReviewUpsert) -> ScenarioReview:
-    # first, get the scenario and make sure it exists and is public
-    scenario_doc = db.collection("scenarios").document(scenario_id).get()
+@firestore.transactional
+def upsert_review_transaction(transaction, scenario_ref, review_ref, user_uid, payload: ReviewUpsert):
+    scenario_doc = scenario_ref.get(transaction=transaction)
+    review_doc = review_ref.get(transaction=transaction)
+
     if not scenario_doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scenario not found")
     scenario = Scenario(**scenario_doc.to_dict())
@@ -26,48 +26,52 @@ def upsert_review(scenario_id: str, user: CurrentUserDep, payload: ReviewUpsert)
     if scenario.visibility == Visibility.PRIVATE: #private scenarios cannot be rated
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scenario not found")
 
-    if scenario.author_uid == user.uid: # authors can't rate their own scenarios
+    if scenario.author_uid == user_uid: # authors can't rate their own scenarios
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Authors cannot rate their own scenario")
-    
-    # second, see if the user already has a review. we know have a scenario we know we can rate
-    doc = db.collection("scenarioReviews").document(f"{scenario_id}_{user.uid}").get()
 
-    if not doc.exists: # add a new review
+    if not review_doc.exists: # add a new review
         timestamp = datetime.now(UTC)
-        scenario_review = ScenarioReview(
-            id=f"{scenario_id}_{user.uid}", 
+        review = ScenarioReview(
+            id=f"{scenario.id}_{user_uid}", 
             scenario_id=scenario.id,
-            reviewer_uid=user.uid,
+            reviewer_uid=user_uid,
             rating=payload.rating,
             comment=payload.comment,
             created_at=timestamp,
             updated_at=timestamp
         )
-        db.collection("scenarioReviews").document(scenario_review.id).set(scenario_review.model_dump(by_alias=True))
 
         new_rating_count = scenario.rating_count + 1
         curr_avg_rating = scenario.avg_rating if scenario.avg_rating is not None else 0
-        new_avg_rating = (payload.rating + (scenario.rating_count * scenario.avg_rating)) / new_rating_count
 
-        db.collection("scenarios").document(scenario_id).update({
-            "avgRating": new_avg_rating,
-            "ratingCount": new_rating_count
-        })
-    else: #update existing review
-        old_rating = doc.get("rating")
-        doc.reference.update({
-            "rating": payload.rating,
-            "comment": payload.comment,
-            "updatedAt": datetime.now(UTC)
-        })
-
+        new_avg_rating = (payload.rating + (scenario.rating_count * curr_avg_rating)) / new_rating_count
+    else:
+        review = ScenarioReview(**review_doc.to_dict())
+        old_rating = review.rating
+        new_rating_count = scenario.rating_count
         new_avg_rating = ((scenario.rating_count * scenario.avg_rating) - old_rating + payload.rating) / scenario.rating_count
-        db.collection("scenarios").document(scenario_id).update({
-            "avgRating": new_avg_rating
-        })
-        
-    doc = db.collection("scenarioReviews").document(doc.id).get()
-    return ScenarioReview(**doc.to_dict())
+
+        review.rating = payload.rating
+        review.comment = payload.comment
+        review.updated_at = datetime.now(UTC)
+
+    # write to the db transactionally
+
+    transaction.update(scenario_ref, {
+        "avgRating": new_avg_rating,
+        "ratingCount": new_rating_count
+    })
+    transaction.set(review_ref, review.model_dump(by_alias=True))
+
+    return review
+
+
+@router.put("/{scenario_id}", response_model=ScenarioReview)
+def upsert_review(scenario_id: str, user: CurrentUserDep, payload: ReviewUpsert) -> ScenarioReview:
+
+    scenario_ref = db.collection("scenarios").document(scenario_id)
+    review_ref = db.collection("scenarioReviews").document(f"{scenario_id}_{user.uid}")
+    return upsert_review_transaction(db.transaction(), scenario_ref, review_ref, user.uid, payload)
 
 
 @router.get("/{scenario_id}/my-rating", response_model=ScenarioReview | None)
