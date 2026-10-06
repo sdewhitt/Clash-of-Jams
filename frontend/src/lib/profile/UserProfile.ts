@@ -1,7 +1,5 @@
-import { doc, serverTimestamp, updateDoc, } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, runTransaction, } from 'firebase/firestore';
 import { type Theme } from "@/context/ThemeContext";
-import { isUsernameAvailable } from '../auth/account';
-import { AuthError } from '../auth/account';
 import { db } from '@/lib/firebase';
 
 export async function processAvatar(file: File): Promise<string> {
@@ -89,32 +87,65 @@ export async function updateUserTheme( uid: string, userTheme: Theme ) {
     });
 }
 
-export async function updateUsername( uid: string, newUsername: string ) {
-    const username = newUsername.trim();
+export async function updateUserBio( uid: string, bio: string ) {
+    const userRef = doc(db, "users", uid);
+
+    await updateDoc(userRef, {
+        bio: bio,
+        updatedAt: serverTimestamp(),
+    });
+}
+
+export async function updatePreferredInstrument( uid: string, preferredInstrument: string ) {
+    const userRef = doc(db, "userSettings", uid);
+
+    await updateDoc(userRef, {
+        preferredInstrument: preferredInstrument,
+        updatedAt: serverTimestamp(),
+    });
+}
+
+export async function updateUsername( uid: string, oldUsername: string, newUsername: string ) {
+    const username = newUsername.trim().toLowerCase();
+
+    if (username == oldUsername){
+        return;
+    }
+
     if ((username.length < 3) || (username.length > 20)) {
         throw new Error(
-        "Valid usernames must be between 3-20 characters."
+            "Valid usernames must be between 3-20 characters."
         );
     }
 
     const usernameRegex = /^[a-zA-Z0-9_]+$/;
     if (!usernameRegex.test(username)) {
         throw new Error(
-        "Valid usernames can only contain letters, numbers, and underscores."
+            "Valid usernames can only contain letters, numbers, and underscores."
         );
     }
 
-    if (!(await isUsernameAvailable(username))) {
-        throw new AuthError('That username is taken.')
-    }
-
-    const usernameLower = username.toLowerCase();
-
     const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, {
-        username: username,
-        usernameLower: usernameLower,
-        updatedAt: serverTimestamp(),
+    const newUsernameRef = doc(db, "usernames", username);
+    const oldUsernameRef = doc(db, "usernames", oldUsername);
+
+    await runTransaction(db, async (transaction) => {
+        const newUsernameSnapshot = await transaction.get(newUsernameRef);
+
+        if (newUsernameSnapshot.exists()) {
+            throw new Error("That username is already taken.");
+        }
+
+        transaction.update(userRef, {
+            displayName: newUsername,
+            username: newUsername,
+            usernameLower: username,
+            updatedAt: serverTimestamp(),
+        });
+
+        transaction.set(newUsernameRef, {uid: uid, createdAt: serverTimestamp(), username: newUsername});
+
+        transaction.delete(oldUsernameRef);
     });
 
     return username;

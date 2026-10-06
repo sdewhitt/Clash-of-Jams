@@ -1,27 +1,28 @@
-type UsernameEditorProps = {
-    username: string;
-    onUsernameDraftChanged: (username: string) => void;
+type BioEditorProps = {
+    bio: string;
+    onBioDraftChanged: (bio: string) => void;
 };
 
-export function UsernameEditor({ username, onUsernameDraftChanged, }: UsernameEditorProps) {
+export function BioEditor({ bio, onBioDraftChanged }: BioEditorProps) {
     return (
         <div className="flex flex-col gap-2">
             <label
-                htmlFor="username"
+                htmlFor="bio"
                 className="text-md font-medium text-accent-start select-none"
             >
-                Username:
+                Bio:
             </label>
 
-            <input
-                id="username"
-                type="text"
-                value={username}
+            <textarea
+                id="bio"
+                value={bio}
                 onChange={(event) =>
-                    onUsernameDraftChanged(event.target.value)
+                    onBioDraftChanged(event.target.value)
                 }
                 className="
                     w-full
+                    min-h-32
+                    resize-y
                     rounded-lg
                     border
                     border-line
@@ -35,7 +36,7 @@ export function UsernameEditor({ username, onUsernameDraftChanged, }: UsernameEd
                     outline-none
                     focus:border-accent-start
                 "
-                placeholder="Enter your username"
+                placeholder="Enter your bio"
             />
         </div>
     );

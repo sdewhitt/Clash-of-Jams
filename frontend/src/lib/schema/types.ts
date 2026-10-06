@@ -105,7 +105,6 @@ export interface UsernameReservation {
 export interface UserSettings {
   uid: string
   theme: string
-  colorblindMode: 'off' | 'protanopia' | 'deuteranopia' | 'tritanopia'
   reduceFlashing: boolean
   preferredInstrument: Instrument
   /** Milliseconds of input latency the gameplay engine compensates for. */

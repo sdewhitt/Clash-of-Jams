@@ -7,10 +7,13 @@ import { BackButton } from "@/components/BackButton"
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { SettingsButton } from "@/components/SettingsButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { updateUserAvatar, updateUserTheme } from "@/lib/profile/UserProfile";
+import { updatePreferredInstrument, updateUserAvatar, updateUserBio, updateUsername, updateUserTheme } from "@/lib/profile/UserProfile";
 import { getAvatars, type Avatar } from "@/lib/profile/Avatar";
-import { getUserSettings, type userSettings } from "@/lib/profile/UserSettings";
+import { getUserSettings } from "@/lib/profile/UserSettings";
+import type { UserSettings } from "@/lib/schema/types";
 import { useTheme, type Theme } from "@/context/ThemeContext";
+import { UsernameEditor } from "@/components/UsernameEditor";
+import { BioEditor } from "@/components/BioEditor";
 
 type ProfileSection =
     | "profile"
@@ -29,12 +32,21 @@ type ProfileEditContentProps = {
 };
 
 function ProfileEditContent({ selectedSetting, user, profile, draftUsername, draftAvatar, setDraftUsername, setDraftAvatar } : ProfileEditContentProps) {
+    const [savedUsername, setSavedUsername] = useState("");
     const [avatars, setAvatars] = useState<Avatar[]>([]);
     const [showAllAvatars, setShowAllAvatars] = useState(false);
     const [, setAvatarsLoading] = useState(true);
-    const [userSettings, setUserSettings] = useState<userSettings>();
-    const [draftTheme, setDraftTheme] = useState<Theme>()
-    const { setTheme } = useTheme()
+    const [userSettings, setUserSettings] = useState<UserSettings>();
+    const [draftTheme, setDraftTheme] = useState<Theme>();
+    const [savedTheme, setSavedTheme] = useState<Theme>();
+    const [draftBio, setDraftBio] = useState("");
+    const [savedBio, setSavedBio] = useState("");
+    const [instrument, setInstrument] = useState("");
+    const [savedInstrument, setSavedInstrument] = useState("");
+    const { setTheme } = useTheme();
+
+    const [error, setError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     async function loadUserSettings() {
         try {
@@ -65,7 +77,14 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     }, []);
 
     useEffect(() => {
+        setSavedUsername(profile?.displayName ?? "")
+        setDraftBio(profile?.bio ?? "")
+        setSavedBio(profile?.bio ?? "")
         setDraftTheme(userSettings?.theme as Theme)
+        setSavedTheme(userSettings?.theme as Theme)
+        setInstrument(userSettings?.preferredInstrument ?? "")
+        setSavedInstrument(userSettings?.preferredInstrument ?? "")
+        setTheme(userSettings?.theme as Theme)
     }, [userSettings]);
 
     const handleThemeChange = async (uid: string, chosenTheme: Theme) => {
@@ -74,32 +93,192 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         loadUserSettings();
     };
 
+    const handleGeneralUpdates = async (uid: string, oldUsername: string, newUsername: string, bio: string, instrument: string) => {
+        setError(null);
+        setIsSaving(true);
+
+        try {
+            await Promise.all([
+                updateUsername(uid, oldUsername, newUsername),
+                updateUserBio(uid, bio),
+                updatePreferredInstrument(uid, instrument),
+            ]);
+
+            setSavedUsername(newUsername)
+            await loadUserSettings();
+        } catch (error) {
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to upload avatar."
+            );
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleGeneralCancel = async () => {
+        setDraftUsername(savedUsername);
+        setDraftBio(savedBio);
+        setDraftTheme(savedTheme);
+        setInstrument(savedInstrument);
+    };
+
     const displayedAvatars = showAllAvatars ? avatars : avatars.slice(0, 4);
     
     switch(selectedSetting) {
         case "profile":
             return (
-                <div>
-                    Hello
+                <div className="flex flex-col overscroll-contain m-4 gap-4">
+                    {error && (
+                        <div
+                            role="alert"
+                            className="
+                                flex
+                                items-center
+                                justify-between
+                                gap-4
+                                rounded-lg
+                                border-2
+                                border-accent-start
+                                bg-linear-to-b
+                                from-accent-start
+                                via-accent-middle
+                                to-accent-end
+                                brightness-85
+                                opacity-80
+                                px-4
+                                py-3
+                                text-inverse-ink
+                            "
+                        >
+                            <div>
+                                <p className="font-semibold">
+                                    Update failed
+                                </p>
+                                <p className="text-sm">
+                                    {error}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setError(null)}
+                                className="
+                                    rounded-md
+                                    px-2
+                                    py-1
+                                    text-lg
+                                    hover:bg-contrast-start
+                                "
+                                aria-label="Dismiss error"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
+                    <UsernameEditor
+                        username={draftUsername}
+                        onUsernameDraftChanged={setDraftUsername}
+                    />
+                    <BioEditor
+                        bio={draftBio}
+                        onBioDraftChanged={setDraftBio}
+                    />
+                    <div className="flex flex-col gap-2">
+                        <label
+                            htmlFor="preferredInstrument"
+                            className="text-md font-medium text-accent-start select-none"
+                        >
+                            Preferred Instrument:
+                        </label>
+                        <select
+                            id="preferredInstrument"
+                            name="instrument"
+                            value={instrument}
+                            onChange={(e) => setInstrument(e.target.value)}
+                            required
+                            className={`
+                                border
+                                bg-linear-to-b
+                                from-accent-start
+                                via-accent-middle
+                                to-accent-end
+                                text-md text-ink
+                                shadow-sm 
+                                focus: border-line
+                                focus:outline-none 
+                                focus:ring-2 
+                                focus:ring-accent-start
+                                rounded-lg 
+                                px-3 py-2 
+                            `}
+                        >
+                            <option value="" disabled>Select an Instrument</option>
+                            <option className="text-md text-inverse-ink" value="piano">Piano</option>
+                            <option className="text-md text-inverse-ink" value="guitar">Guitar</option>
+                            <option className="text-md text-inverse-ink" value="woodwind">Woodwind</option>
+                            <option className="text-md text-inverse-ink" value="vocals">Vocals</option>
+                            <option className="text-md text-inverse-ink" value="midi">Midi</option>
+                        </select>
+                    </div>
+                    {user && (
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                className={`
+                                    w-48
+                                    rounded-lg 
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    hover:scale-105
+                                    active:scale-95
+                                    py-2
+                                    mr-4
+                                `}
+                                onClick={() => handleGeneralCancel()}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className={`
+                                    w-48
+                                    rounded-lg 
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    hover:scale-105
+                                    active:scale-95
+                                    py-2
+                                `}
+                                onClick={() => handleGeneralUpdates(user.uid, profile?.usernameLower ?? "", draftUsername, draftBio, instrument)}
+                            >
+                                Save
+                            </button>
+                        </div>
+                    )}
                 </div>
             );
         case "avatar":
             return (
-                <div className="flex w-full flex-col gap-4 p-6">
-                    <div className="relative flex items-center">
-                        <h1 className="text-3xl text-ink">
-                            Your Avatar
-                        </h1>
-
-                        <div className="absolute left-1/2 -translate-x-1/2">
-                            <img
-                                src={draftAvatar}
-                                alt={`${profile?.displayName ?? user?.email ?? "User"}'s Avatar`}
-                                className="h-48 w-48 rounded-full object-cover outline-3 outline-contrast-start"
+                <div className="flex w-full flex-col p-6">
+                    <h1 className="text-3xl text-black">
+                        Your Avatar
+                    </h1>
+                    <div className="flex w-full flex-col items-center mb-2">
+                        <div className="flex items-center justify-center"> 
+                            <img 
+                                src={draftAvatar} 
+                                alt={`${profile?.displayName ?? user?.email ?? "User"}'s Avatar`} 
+                                className=" h-48 w-48 rounded-full object-cover outline-3 outline-contrast-start " 
                             />
                         </div>
                     </div>
-                    <hr className="w-full border-4 border-t border-accent-start" />
+                    <hr className="w-full border-4 border-t border-accent-start mb-2"/>
                     <div className={`
                         flex flex-col
                         bg-linear-to-b
@@ -108,6 +287,7 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                         to-accent-end
                         rounded-md
                         p-4
+                        mb-2
                         gap-4
                     `}>
                         <div className="flex justify-between">
@@ -189,12 +369,13 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                                     py-2
                                     mr-4
                                 `}
-                                onClick={() => setDraftAvatar( profile?.avatarUrl ?? "../../favicon.svg" )}
+                                onClick={() => window.location.reload()}
                             >
                                 Cancel
                             </button>
                             <button
                                 type="button"
+                                disabled={isSaving}
                                 className={`
                                     w-48
                                     rounded-lg 
@@ -205,10 +386,15 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                                     hover:scale-105
                                     active:scale-95
                                     py-2
+                                    transition
+                                    ${isSaving
+                                        ? "cursor-not-allowed opacity-50"
+                                        : "hover:scale-105 active:scale-95"
+                                    }
                                 `}
                                 onClick={() => updateUserAvatar(user.uid, draftAvatar)}
                             >
-                                Save
+                                {isSaving ? "Saving..." : "Save"}
                             </button>
                         </div>
                     )}
@@ -279,7 +465,6 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                             </button>
                         </div>
                     </div>
-
                     {user && (
                         <div className="flex justify-end gap-4 mt-6">
                             <button
@@ -421,7 +606,7 @@ export function EditProfile() {
                     <ProfileEditContent 
                         selectedSetting={selectedSetting} 
                         user={user} 
-                        profile={profile} 
+                        profile={profile}
                         draftUsername={draftUsername} 
                         draftAvatar={draftAvatar} 
                         setDraftUsername={setDraftUsername} 

@@ -1,12 +1,31 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
+import { getUserSettings } from "@/lib/profile/UserSettings";
+import type { UserSettings } from '@/lib/schema/types';
 
 export function UserProfile() {
-    const { user, profile, loading } = useAuth()
-    const navigate = useNavigate()
+    const { user, profile, loading } = useAuth();
+    const [userSettings, setUserSettings] = useState<UserSettings>();
+    const [ elo, setElo ] = useState("");
+    const [ bio, setBio ] = useState("");
+    const [ preferredInstrument, setPreferredInstrument ] = useState("");
+    const navigate = useNavigate();
     
+    async function loadUserSettings() {
+        try {
+            if (!user) {
+                return;
+            }
+            const settings = await getUserSettings(user.uid);
+            setUserSettings(settings)
+        } catch (error) {
+            console.error("Failed to load user settings:", error);
+        }
+    }
+
     if (loading) { 
         return ( 
             <main className="h-screen flex items-center justify-center"> 
@@ -17,6 +36,22 @@ export function UserProfile() {
             </main> 
         ); 
     }
+
+    useEffect(
+        () => { 
+            if (loading) return; 
+            loadUserSettings();
+            }, [loading, profile, user]
+    );
+
+    useEffect(
+        () => { 
+            if (!userSettings) return; 
+            setBio( profile?.bio ?? "" );
+            setPreferredInstrument( userSettings?.preferredInstrument ?? "" );
+            }, [userSettings]
+    );
+
 
     function navPortal(location: string) {
         navigate(location)
@@ -71,10 +106,13 @@ export function UserProfile() {
                             alt={`${profile?.displayName ?? user?.email ?? "…"}'s Avatar`}
                             className="w-3/4 aspect-square justify-center object-cover rounded-full outline-3 outline-contrast-middle"
                         />
-                        <div className="h-full w-full flex flex-col justify-center">
-                            <h2 className="text-ink text-6xl mx-4">{profile?.displayName ?? user?.email ?? "…"}</h2>
+                        <div className="h-full w-full flex flex-col justify-center gap-2">
+                            <div className="flex justify-between">
+                                <h2 className="text-ink text-6xl mx-4">{profile?.displayName ?? user?.email ?? "…"}</h2>
+                                <h3 className="content-end text-ink text-4xl mx-4">{profile?.displayName ?? user?.email ?? "…"}</h3>
+                            </div>
                             <div className="border-t-4 border-contrast-start" />
-                            <h3 className="text-ink text-2xl mx-8">{profile?.displayName ?? user?.email ?? "…"}</h3>
+                            <h3 className="text-ink text-2xl mx-8">{bio ?? "…"}</h3>
                         </div>
                     </div>
                 </div>
