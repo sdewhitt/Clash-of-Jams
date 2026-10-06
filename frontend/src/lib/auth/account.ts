@@ -82,7 +82,7 @@ export async function signUp(args: {
     batch.set(doc(db, skillRatingsPath(user.uid), "woodwind"), newSkillRating({ uid:user.uid, instrument:"woodwind" }))
     batch.set(doc(db, skillRatingsPath(user.uid), "vocals"), newSkillRating({ uid:user.uid, instrument:"vocals" }))
     batch.set(doc(db, skillRatingsPath(user.uid), "midi"), newSkillRating({ uid:user.uid, instrument:"midi" }))
-    
+
     await batch.commit()
   } catch (error) {
     // Roll the auth account back, otherwise the email is locked to a user with
