@@ -168,7 +168,6 @@ export function newUserSettings(args: {
   return {
     uid: args.uid,
     theme: 'system',
-    colorblindMode: 'off',
     reduceFlashing: false,
     preferredInstrument: args.preferredInstrument ?? 'piano',
     inputLatencyOffsetMs: 0,
