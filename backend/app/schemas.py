@@ -46,6 +46,15 @@ class Instrument(StrEnum):
     VOCALS = "vocals"
     MIDI = "midi"
 
+class Genre(StrEnum):
+    BLUES = 'blues'
+    JAZZ = 'jazz'
+    ELECTRONIC = 'electronic'
+    HIPHOP = 'hip-hop'
+    POP = 'pop'
+    RANDB = 'r&b'
+    ROCK = 'rock'
+
 
 class Visibility(StrEnum):
     PRIVATE = "private"
@@ -67,6 +76,7 @@ class ScenarioCreate(ApiModel):
     title: str = Field(min_length=1, max_length=120)
     description: str = ""
     instrument: Instrument
+    genre: list[Genre]
     visibility: Visibility = Visibility.PRIVATE
     tags: list[str] = []
     author_difficulty: int = Field(default=1, ge=1, le=10)
@@ -81,6 +91,7 @@ class Scenario(ApiModel):
     title: str
     description: str
     instrument: Instrument
+    genres: list[Genre]
     visibility: Visibility
     tags: list[str]
     author_difficulty: int

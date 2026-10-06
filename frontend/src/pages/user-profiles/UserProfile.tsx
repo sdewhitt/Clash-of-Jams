@@ -3,16 +3,22 @@ import { useNavigate } from "react-router"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { getUserSettings } from "@/lib/profile/UserSettings";
-import type { UserSettings } from '@/lib/schema/types';
+import { getUserElos, getUserSettings } from "@/lib/profile/UserSettings";
+import type { SkillRating, UserSettings } from '@/lib/schema/types';
+import { EloDisplay } from "@/components/EloDisplay";
 
 export function UserProfile() {
     const { user, profile, loading } = useAuth();
     const [userSettings, setUserSettings] = useState<UserSettings>();
-    const [ elo, setElo ] = useState("");
-    const [ bio, setBio ] = useState("");
     const [ preferredInstrument, setPreferredInstrument ] = useState("");
+    const [ eloRatings, setEloRatings] = useState<SkillRating[]>([]);
     const navigate = useNavigate();
+
+    function formatLabel(value: string) {
+        return value
+            .replace(/[-_]/g, " ")
+            .replace(/\b\w/g, (char) => char.toUpperCase());
+    }
     
     async function loadUserSettings() {
         try {
@@ -21,6 +27,9 @@ export function UserProfile() {
             }
             const settings = await getUserSettings(user.uid);
             setUserSettings(settings)
+
+            const elos = await getUserElos(user.uid);
+            setEloRatings(elos);
         } catch (error) {
             console.error("Failed to load user settings:", error);
         }
@@ -46,8 +55,7 @@ export function UserProfile() {
 
     useEffect(
         () => { 
-            if (!userSettings) return; 
-            setBio( profile?.bio ?? "" );
+            if (!userSettings) return;
             setPreferredInstrument( userSettings?.preferredInstrument ?? "" );
             }, [userSettings]
     );
@@ -58,8 +66,11 @@ export function UserProfile() {
     }
     
     return (
-        <main className="h-screen flex flex-col">
+        <main className="flex flex-col">
             <header className={`
+                sticky
+                top-0
+                z-50
                 flex
                 items-center
                 justify-between
@@ -100,19 +111,88 @@ export function UserProfile() {
                     <button className="absolute top-8 right-8 text-5xl hover:opacity-70 hover:scale-105 active:scale-95" onClick={() => navPortal('/profile/edit_profile')}>
                         ✎
                     </button>
-                    <div className="grid grid-cols-[1.5fr_3fr] gap-8 m-8">
+                    <div className="grid grid-cols-[1.5fr_3fr] gap-2 m-8">
                         <img 
                             src={profile?.avatarUrl ?? "../../favicon.svg"}
                             alt={`${profile?.displayName ?? user?.email ?? "…"}'s Avatar`}
                             className="w-3/4 aspect-square justify-center object-cover rounded-full outline-3 outline-contrast-middle"
                         />
                         <div className="h-full w-full flex flex-col justify-center gap-2">
-                            <div className="flex justify-between">
-                                <h2 className="text-ink text-6xl mx-4">{profile?.displayName ?? user?.email ?? "…"}</h2>
-                                <h3 className="content-end text-ink text-4xl mx-4">{profile?.displayName ?? user?.email ?? "…"}</h3>
-                            </div>
+                            <h2 className="select-none text-ink text-6xl mx-4">{profile?.displayName ?? user?.email ?? "…"}</h2>
                             <div className="border-t-4 border-contrast-start" />
-                            <h3 className="text-ink text-2xl mx-8">{bio ?? "…"}</h3>
+                            <div className="flex flex-col gap-2">
+                                {profile && profile.bio.trim() !== "" && (
+                                    <h3 className="select-none text-ink text-xl mx-8">
+                                        {profile.bio}
+                                    </h3>
+                                )}
+                                <div className="mx-8">
+                                    <label
+                                        htmlFor="preferredInstrument"
+                                        className="text-md font-medium text-contrast-start select-none"
+                                    >
+                                        Preferred Instrument:
+                                    </label>
+                                    <div 
+                                        id="preferredInstrument" 
+                                        className={`
+                                            w-fit
+                                            select-none
+                                            bg-linear-to-b
+                                            from-contrast-start
+                                            via-contrast-middle
+                                            to-contrast-end
+                                            rounded-full
+                                            mx-2
+                                            px-4 py-2
+                                        `}
+                                    >
+                                        {formatLabel(preferredInstrument)}
+                                    </div>
+                                </div>
+                                <div className="mx-8">
+                                    <label
+                                        htmlFor="preferredGenres"
+                                        className="text-md font-medium text-contrast-start select-none"
+                                    >
+                                        Preferred Genres:
+                                    </label>
+                                    <div id="preferredGenres" className="flex flex-row overscroll-x-contain gap-4 mx-2">
+                                        {userSettings?.preferredGenres.map((genre) => (
+                                            <div 
+                                                key={genre}
+                                                className={`
+                                                    w-fit
+                                                    select-none 
+                                                    bg-linear-to-b
+                                                    from-contrast-start
+                                                    via-contrast-middle
+                                                    to-contrast-end
+                                                    rounded-full
+                                                    px-4 py-2
+                                                `}
+                                            >
+                                                {formatLabel(genre)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="mx-8">
+                                    <label
+                                        htmlFor="elos"
+                                        className="text-md font-medium text-contrast-start select-none"
+                                    >
+                                        Elos:
+                                    </label>
+                                    <div id="elos" className="flex flex-row overscroll-x-contain gap-4 mx-2">                           
+                                        {eloRatings.map((rating) => (
+                                            <div key={rating.instrument}>
+                                                <EloDisplay instrument={rating.instrument} tier={rating.tier} elo={rating.elo}/>
+                                            </div>
+                                        ))}
+                                    </div> 
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
