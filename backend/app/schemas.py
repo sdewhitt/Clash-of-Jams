@@ -123,13 +123,6 @@ class ScenarioReview(ApiModel):
     updated_at: datetime
 
 
-class LeaderboardReponse(ApiModel):
-    uid: str
-    username: str # TODO: will also want to bring in pfp at some point
-    ranking: int
-    key: float # this will be ELO or score so we can use this for both
-
-
 class SkillRating(ApiModel):
     """users/{uid}/skillRatings/{instrument}: one rating per user per instrument."""
 
@@ -140,6 +133,23 @@ class SkillRating(ApiModel):
     games_played: int = 0
     is_provisional: bool = True  # until PROVISIONAL_MATCHES (10) games are played
     updated_at: datetime
+
+
+class LeaderboardEntry(ApiModel):
+    uid: str
+    display_name: str # TODO: will also want to bring in pfp at some point
+    ranking: int
+    key: float # this will be ELO or score so we can use this for both
+    skill_rating: SkillRating | None = None # will be used only in ELO leaderboard
+
+class LeaderboardResponse(ApiModel):
+    entries: list[LeaderboardEntry]
+    my_entry: LeaderboardEntry | None = None
+    total_players: int
+    percentile: float | None
+
+
+
 
 
 class CurrentUser(BaseModel):

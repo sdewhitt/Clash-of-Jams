@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter
 
 from app.dependencies import CurrentUserDep
-from app.schemas import Scenario, ScenarioReview, ReviewUpsert, Visibility
+from app.schemas import LeaderboardEntry, LeaderboardResponse, SkillRating, Instrument
 from app.firebase import get_firestore_client, firestore
-from google.cloud.firestore_v1.base_query import FieldFilter
+from google.cloud.firestore_v1.base_query import FieldFilter, Or
 
 router = APIRouter(prefix="/leaderboards", tags=["leaderboards"])
 db = get_firestore_client()
@@ -20,19 +20,78 @@ db = get_firestore_client()
 # 1st route:
 
 
-@router.get("/elo", response_model = )
-def get_elo_leaderboard(user: CurrentUserDep) -> # I would like to return a list of leaderboardResponse, the users skill rating, and either their rank or percentile tbd
-# get all skill rating items and sort descending
-# for skillRating in that list, get the user doc for that uid:
-#   if uid == user.uid:
-#       save the users info (ranking and what not)
-#    elif account is public:
-#       we can add them to the list
-#  
-# question: should we compute the percentile and rank here or on the frontend? I think here it will be easier to account for ties, will handle that in implmentation
-#
-# TODO: handle if the user is not in the leaderboard (they should be with elo, but they won't be with the other one)
-#
+@router.get("/elo", response_model = LeaderboardResponse)
+def get_elo_leaderboard(user: CurrentUserDep, instrument: Instrument) -> LeaderboardResponse:
+    docs = (
+        db.collection("users")
+        .where(filter=Or(
+            [
+                FieldFilter("isProfilePublic", "==", True),
+                FieldFilter("uid", "==", user.uid)
+            ]
+        ))
+        .where(filter=FieldFilter("isBanned", "==", False)) #users who are banned or social restricted cannot see themselves on leaderboards
+        .where(filter=FieldFilter("isSocialRestricted", "==", False))
+        .stream()
+    )
+
+    users = {doc.id: doc.to_dict() for doc in docs} #this gives us a bunch of users
+    refs = [
+        db.collection("users").document(uid).collection("skillRatings").document(instrument)
+        for uid in users
+    ]
+
+    ratings: list[SkillRating] = []
+
+    for snap in db.get_all(refs):
+        if not snap.exists:
+            continue
+        ratings.append(SkillRating(**snap.to_dict()))
+
+    ratings.sort(key=lambda rating: rating.elo, reverse=True)
+
+    leaderboard_entries: list[LeaderboardEntry] = []
+    my_entry = None
+    position = 0 # index in the list
+    rank = 1     # rank displayed on leaderboard (elo ties will have same rank)
+    prev_elo = None
+
+    for rating in ratings: # build Leaderboard entries and populate leaderboard response
+        profile = users[rating.uid]
+
+        #position is always position
+        if (prev_elo is not None) and (rating.elo != prev_elo): # if no tie, we use their real position
+            rank = position + 1
+
+
+        entry = LeaderboardEntry(
+            uid=profile["uid"],
+            display_name=profile["displayName"],
+            ranking=rank,
+            key=rating.elo,
+            skill_rating=rating
+        )
+
+        if profile["uid"] == user.uid:
+            my_entry = entry
+        leaderboard_entries.append(entry)
+
+        position+=1
+        prev_elo = rating.elo
+
+
+    percentile = None
+    if my_entry is not None:
+        percentile = (my_entry.ranking / position) # position can't be zero if we have a user
+
+    leaderboard_entries = leaderboard_entries[:25] # get the top 25 positions
+
+    return LeaderboardResponse(
+        entries=leaderboard_entries,
+        my_entry=my_entry,
+        total_players=len(ratings),
+        percentile=percentile
+    )
 
 # also want to do a score leaderboard for each scenario so will handle that later
 
