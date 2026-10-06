@@ -53,6 +53,14 @@ class Visibility(StrEnum):
     PUBLIC = "public"
 
 
+class RankTier(StrEnum):
+    BRONZE = "bronze"
+    SILVER = "silver"
+    GOLD = "gold"
+    PLATINUM = "platinum"
+    DIAMOND = "diamond"
+
+
 class ScenarioCreate(ApiModel):
     """What a client sends to create a scenario. Server fills in the rest."""
 
@@ -120,6 +128,18 @@ class LeaderboardReponse(ApiModel):
     username: str # TODO: will also want to bring in pfp at some point
     ranking: int
     key: float # this will be ELO or score so we can use this for both
+
+
+class SkillRating(ApiModel):
+    """users/{uid}/skillRatings/{instrument}: one rating per user per instrument."""
+
+    uid: str
+    instrument: Instrument
+    elo: float = 400  # matches STARTING_ELO in collections.ts and initial_elo in algs/elo.py
+    tier: RankTier = RankTier.BRONZE
+    games_played: int = 0
+    is_provisional: bool = True  # until PROVISIONAL_MATCHES (10) games are played
+    updated_at: datetime
 
 
 class CurrentUser(BaseModel):
