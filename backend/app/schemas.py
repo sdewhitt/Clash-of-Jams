@@ -115,6 +115,12 @@ class ScenarioReview(ApiModel):
     updated_at: datetime
 
 
+class LeaderboardReponse(ApiModel):
+    uid: str
+    username: str # TODO: will also want to bring in pfp at some point
+    ranking: int
+    key: float # this will be ELO or score so we can use this for both
+
 
 class CurrentUser(BaseModel):
     """The caller, as resolved from their Firebase ID token.

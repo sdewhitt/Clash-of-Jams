@@ -11,6 +11,8 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 router = APIRouter(prefix="/ratings", tags=["ratings"])
 db = get_firestore_client()
 
+#TODO: fetch pfps and show them on each review and username ...
+
 @firestore.transactional
 def upsert_review_transaction(transaction, scenario_ref, review_ref, user_uid, payload: ReviewUpsert):
     scenario_doc = scenario_ref.get(transaction=transaction)
