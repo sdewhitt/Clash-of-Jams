@@ -94,8 +94,8 @@ class ScenarioWithAuthor(ApiModel):
 class FilterResponse(ApiModel):
     max_plays: int | None = None
     min_plays: int | None = None
-    max_rating: float | None = None # TODO: once ratings are implemented we need to fill this in dynamically
-    min_rating: float | None = None
+    max_rating: float = 5.0
+    min_rating: float = 0.0
     max_difficulty: float | None = None # TODO: for now this is the difficulty set by the author.  I would like to make this the avg_rating eventually
     min_difficulty: float | None = None
 

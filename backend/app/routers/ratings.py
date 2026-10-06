@@ -74,7 +74,7 @@ def upsert_review(scenario_id: str, user: CurrentUserDep, payload: ReviewUpsert)
 @router.get("/{scenario_id}/my-rating", response_model=ScenarioReview | None)
 def get_user_scenario_review(scenario_id: str, user: CurrentUserDep) -> ScenarioReview | None:
     # I am only going to allow users to view their own ratings with this endpoint
-    # I will use this to pre-populate fields when re-rating
+    # I will use this to pre-populate fields when re-rating 
 
     #TODO: how do we handle private scenarios?  Ans: we don't allow them to write a review unless they have access so it will just return None
 

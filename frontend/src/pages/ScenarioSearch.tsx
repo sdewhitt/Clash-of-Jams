@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router"
 
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { RangeSlider } from "@/components/RangeSlider"
+import { StarDisplay } from "@/components/StarRating"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
-import { INSTRUMENTS, type Scenario } from "@/lib/schema/types"
+import { INSTRUMENTS, type Scenario, type ScenarioReview } from "@/lib/schema/types"
 
 type ScenarioWithAuthor = {
     scenario: Scenario
     authorName: string
+}
+
+// Mirrors backend/app/schemas.py's ScenarioReview; timestamps arrive as ISO strings.
+type ApiReview = Omit<ScenarioReview, "createdAt" | "updatedAt"> & {
+    createdAt: string
+    updatedAt: string
 }
 
 // Mirrors backend/app/schemas.py's FilterResponse (camelCase on the wire).
@@ -47,6 +55,7 @@ const controlClass =
 
 export function ScenarioSearch() {
     const { user, profile } = useAuth()
+    const navigate = useNavigate()
 
     // Filter and sort state is wired to the controls but not applied to the list yet.
     const [search, setSearch] = useState("")
@@ -57,6 +66,14 @@ export function ScenarioSearch() {
     const [scenarios, setScenarios] = useState<ScenarioWithAuthor[]>([])
     const [selectedId, setSelectedId] = useState<string | null>(null)
     const selected = scenarios.find(({ scenario }) => scenario.id === selectedId) ?? null
+
+    // Tagged with the scenario they belong to, so switching selection never shows
+    // the previous scenario's reviews. reviews is null if the fetch failed.
+    const [loadedReviews, setLoadedReviews] = useState<{
+        scenarioId: string
+        reviews: ApiReview[] | null
+    } | null>(null)
+    const selectedReviews = loadedReviews?.scenarioId === selectedId ? loadedReviews : null
 
     // Each range is null until we know the real bounds from the API — a
     // slider with a null range renders disabled instead of guessing 0-0.
@@ -76,6 +93,22 @@ export function ScenarioSearch() {
             .then(setFilterBounds)
             .catch(console.error)
     }, [])
+
+    useEffect(() => {
+        if (!selectedId) return
+        let cancelled = false
+        apiFetch<ApiReview[]>(`/ratings/${selectedId}`)
+            .then((reviews) => {
+                if (!cancelled) setLoadedReviews({ scenarioId: selectedId, reviews })
+            })
+            .catch((err) => {
+                console.error(err)
+                if (!cancelled) setLoadedReviews({ scenarioId: selectedId, reviews: null })
+            })
+        return () => {
+            cancelled = true
+        }
+    }, [selectedId])
 
     // Seed each slider's range from the fetched bounds, once they arrive.
     // Left null (and the slider left disabled) if a bound isn't available yet,
@@ -319,7 +352,7 @@ export function ScenarioSearch() {
                                                     {scenario.authorDifficulty}
                                                 </ScenarioStat>
                                                 <ScenarioStat label="Rating">
-                                                    {scenario.avgRating ?? "—"}
+                                                    <StarDisplay value={scenario.avgRating} />
                                                 </ScenarioStat>
                                             </dl>
 
@@ -406,7 +439,7 @@ export function ScenarioSearch() {
                                             {selected.scenario.authorDifficulty}
                                         </ScenarioStat>
                                         <ScenarioStat label="Rating">
-                                            {selected.scenario.avgRating ?? "—"}
+                                            <StarDisplay value={selected.scenario.avgRating} />
                                         </ScenarioStat>
                                     </dl>
 
@@ -422,6 +455,36 @@ export function ScenarioSearch() {
                                             ))}
                                         </ul>
                                     )}
+
+                                    <h3 className="mt-6 text-lg font-bold text-ink">Reviews</h3>
+                                    {selectedReviews === null ? (
+                                        <p className="text-sm text-muted">Loading reviews…</p>
+                                    ) : selectedReviews.reviews === null ? (
+                                        <p className="text-sm text-muted">Couldn't load reviews.</p>
+                                    ) : selectedReviews.reviews.length === 0 ? (
+                                        <p className="text-sm italic text-muted">No reviews yet.</p>
+                                    ) : (
+                                        <ul className="mt-2 flex flex-col gap-3">
+                                            {selectedReviews.reviews.map((review) => (
+                                                <li
+                                                    key={review.id}
+                                                    className="rounded-lg border-2 border-accent-start px-3 py-2"
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <StarDisplay value={review.rating} />
+                                                        <span className="text-xs text-muted">
+                                                            {new Date(review.createdAt).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    {review.comment && (
+                                                        <p className="mt-1 wrap-break-word text-sm text-ink">
+                                                            {review.comment}
+                                                        </p>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </>
                             ) : (
                                 <p className="flex h-full items-center justify-center text-center text-muted">
@@ -430,10 +493,11 @@ export function ScenarioSearch() {
                             )}
                         </section>
 
-                        {/* No play route exists yet, so this only enables once something is selected. */}
+                        {/* Goes to a placeholder page until gameplay exists; it only offers rating. */}
                         <button
                             type="button"
                             disabled={!selected}
+                            onClick={() => selected && navigate(`/play/${selected.scenario.id}`)}
                             className={`
                                 shrink-0
                                 rounded-xl
