@@ -107,7 +107,7 @@ export const DEFAULT_SCORING_RULES: ScoringRules = {
 }
 
 /** Starting elo for a player who has never been rated on an instrument. */
-export const STARTING_ELO = 1000
+export const STARTING_ELO = 400
 
 /** Matches played before a rating stops being provisional. */
 export const PROVISIONAL_MATCHES = 10
@@ -167,10 +167,14 @@ export function newUserSettings(args: {
 }): WithFieldValue<UserSettings> {
   return {
     uid: args.uid,
-    theme: 'system',
-    colorblindMode: 'off',
+    theme: 'default',
     reduceFlashing: false,
+    publicBio: true,
     preferredInstrument: args.preferredInstrument ?? 'piano',
+    publicInstrument: true,
+    preferredGenres: [],
+    publicGenres: [],
+    publicElos: [],
     inputLatencyOffsetMs: 0,
     masterVolume: 0.8,
     metronomeEnabled: true,
@@ -194,6 +198,7 @@ export function newScenario(args: {
     title: args.title,
     description: args.description ?? '',
     instrument: args.instrument,
+    genres: [],
     visibility: args.visibility ?? 'private',
     tags: args.tags ?? [],
     authorDifficulty: args.authorDifficulty ?? 1,

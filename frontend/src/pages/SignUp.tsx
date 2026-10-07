@@ -6,7 +6,7 @@ import { USERNAME_PATTERN, authErrorMessage, signUp } from '@/lib/auth/account'
 import { useAuth } from '@/lib/auth/useAuth'
 
 const FIELD_CLASS =
-  'rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint'
+  'rounded-lg border border-base-middle bg-base-middle px-3 py-2 text-ink placeholder:text-faint'
 
 export function SignUp() {
   const navigate = useNavigate()
@@ -92,18 +92,52 @@ export function SignUp() {
           <button
             type="submit"
             disabled={busy}
-            className="mt-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition-colors hover:bg-accent-middle disabled:opacity-60"
+            className={`
+              mt-2
+              mx-2
+              rounded-lg 
+              rounded-lg 
+              bg-linear-to-b
+              from-accent-start
+              via-accent-middle
+              to-accent-end
+              font-medium
+              text-ink
+              hover:brightness-125
+              hover:scale-105
+              active:scale-95
+              disabled:opacity-60
+              transition-colors 
+              px-4 
+              py-2.5
+            `}
           >
             {busy ? 'Creating account…' : 'Create account'}
           </button>
         </form>
 
-        <p className="mt-6 text-sm text-muted">
-          Already have an account?{' '}
-          <Link to="/login" className="underline-offset-4 hover:text-ink hover:underline">
-            Sign in
-          </Link>
-        </p>
+        <div className={`
+          bg-linear-to-b
+          from-accent-start
+          via-accent-middle
+          to-accent-end
+          text-ink
+          rounded-lg
+          my-4
+          mx-2
+          px-4
+          py-2
+        `}>
+          <p className=" text-sm">
+            Already have an account?{' '}
+            <Link 
+              to="/login" 
+              className="underline-offset-4 hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

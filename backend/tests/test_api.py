@@ -10,7 +10,7 @@ def test_health(client: TestClient) -> None:
 def test_create_then_read_scenario(client: TestClient) -> None:
     created = client.post(
         "/api/v1/scenarios",
-        json={"title": "Chromatic warmup", "instrument": "guitar"},
+        json={"title": "Chromatic warmup", "instrument": "guitar", "genres": ["rock"]},
     )
     assert created.status_code == 201
     scenario_id = created.json()["id"]
@@ -44,11 +44,18 @@ def test_payloads_use_the_typescript_field_names(client: TestClient) -> None:
         "title",
         "description",
         "instrument",
+        "genres",
         "visibility",
         "tags",
         "authorDifficulty",
         "playCount",
         "createdAt",
+        "avgRating",
+        "crowdDifficulty",
+        "ratingCount",
+        "currentVersionId",
+        "currentVersionNumber",
+        "updatedAt",
     }
 
     listed = client.get("/api/v1/scenarios")

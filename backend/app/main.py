@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.config import get_settings
-from app.routers import health, scenarios
+from app.routers import health, ratings, scenarios, leaderboards
 
 
 def create_app() -> FastAPI:
@@ -36,6 +36,8 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(scenarios.router, prefix=settings.api_prefix)
+    app.include_router(ratings.router, prefix=settings.api_prefix)
+    app.include_router(leaderboards.router, prefix=settings.api_prefix)
 
     return app
 

@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router'
-import { authErrorMessage, sendResetEmail, signIn } from '@/lib/auth/account'
+import { Link, useLocation, useNavigate } from 'react-router'
+
+import { authErrorMessage, sendResetEmail, signIn, signInWithGoogle } from '@/lib/auth/account'
+import { useTheme, type Theme } from '@/context/ThemeContext'
 import { useAuth } from '@/lib/auth/useAuth'
+import { getUserSettings, } from "@/lib/profile/UserSettings";
 
 export function Login() {
   const navigate = useNavigate()
@@ -15,11 +18,59 @@ export function Login() {
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // Where RequireAuth bounced the user from, if anywhere.
-  const from = (location.state as { from?: string } | null)?.from ?? '/home'
+  const {setTheme} = useTheme()
 
-  if (loading) return null
-  if (user) return <Navigate to={from} replace />
+  // Where RequireAuth bounced the user from, if anywhere.
+  const from = (location.state as { from?: string } | null)?.from ?? '/home';
+
+  useEffect(() => {
+    if (loading || !user) { 
+      return 
+    } 
+    
+    let cancelled = false 
+    
+    async function initializeUser() {
+      try {
+        if (!user) {
+            return;
+        }
+        const settings = await getUserSettings(user.uid);
+        if (cancelled) { 
+          return;
+        }
+        
+        const theme: Theme = settings?.theme as Theme ?? "default";
+        setTheme(theme);
+
+        navigate(from, { replace: true });
+      } catch (error) { 
+        console.error('Failed to load user settings:', error);
+        
+        if (!cancelled) {
+          setTheme('default');
+          navigate(from, { replace: true }); 
+        } 
+      } 
+    } 
+    
+    initializeUser();
+    
+    return () => { 
+      cancelled = true 
+    } 
+  }, [user, loading, from, navigate, setTheme])
+
+  if (loading) { 
+    return ( 
+        <main className="h-screen flex items-center justify-center"> 
+            <div className="flex flex-col items-center gap-4"> 
+            <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin" /> 
+                <p className="text-xl font-semibold text-ink"> Loading profile... </p> 
+            </div> 
+        </main> 
+    ); 
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -28,6 +79,19 @@ export function Login() {
     setBusy(true)
     try {
       await signIn(email, password)
+    } catch (caught) {
+      setError(authErrorMessage(caught))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleGoogle() {
+    setError(null)
+    setNotice(null)
+    setBusy(true)
+    try {
+      await signInWithGoogle()
       navigate(from, { replace: true })
     } catch (caught) {
       setError(authErrorMessage(caught))
@@ -51,6 +115,18 @@ export function Login() {
     }
   }
 
+  if (user) { 
+    return ( 
+      <main className="h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4"> 
+          <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin" /> 
+          <p className="text-xl font-semibold text-ink"> Loading profile... </p> 
+        </div>
+      </main> 
+    ) 
+
+  }
+
   return (
     <div className="flex min-h-dvh items-center justify-center px-6">
       <div className="w-full max-w-sm">
@@ -66,7 +142,7 @@ export function Login() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint"
+              className="rounded-lg border border-base-middle bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
             />
           </label>
 
@@ -79,7 +155,7 @@ export function Login() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint"
+              className="rounded-lg border border-base-middle bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
             />
           </label>
 
@@ -89,23 +165,74 @@ export function Login() {
           <button
             type="submit"
             disabled={busy}
-            className="mt-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition-colors hover:bg-accent-middle disabled:opacity-60"
+            className={`
+              mt-2
+              mx-2
+              rounded-lg 
+              bg-linear-to-b
+              from-accent-start
+              via-accent-middle
+              to-accent-end
+              font-medium
+              text-ink
+              hover:brightness-125
+              hover:scale-105
+              active:scale-95
+              disabled:opacity-60
+              transition-colors 
+              px-4 
+              py-2.5
+            `}
           >
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
-        <div className="mt-6 flex items-center justify-between text-sm">
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={busy}
+          className="mt-3 w-full rounded-lg border border-base-middle bg-base-end px-4 py-2.5 font-medium text-ink transition-colors hover:bg-accent-base-middle disabled:opacity-60"
+        >
+          Continue with Google
+        </button>
+
+        <div className="mt-6 mx-2 flex items-center justify-between text-sm">
           <Link
             to="/signup"
-            className="text-muted underline-offset-4 hover:text-ink hover:underline"
+            className={`
+              text-ink 
+              bg-linear-to-b
+              from-accent-start
+              via-accent-middle
+              to-accent-end
+              hover:brightness-125
+              hover:scale-105
+              hover:underline
+              active:scale-95
+              rounded-lg
+              px-4
+              py-4
+            `}
           >
             Create an account
           </Link>
           <button
-            type="button"
             onClick={handleReset}
-            className="text-muted underline-offset-4 hover:text-ink hover:underline"
+            className={`
+              text-ink 
+              bg-linear-to-b
+              from-accent-start
+              via-accent-middle
+              to-accent-end
+              hover:brightness-125
+              hover:scale-105
+              hover:underline
+              active:scale-95
+              rounded-lg
+              px-4
+              py-4
+            `}
           >
             Forgot password?
           </button>

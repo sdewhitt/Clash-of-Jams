@@ -4,71 +4,174 @@
   'Light Mode' associated with the Clash of Jams application
 */
 :root {
-  --color-base-start: #0b0a12;
-  --color-base-middle: #2c2840;
-  --color-base-end: #14121f;
-
-  --color-ink: #f2f0f7;
-  --color-inverse-ink:#07060b;
-  --color-muted: #a09cb5;
-  --color-faint: #6e6987;
-
-  --color-accent-base-start: #321251;
-  --color-accent-base-middle: #7b2fc7;
-  --color-accent-base-end: #461873;
+  --color-base-start: #fffdf7;
+  --color-base-middle: #fff8e8; 
+  --color-base-end: #fdf4dc;
   
-  --color-accent-start: #9c32ff;
-  --color-accent-middle: #5a3e76;
-  --color-accent-end: #a650fc;
-
-  --color-contrast-start: #5755f7;
-  --color-contrast-middle: #45446c;
-  --color-contrast-end: #7774fb;
+  --color-ink: #100b18;
+  --color-inverse-ink: #fffaff;
+  --color-muted: #716a7e;
+  --color-faint: #91889f;
   
+  --color-accent-base-start: #eadcff;
+  --color-accent-base-middle: #a96be5; 
+  --color-accent-base-end: #e8d7ff;
+  
+  --color-accent-start: #b86cff;
+  --color-accent-middle: #8b35d9;
+  --color-accent-end: #a855f7;
+  
+  --color-contrast-start: #b9d7ff;
+  --color-contrast-middle: #527fc4;
+  --color-contrast-end: #9bc5ff;
 }
 
 /*
   'Dark Mode' associated with the Clash of Jams application
 */
 [data-theme="dark"] {
-  --color-base: #050505;
-  --color-surface: #111111;
-  --color-line: #2a2a2a;
-  --color-ink: #ffffff;
-  --color-inverse-ink:#07060b;
-  --color-muted: #a3a3a3;
-  --color-faint: #737373;
-  --color-accent-base: #7b2fc7;
-  --color-accent: #3b82f6;
-  --color-accent-soft: #60a5fa;
-  --color-accent-soft-x2: #d7afff;
+  --color-base-start: #090811;
+  --color-base-middle: #171226;
+  --color-base-end: #0e0b19;
+  
+  --color-ink: #f7f3ff;
+  --color-inverse-ink: #08060d;
+  --color-muted: #aaa1bd;
+  --color-faint: #756b89;
+  
+  --color-accent-base-start: #28103e;
+  --color-accent-base-middle: #7130ad;
+  --color-accent-base-end: #391653; 
 
-  --color-contrast: #5755f7;
-  --color-contrast-soft: #7774fb;
-  --color-contrast-soft-x2: #a7a6ff;
+  --color-accent-start: #b45cff; 
+  --color-accent-middle: #8b3dcc;
+  --color-accent-end: #c06cff;
+  
+  --color-contrast-start: #6461ff;
+  --color-contrast-middle: #4845a0;
+  --color-contrast-end: #8582ff;
+  
 }
 
 /*
   Neon theme
 */
 [data-theme="neon"] {
-  --color-base: #080014;
-  --color-surface: #140021;
-  --color-line: #3b155c;
-  --color-ink: #ffffff;
-  --color-inverse-ink:#07060b;
-  --color-muted: #d8b4fe;
-  --color-faint: #a855f7;
-  --color-accent-base: #7b2fc7;
-  --color-accent: #ec4899;
-  --color-accent-soft: #f472b6;
-  --color-accent-soft-x2: #d7afff;
-  --color-contrast: #5755f7;
-  --color-contrast-soft: #7774fb;
-  --color-contrast-soft-x2: #a7a6ff;
+  --color-base-start: #07000f;
+  --color-base-middle: #150021;
+  --color-base-end: #0b0015;
+  
+  --color-ink: #fff7ff;
+  --color-inverse-ink: #08000d;
+  --color-muted: #d4b9e8;
+  --color-faint: #9b6fba;
+  
+  --color-accent-base-start: #3a084f; 
+  --color-accent-base-middle: #76105f; 
+  --color-accent-base-end: #4a0a50; 
+  
+  --color-accent-start: #ff72c2; 
+  --color-accent-middle: #ff2fa3; 
+  --color-accent-end: #ff55b4;
+  
+  --color-contrast-start: #9af5ff;
+  --color-contrast-middle: #20cfe8;
+  --color-contrast-end: #72edff;
 }
 
-/* Tailwind v4 reads these and generates matching utilities (bg-surface, text-muted, ...). */
+[data-theme="deuteranopia"] {
+    --color-base-start: #fffdf7;
+    --color-base-middle: #fff8e8; 
+    --color-base-end: #fdf4dc;
+
+    --color-ink: #100b18;
+    --color-inverse-ink: #fffaff;
+    --color-muted: #716a7e;
+    --color-faint: #91889f;
+
+    --color-accent-base-start: #fff1d6;
+    --color-accent-base-middle: #ffd28a;
+    --color-accent-base-end: #ffe5b5;
+
+    --color-accent-start: #ff9f1c;
+    --color-accent-middle: #ff7a00;
+    --color-accent-end: #ffb347;
+
+    --color-contrast-start: #3b82f6;
+    --color-contrast-middle: #2563eb;
+    --color-contrast-end: #60a5fa;
+}
+
+[data-theme="protanopia"] {
+    --color-base-start: #fffdf7;
+    --color-base-middle: #fff8e8; 
+    --color-base-end: #fdf4dc;
+
+    --color-ink: #100b18;
+    --color-inverse-ink: #fffaff;
+    --color-muted: #716a7e;
+    --color-faint: #91889f;
+
+    --color-accent-base-start: #fff4d6;
+    --color-accent-base-middle: #ffd98a;
+    --color-accent-base-end: #ffebbd;
+
+    --color-accent-start: #ffb000;
+    --color-accent-middle: #f59e0b;
+    --color-accent-end: #ffd166;
+
+    --color-contrast-start: #2563eb;
+    --color-contrast-middle: #1d4ed8;
+    --color-contrast-end: #60a5fa;
+}
+
+[data-theme="tritanopia"] {
+    --color-base-start: #090811;
+    --color-base-middle: #333139;
+    --color-base-end: #0e0b19;
+    
+    --color-ink: #100b18;
+    --color-inverse-ink: #fffaff;
+    --color-muted: #716a7e;
+    --color-faint: #91889f;
+
+    --color-accent-base-start: #ffe3ec;
+    --color-accent-base-middle: #ffb8cc;
+    --color-accent-base-end: #ffd1de;
+    
+    --color-accent-start: #ff4d8d;
+    --color-accent-middle: #e11d48;
+    --color-accent-end: #fb7185;
+
+    --color-contrast-start: #14b8a6;
+    --color-contrast-middle: #0f766e;
+    --color-contrast-end: #5eead4;
+}
+
+[data-theme="high-contrast"] {
+    --color-base-start: #fffdf7;
+    --color-base-middle: #fff8e8; 
+    --color-base-end: #fdf4dc;
+
+    --color-ink: #100b18;
+    --color-inverse-ink: #fffaff;
+    --color-muted: #716a7e;
+    --color-faint: #91889f;
+
+    --color-accent-base-start: #fff4d6;
+    --color-accent-base-middle: #ffd98a;
+    --color-accent-base-end: #ffebbd;
+
+    --color-accent-start: #ffb000;
+    --color-accent-middle: #ff8c00;
+    --color-accent-end: #ffd166;
+
+    --color-contrast-start: #56b4e9;
+    --color-contrast-middle: #0072b2;
+    --color-contrast-end: #9bdcff;
+}
+
+/* Tailwind v4 reads these and generates matching utilities (bg-base-end, text-muted, ...). */
 @theme {
   --color-base-start: var(--color-base-start);
   --color-base-middle: var(--color-base-middle);

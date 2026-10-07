@@ -17,6 +17,8 @@ import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
 import { AudioLab } from '@/pages/AudioLab'
+import { PlayScenario } from '@/pages/PlayScenario'
+import { EloLeaderboard } from '@/pages/EloLeaderboard'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
@@ -33,21 +35,30 @@ const PROTECTED_ROUTES = [
   { path: '/scenario_search', element: <ScenarioSearch /> },
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
   { path: '/audio_lab', element: <AudioLab /> },
+  { path: '/play/:scenarioId', element: <PlayScenario /> },
+  { path: '/leaderboards', element: <EloLeaderboard /> },
 ]
+
+/** The route table, separate from the router so tests can mount it in a MemoryRouter. */
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/home" replace />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<SignUp />} />
+      {PROTECTED_ROUTES.map(({ path, element }) => (
+        <Route key={path} path={path} element={<RequireAuth>{element}</RequireAuth>} />
+      ))}
+      <Route path="*" element={<Navigate to="/home" replace />} />
+    </Routes>
+  )
+}
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/home" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          {PROTECTED_ROUTES.map(({ path, element }) => (
-            <Route key={path} path={path} element={<RequireAuth>{element}</RequireAuth>} />
-          ))}
-          <Route path="*" element={<Navigate to="/home" replace />} />
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
   )
