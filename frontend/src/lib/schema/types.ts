@@ -187,8 +187,8 @@ export interface ScoringRules {
   pitchWeight: number
   rhythmWeight: number
   completenessWeight: number
-  /** Timing window, in ms, within which a note counts as on time. */
-  hitWindowMs: number
+  /** Timing window, in beats, within which a note counts as on time. Scales with tempo. */
+  hitWindowBeats: number
   /** Cents of pitch deviation tolerated before a note counts as wrong. */
   pitchToleranceCents: number
 }

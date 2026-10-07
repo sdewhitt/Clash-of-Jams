@@ -102,8 +102,8 @@ export const DEFAULT_SCORING_RULES: ScoringRules = {
   pitchWeight: 0.4,
   rhythmWeight: 0.4,
   completenessWeight: 0.2,
-  hitWindowMs: 120,
-  pitchToleranceCents: 50,
+  hitWindowBeats: 0.25,
+  pitchToleranceCents: 20,
 }
 
 /** Starting elo for a player who has never been rated on an instrument. */
