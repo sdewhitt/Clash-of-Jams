@@ -24,7 +24,7 @@ export type Role = (typeof ROLES)[number]
 export const INSTRUMENTS = ['piano', 'guitar', 'woodwind', 'vocals', 'midi'] as const
 export type Instrument = (typeof INSTRUMENTS)[number]
 
-export const GENRES = ['blues', 'jazz', 'electronic', 'hip-hop', 'pop', 'r&b', 'rock'] as const
+export const GENRES = ['blues', 'jazz', 'electronic', 'hip-hop', 'pop', 'r&b', 'rock', 'indie', 'alternative', 'folk', 'metal'] as const
 export type Genre = (typeof GENRES)[number]
 
 export const VISIBILITIES = ['private', 'unlisted', 'public'] as const
@@ -109,8 +109,12 @@ export interface UserSettings {
   uid: string
   theme: string
   reduceFlashing: boolean
+  publicBio: boolean
   preferredInstrument: Instrument
+  publicInstrument: boolean
   preferredGenres: Genre[]
+  publicGenres: Genre[]
+  publicElos: Instrument[]
   /** Milliseconds of input latency the gameplay engine compensates for. */
   inputLatencyOffsetMs: number
   masterVolume: number

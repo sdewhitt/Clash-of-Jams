@@ -2,11 +2,10 @@ import { useState } from "react";
 import { processAvatar } from "@/lib/profile/UserProfile";
 
 type AvatarUploadProps = {
-    currentAvatarUrl: string;
     onAvatarUpdated: (url: string) => void;
 };
 
-export function AvatarUploader({ currentAvatarUrl, onAvatarUpdated, }: AvatarUploadProps) {
+export function AvatarUploader({ onAvatarUpdated, }: AvatarUploadProps) {
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +46,7 @@ export function AvatarUploader({ currentAvatarUrl, onAvatarUpdated, }: AvatarUpl
                 className="block h-24 w-24 cursor-pointer overflow-hidden rounded-full outline-3 outline-contrast-start transition duration-200 hover:scale-105 hover:brightness-125 active:scale-95"
             >
                 <img
-                    src={currentAvatarUrl}
+                    src={'/upload.png'}
                     alt="Profile avatar"
                     className="h-full w-full rounded-full object-cover bg-contrast-end"
                 />

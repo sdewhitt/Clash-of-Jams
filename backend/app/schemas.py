@@ -54,6 +54,10 @@ class Genre(StrEnum):
     POP = 'pop'
     RANDB = 'r&b'
     ROCK = 'rock'
+    INDIE = 'indie'
+    ALTERNATIVE = 'alternative'
+    FOLK = 'folk'
+    METAL = 'metal'
 
 
 class Visibility(StrEnum):

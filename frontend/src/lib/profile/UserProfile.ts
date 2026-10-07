@@ -96,6 +96,33 @@ export async function updateUserBio( uid: string, bio: string ) {
     });
 }
 
+export async function updateBioPublicity( uid: string, bio: boolean ) {
+    const userRef = doc(db, "userSettings", uid);
+
+    await updateDoc(userRef, {
+        publicBio: bio,
+        updatedAt: serverTimestamp(),
+    });
+}
+
+export async function updatePreferredGenres( uid: string, genres: string[] ) {
+    const userRef = doc(db, "userSettings", uid);
+
+    await updateDoc(userRef, {
+        preferredGenres: genres,
+        updatedAt: serverTimestamp(),
+    });
+}
+
+export async function updateGenrePublicity( uid: string, genres: string[] ) {
+    const userRef = doc(db, "userSettings", uid);
+
+    await updateDoc(userRef, {
+        publicGenres: genres,
+        updatedAt: serverTimestamp(),
+    });
+}
+
 export async function updatePreferredInstrument( uid: string, preferredInstrument: string ) {
     const userRef = doc(db, "userSettings", uid);
 
@@ -104,6 +131,25 @@ export async function updatePreferredInstrument( uid: string, preferredInstrumen
         updatedAt: serverTimestamp(),
     });
 }
+
+export async function updateInstrumentPublicity( uid: string, instrument: boolean ) {
+    const userRef = doc(db, "userSettings", uid);
+
+    await updateDoc(userRef, {
+        publicInstrument: instrument,
+        updatedAt: serverTimestamp(),
+    });
+}
+
+export async function updateEloPublicity( uid: string, elo: string[] ) {
+    const userRef = doc(db, "userSettings", uid);
+
+    await updateDoc(userRef, {
+        publicElos: elo,
+        updatedAt: serverTimestamp(),
+    });
+}
+
 
 export async function updateUsername( uid: string, oldUsername: string, newUsername: string ) {
     const username = newUsername.trim().toLowerCase();

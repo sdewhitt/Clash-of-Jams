@@ -4,7 +4,7 @@ import { db } from "@/lib/firebase";
 
 export type Avatar = {
     aid: string;
-    url: string;
+    avatarUrl: string;
     name: string;
     createdDate: Timestamp;
     uid: string;
