@@ -123,6 +123,10 @@ class ScenarioReview(ApiModel):
     updated_at: datetime
 
 
+class PublicReview(ScenarioReview):
+    display_name: str
+
+
 class SkillRating(ApiModel):
     """users/{uid}/skillRatings/{instrument}: one rating per user per instrument."""
 
@@ -135,18 +139,29 @@ class SkillRating(ApiModel):
     updated_at: datetime
 
 
+class RunSummary(ApiModel):
+    """The slice of a run a scenario leaderboard shows — not the full breakdown."""
+
+    run_id: str
+    played_at: datetime
+
+
 class LeaderboardEntry(ApiModel):
     uid: str
     display_name: str # TODO: will also want to bring in pfp at some point
     ranking: int
     key: float # this will be ELO or score so we can use this for both
     skill_rating: SkillRating | None = None # will be used only in ELO leaderboard
+    run: RunSummary | None = None # will be used only in scenario leaderboards
 
 class LeaderboardResponse(ApiModel):
     entries: list[LeaderboardEntry]
     my_entry: LeaderboardEntry | None = None
     total_players: int
-    percentile: float | None
+    percentile: float | None # caller's rank / total_players, i.e. "top X%" (0.05 = top 5%)
+    # Range of played_at across all runs, for the scenario board's date slider. None on the ELO board.
+    earliest_played_at: datetime | None = None
+    latest_played_at: datetime | None = None
 
 
 

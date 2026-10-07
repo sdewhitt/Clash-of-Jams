@@ -1,7 +1,10 @@
-from fastapi import APIRouter
+from datetime import UTC, datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Query
 
 from app.dependencies import CurrentUserDep
-from app.schemas import LeaderboardEntry, LeaderboardResponse, SkillRating, Instrument
+from app.schemas import LeaderboardEntry, LeaderboardResponse, RunSummary, SkillRating, Instrument
 from app.firebase import get_firestore_client, firestore
 from google.cloud.firestore_v1.base_query import FieldFilter, Or
 
@@ -21,7 +24,7 @@ db = get_firestore_client()
 
 
 @router.get("/elo", response_model = LeaderboardResponse)
-def get_elo_leaderboard(user: CurrentUserDep, instrument: Instrument) -> LeaderboardResponse:
+def get_elo_leaderboard(user: CurrentUserDep, instrument: Instrument, limit: Annotated[int, Query(ge=1, le=250)] = 100) -> LeaderboardResponse:
     docs = (
         db.collection("users")
         .where(filter=Or(
@@ -84,7 +87,7 @@ def get_elo_leaderboard(user: CurrentUserDep, instrument: Instrument) -> Leaderb
     if my_entry is not None:
         percentile = (my_entry.ranking / position) # position can't be zero if we have a user
 
-    leaderboard_entries = leaderboard_entries[:25] # get the top 25 positions
+    leaderboard_entries = leaderboard_entries[:limit] # get the top limit positions
 
     return LeaderboardResponse(
         entries=leaderboard_entries,
@@ -95,4 +98,106 @@ def get_elo_leaderboard(user: CurrentUserDep, instrument: Instrument) -> Leaderb
 
 # also want to do a score leaderboard for each scenario so will handle that later
 
-# TODO: on front end we should be able to choose only instruments that are eligible to be played on that scenario.  if it is a guitar scenario i dont want to see the piano leaderboard
+
+@router.get("/{scenario_id}/{version_id}", response_model=LeaderboardResponse)
+def get_scenario_leaderboard(
+    user: CurrentUserDep,
+    scenario_id: str,
+    version_id: str,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    played_after: datetime | None = None,  # optional date range; each player's best run *within* it counts
+    played_before: datetime | None = None,
+) -> LeaderboardResponse:
+
+    def is_eligible(uid: str, profile: dict) -> bool:
+        # same rules as the ELO query: no banned/restricted users, private profiles only see themselves
+        if profile["isBanned"] or profile["isSocialRestricted"]:
+            return False
+        return profile["isProfilePublic"] or uid == user.uid
+
+    # scenario_id isn't filtered on: version ids are unique, so the version already
+    # pins the scenario, and these three fields are exactly the existing runs index
+    docs = (
+        db.collection("runs")
+        .where(filter=FieldFilter("scenarioVersionId", "==", version_id))
+        .where(filter=FieldFilter("validation", "==", "accepted"))
+        .order_by("finalScore", direction=firestore.Query.DESCENDING)
+        .stream()
+    )
+
+    # runs arrive highest score first, so the first run we see for a uid is their best
+    played_after = _as_utc(played_after)
+    played_before = _as_utc(played_before)
+    earliest: datetime | None = None # bounds over every run, so the date slider's range doesn't
+    latest: datetime | None = None   # shrink as the user narrows the filter
+
+    best_runs: dict[str, dict] = {} # uid -> best run
+    for doc in docs:
+        run = doc.to_dict()
+        if run["speedMultiplier"] != 1: # only full speed runs count
+            continue
+
+        played_at = run["playedAt"]
+        earliest = played_at if earliest is None else min(earliest, played_at)
+        latest = played_at if latest is None else max(latest, played_at)
+        # date check comes before the best-run check, so a player's best run inside the range wins
+        if (played_after and played_at < played_after) or (played_before and played_at > played_before):
+            continue
+
+        uid = run["userUid"]
+        if uid not in best_runs:
+            run["id"] = doc.id
+            best_runs[uid] = run
+
+    refs = [db.collection("users").document(uid) for uid in best_runs]
+    profiles = {snap.id: snap.to_dict() for snap in db.get_all(refs) if snap.exists}
+
+    leaderboard_entries: list[LeaderboardEntry] = []
+    my_entry = None
+    position = 0 # index in the list
+    rank = 1     # rank displayed on leaderboard, ties will have the same rank
+    prev_score = None
+
+    for uid, run in best_runs.items(): # still in score order, so no sort needed
+        if uid not in profiles or not is_eligible(uid, profiles[uid]):
+            continue
+        profile = profiles[uid]
+
+        if (prev_score is not None) and (run["finalScore"] != prev_score): # if no tie, we use their real position
+            rank = position + 1
+
+        entry = LeaderboardEntry(
+            uid=uid,
+            display_name=profile["displayName"],
+            ranking=rank,
+            key=run["finalScore"],
+            run=RunSummary(run_id=run["id"], played_at=run["playedAt"])
+        )
+
+        if uid == user.uid:
+            my_entry = entry
+        leaderboard_entries.append(entry)
+
+        position+=1
+        prev_score = run["finalScore"]
+
+
+    percentile = None
+    if my_entry is not None:
+        percentile = (my_entry.ranking / position) # position can't be zero if we have a user
+
+    return LeaderboardResponse(
+        entries=leaderboard_entries[:limit], # get the top limit positions
+        my_entry=my_entry,
+        total_players=position,
+        percentile=percentile,
+        earliest_played_at=earliest,
+        latest_played_at=latest,
+    )
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    """Treat a timezone-less query param as UTC, so it can be compared with Firestore timestamps."""
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value

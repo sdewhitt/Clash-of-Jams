@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, HTTPException, status
 
 from app.dependencies import CurrentUserDep
-from app.schemas import Scenario, ScenarioReview, ReviewUpsert, Visibility
+from app.schemas import Scenario, ScenarioReview, ReviewUpsert, Visibility, PublicReview
 from app.firebase import get_firestore_client, firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
@@ -68,6 +68,22 @@ def upsert_review_transaction(transaction, scenario_ref, review_ref, user_uid, p
 @router.put("/{scenario_id}", response_model=ScenarioReview)
 def upsert_review(scenario_id: str, user: CurrentUserDep, payload: ReviewUpsert) -> ScenarioReview:
 
+    user_doc = db.collection("users").document(user.uid).get()
+    if not user_doc.exists or user_doc.get("isBanned") or user_doc.get("isSocialRestricted"): # user doc has to exist.  If not, something is NOT okay
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not permitted to place reviews")
+
+    runs = (
+        db.collection("runs")
+        .where(filter=FieldFilter("scenarioId", "==", scenario_id))
+        .where(filter=FieldFilter("userUid", "==", user.uid))
+        .limit(1)
+        .get()
+    )
+    has_played = len(runs) > 0 and runs[0].get("validation") != "rejected"
+    if not has_played:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot review a scenario you have not played")
+
+
     scenario_ref = db.collection("scenarios").document(scenario_id)
     review_ref = db.collection("scenarioReviews").document(f"{scenario_id}_{user.uid}")
     return upsert_review_transaction(db.transaction(), scenario_ref, review_ref, user.uid, payload)
@@ -88,8 +104,8 @@ def get_user_scenario_review(scenario_id: str, user: CurrentUserDep) -> Scenario
     return ScenarioReview(**doc.to_dict())
 
 
-@router.get("/{scenario_id}", response_model=list[ScenarioReview])
-def get_scenario_reviews(scenario_id: str) -> list[ScenarioReview]:
+@router.get("/{scenario_id}", response_model=list[PublicReview])
+def get_scenario_reviews(scenario_id: str) -> list[PublicReview]:
     docs = (
         db.collection("scenarioReviews")
         .where(filter=FieldFilter("scenarioId", "==", scenario_id))
@@ -98,4 +114,25 @@ def get_scenario_reviews(scenario_id: str) -> list[ScenarioReview]:
         .stream()
     )
 
-    return [ScenarioReview(**doc.to_dict()) for doc in docs]
+    scenario_reviews = [ScenarioReview(**doc.to_dict()) for doc in docs]
+
+    refs = [db.collection("users").document(review.reviewer_uid) for review in scenario_reviews]
+    profiles = {snap.id: snap.to_dict() for snap in db.get_all(refs) if snap.exists}
+
+    filtered_reviews: list[PublicReview] = []
+
+    for review in scenario_reviews:
+        if review.reviewer_uid not in profiles: continue
+        profile = profiles[review.reviewer_uid]
+        if profile["isBanned"] or profile["isSocialRestricted"]:
+            continue
+        if not profile["isProfilePublic"]:
+            display_name = "Anonymous"
+        else:
+            display_name = profile["displayName"]
+
+        filtered_reviews.append(PublicReview(
+            **review.model_dump(),
+            display_name=display_name
+        ))
+    return filtered_reviews

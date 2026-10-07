@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router"
+import { useNavigate, useParams, useSearchParams } from "react-router"
 
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
+import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
 import { StarPicker } from "@/components/StarRating"
 import { ApiError, apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
@@ -28,14 +29,19 @@ const buttonClass = `
 `
 
 /**
- * Stand-in for scenario gameplay until it exists. All it does is offer the
- * post-play rating popup, so ratings can be exercised end to end.
+ * Stand-in for scenario gameplay until it exists. Walks through what happens
+ * around a run: play (a Finish button for now), see where you landed on the
+ * leaderboard, then rate the scenario.
  */
 export function PlayScenario() {
     const { scenarioId } = useParams()
+    // The version being played; the search page passes the scenario's current one.
+    const [searchParams] = useSearchParams()
+    const versionId = searchParams.get("version")
     const { user, profile } = useAuth()
     const navigate = useNavigate()
 
+    const [phase, setPhase] = useState<"playing" | "results">("playing")
     const [ratingOpen, setRatingOpen] = useState(false)
     const [rating, setRating] = useState(0)
     const [comment, setComment] = useState("")
@@ -100,16 +106,62 @@ export function PlayScenario() {
                 </div>
             </header>
 
-            <div className="flex flex-1 flex-col items-center justify-center gap-6">
-                <p className="text-3xl font-bold text-ink">Play scenario</p>
-                <button
-                    type="button"
-                    onClick={() => setRatingOpen(true)}
-                    className={`${buttonClass} bg-accent-start text-ink hover:brightness-110`}
-                >
-                    Rate this scenario
-                </button>
-            </div>
+            {phase === "playing" ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-6">
+                    <p className="text-3xl font-bold text-ink">Play scenario</p>
+                    {/* Stands in for the end of a real run. */}
+                    <button
+                        type="button"
+                        onClick={() => setPhase("results")}
+                        className={`${buttonClass} bg-accent-start text-ink hover:brightness-110`}
+                    >
+                        Finish
+                    </button>
+                </div>
+            ) : (
+                <div className="flex flex-1 min-h-0 flex-col items-center gap-4 px-6 py-6">
+                    <h2 className="text-3xl font-bold text-ink">Results</h2>
+
+                    {/* TODO: highlight the run just played once runs can be created in the app;
+                        until then the highlighted row is the player's best run. */}
+                    <section className={`
+                        min-h-0
+                        w-full
+                        max-w-xl
+                        flex-1
+                        overflow-y-auto
+                        rounded-xl
+                        border-3
+                        border-accent-start
+                        bg-linear-to-br
+                        from-accent-base-start from-50
+                        via-accent-base-middle
+                        to-accent-base-end to-70
+                        px-5
+                        py-4
+                    `}>
+                        <h3 className="mb-3 text-lg font-bold text-ink">Leaderboard</h3>
+                        {scenarioId && <ScenarioLeaderboard scenarioId={scenarioId} versionId={versionId} />}
+                    </section>
+
+                    <div className="flex w-full max-w-xl gap-4">
+                        <button
+                            type="button"
+                            onClick={() => setPhase("playing")}
+                            className={`${buttonClass} flex-1 bg-white text-black hover:brightness-95`}
+                        >
+                            Play again
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setRatingOpen(true)}
+                            className={`${buttonClass} flex-1 bg-accent-start text-ink hover:brightness-110`}
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {ratingOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">

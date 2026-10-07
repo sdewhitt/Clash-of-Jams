@@ -31,6 +31,8 @@ export function Home() {
 
             <NavButton onClick={() => navPortal('/multiplayer_connect')}>Online Play</NavButton>
 
+            <NavButton onClick={() => navPortal('/leaderboards')}>Leaderboards</NavButton>
+
             <NavButton onClick={() => navPortal('/scenario_editor')}>Scenario Editor</NavButton>
 
             <NavButton onClick={() => navPortal('/tuner')}>Tuner</NavButton>
