@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { PianoRoll } from '@/components/PianoRoll'
 import { chartDurationMs } from '@/lib/chart/notes'
 import { useAuth } from '@/lib/auth/useAuth'
+import { MUSICXML_ACCEPT, importMusicXmlFile } from '@/lib/import/musicxmlFile'
 import { loadScenario, saveScenarioDraft } from '@/lib/scenarios/store'
 import { INSTRUMENTS, VISIBILITIES } from '@/lib/schema/types'
 import type { Instrument, Visibility } from '@/lib/schema/types'
@@ -23,6 +24,7 @@ import {
   emptyDraft,
   noteCount,
   openingTempo,
+  withImportedScore,
   withInstrument,
   withOpeningTempo,
 } from '@/pages/scenario_editor/draft'
@@ -41,6 +43,7 @@ type Status =
   | { kind: 'loading' }
   | { kind: 'saving' }
   | { kind: 'saved'; versionNumber: number }
+  | { kind: 'imported'; fileName: string; notes: number; warnings: string[] }
   | { kind: 'error'; message: string }
 
 interface EditorPanelProps {
@@ -62,6 +65,7 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
   const [dirty, setDirty] = useState(false)
   // Ids this panel wrote itself, which therefore need no read back.
   const savedHere = useRef<string | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
 
   // Resetting during render is React's own answer to "the prop changed, drop
   // the state derived from it"; an effect would paint the old scenario first.
@@ -115,6 +119,28 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     }
   }
 
+  async function handleImport(file: File) {
+    if (
+      noteCount(draft.chart) > 0 &&
+      !window.confirm('Importing replaces the notes already in this scenario. Continue?')
+    ) {
+      return
+    }
+    try {
+      const imported = await importMusicXmlFile(file)
+      setDraft(withImportedScore(draft, imported))
+      setDirty(true)
+      setStatus({
+        kind: 'imported',
+        fileName: file.name,
+        notes: noteCount(imported.chart),
+        warnings: imported.warnings,
+      })
+    } catch (error: unknown) {
+      setStatus({ kind: 'error', message: messageOf(error) })
+    }
+  }
+
   const tempo = openingTempo(draft.chart)
   const notes = noteCount(draft.chart)
   const canSave =
@@ -152,6 +178,28 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
         >
           {status.kind === 'saving' ? 'Saving...' : scenarioId ? 'Save Version' : 'Save Scenario'}
         </button>
+
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          className="rounded-lg border-2 border-base-middle px-6 py-3 font-bold text-ink
+            transition-colors hover:border-accent-start hover:bg-accent-base-middle"
+        >
+          Import MusicXML
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept={MUSICXML_ACCEPT}
+          aria-label="MusicXML file"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            // Cleared so picking the same file again still fires a change.
+            event.target.value = ''
+            if (file) void handleImport(file)
+          }}
+        />
 
         {scenarioId && (
           <button
@@ -328,6 +376,22 @@ function SaveStatus({
   }
   if (status.kind === 'saved') {
     return <p className="text-sm text-muted">Saved as version {status.versionNumber}.</p>
+  }
+  if (status.kind === 'imported') {
+    return (
+      <div className="text-sm text-muted">
+        <p>
+          Imported {status.notes} {status.notes === 1 ? 'note' : 'notes'} from {status.fileName}.
+        </p>
+        {status.warnings.length > 0 && (
+          <ul className="mt-1 list-disc pl-5 text-faint">
+            {status.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
   }
   if (!signedIn) {
     return <p className="text-sm text-faint">Sign in to save this scenario to your library.</p>

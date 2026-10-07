@@ -92,6 +92,67 @@ describe('editor default state', () => {
   })
 })
 
+describe('MusicXML import (user story #29)', () => {
+  const scoreFile = (name: string, measure: string) =>
+    new File(
+      [
+        '<score-partwise><work><work-title>Ode to Joy</work-title></work>' +
+          '<part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>' +
+          `<part id="P1"><measure number="1"><attributes><divisions>1</divisions></attributes>` +
+          `<direction><sound tempo="90"/></direction>${measure}</measure></part></score-partwise>`,
+      ],
+      name,
+    )
+  const pitched = (step: string) =>
+    `<note><pitch><step>${step}</step><octave>4</octave></pitch><duration>2</duration></note>`
+
+  it('fills the editor from an uploaded score and leaves it ready to save', async () => {
+    renderEditor()
+
+    await userEvent.upload(
+      screen.getByLabelText('MusicXML file'),
+      scoreFile('ode.musicxml', pitched('E') + pitched('D')),
+    )
+
+    expect(await screen.findByText('Imported 2 notes from ode.musicxml.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Title')).toHaveValue('Ode to Joy')
+    expect(screen.getByLabelText('Tempo (BPM)')).toHaveValue(90)
+    expect(screen.getByText(/^2 notes · 90 BPM · 4\/4/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
+  })
+
+  it('reports an unreadable file and keeps the draft as it was', async () => {
+    renderEditor()
+
+    await userEvent.upload(
+      screen.getByLabelText('MusicXML file'),
+      new File(['not a score'], 'notes.xml'),
+    )
+
+    expect(await screen.findByText('This file is not valid XML.')).toBeInTheDocument()
+    expect(screen.getByText(/^0 notes · 120 BPM/)).toBeInTheDocument()
+  })
+
+  it('asks before replacing notes that are already there', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    renderEditor()
+    const input = screen.getByLabelText('MusicXML file')
+
+    await userEvent.upload(input, scoreFile('first.xml', pitched('E') + pitched('D')))
+    await screen.findByText('Imported 2 notes from first.xml.')
+    await userEvent.upload(input, scoreFile('second.xml', pitched('C')))
+
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(screen.getByText(/^2 notes ·/)).toBeInTheDocument()
+
+    confirm.mockReturnValue(true)
+    await userEvent.upload(input, scoreFile('second.xml', pitched('C')))
+
+    expect(await screen.findByText('Imported 1 note from second.xml.')).toBeInTheDocument()
+    confirm.mockRestore()
+  })
+})
+
 describe('editor tabs', () => {
   it('renders every tab with its label and exactly one selected', () => {
     renderEditor()

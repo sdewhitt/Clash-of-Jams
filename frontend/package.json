@@ -25,6 +25,7 @@
     "test:rules": "npx -y firebase-tools emulators:exec --config ../firebase/firebase.json --project demo-clash-of-jams --only firestore \"vitest run --project rules\""
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "firebase": "^12.19.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

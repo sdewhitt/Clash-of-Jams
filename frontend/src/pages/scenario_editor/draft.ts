@@ -7,6 +7,7 @@
  * back out of Firestore goes through draftFromDocuments(), which is what makes
  * a save-then-reopen round trip land on the same state.
  */
+import type { MusicXmlImport } from '@/lib/import/musicxml'
 import { emptyChart } from '@/lib/schema/collections'
 import type {
   Instrument,
@@ -88,6 +89,22 @@ export function withInstrument(draft: ScenarioDraft, instrument: Instrument): Sc
       parts: draft.chart.parts.map((part) => ({ ...part, instrument })),
     },
   }
+}
+
+/**
+ * Replaces the draft's chart with an imported score. The score's title only
+ * fills a blank one, and its instrument wins only when the import could tell
+ * what it was, so a file never overwrites what the author already chose.
+ */
+export function withImportedScore(draft: ScenarioDraft, imported: MusicXmlImport): ScenarioDraft {
+  return withInstrument(
+    {
+      ...draft,
+      title: draft.title.trim() ? draft.title : (imported.title ?? ''),
+      chart: imported.chart,
+    },
+    imported.instrument ?? draft.instrument,
+  )
 }
 
 /** Edits the chart's opening tempo and meter, the entry sitting at beat 0. */
