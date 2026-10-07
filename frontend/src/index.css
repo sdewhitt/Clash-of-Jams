@@ -171,7 +171,7 @@
     --color-contrast-end: #9bdcff;
 }
 
-/* Tailwind v4 reads these and generates matching utilities (bg-surface, text-muted, ...). */
+/* Tailwind v4 reads these and generates matching utilities (bg-base-end, text-muted, ...). */
 @theme {
   --color-base-start: var(--color-base-start);
   --color-base-middle: var(--color-base-middle);

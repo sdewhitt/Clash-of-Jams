@@ -80,7 +80,7 @@ class ScenarioCreate(ApiModel):
     title: str = Field(min_length=1, max_length=120)
     description: str = ""
     instrument: Instrument
-    genre: list[Genre]
+    genres: list[Genre] = []
     visibility: Visibility = Visibility.PRIVATE
     tags: list[str] = []
     author_difficulty: int = Field(default=1, ge=1, le=10)
@@ -182,6 +182,16 @@ class LeaderboardResponse(ApiModel):
 
 
 
+class Role(StrEnum):
+    USER = "user"
+    MODERATOR = "moderator"
+    ADMIN = "admin"
+
+
+# Mirrors isAdmin() in firebase/firestore.rules.
+ADMIN_ROLES = frozenset({Role.ADMIN, Role.MODERATOR})
+
+
 class CurrentUser(BaseModel):
     """The caller, as resolved from their Firebase ID token.
 
@@ -191,6 +201,11 @@ class CurrentUser(BaseModel):
 
     uid: str
     email: str | None = None
+    role: Role = Role.USER
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role in ADMIN_ROLES
 
 
 class HealthResponse(ApiModel):

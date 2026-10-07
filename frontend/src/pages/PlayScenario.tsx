@@ -206,7 +206,7 @@ export function PlayScenario() {
                                         rows={4}
                                         placeholder="Write a review (optional)"
                                         aria-label="Review"
-                                        className="w-full resize-none rounded-lg border-2 border-accent bg-white px-3 py-2 text-black"
+                                        className="w-full resize-none rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black"
                                     />
                                     <p className="text-right text-xs text-muted">
                                         {comment.length}/{MAX_COMMENT_LENGTH}

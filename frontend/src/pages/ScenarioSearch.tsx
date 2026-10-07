@@ -60,12 +60,10 @@ function ScenarioStat({ label, children }: { label: string; children: React.Reac
 }
 
 const controlClass =
-    "w-full rounded-lg border-2 border-accent bg-white px-3 py-2 text-black"
+    "w-full rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black"
 
 export function ScenarioSearch() {
     const { user, profile } = useAuth()
-    const navigate = useNavigate()
-
     const navigate = useNavigate()
 
     function navPortal(location: string) {
@@ -310,7 +308,7 @@ export function ScenarioSearch() {
                                     onClick={() => setSortAscending((asc) => !asc)}
                                     aria-label={sortAscending ? "Sort ascending" : "Sort descending"}
                                     title={sortAscending ? "Ascending" : "Descending"}
-                                    className="shrink-0 rounded-lg border-2 border-accent bg-white px-3 py-2 text-black active:scale-95"
+                                    className="shrink-0 rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black active:scale-95"
                                 >
                                     {sortAscending ? "↑" : "↓"}
                                 </button>
@@ -357,6 +355,9 @@ export function ScenarioSearch() {
                                                 </div>
                                                 <div className="truncate text-sm text-muted">
                                                     by {authorName}
+                                                    {/* Only the author is sent their non-public scenarios. */}
+                                                    {scenario.visibility !== "public" &&
+                                                        ` · ${scenario.visibility}, only you can see this`}
                                                 </div>
                                             </div>
 

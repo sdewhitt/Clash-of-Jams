@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     # to auth_dev_uid. Local development only — never enable in a deployment.
     auth_disabled: bool = False
     auth_dev_uid: str = "dev-user"
+    # Role given to that dev user, so admin-only routes can be tried locally.
+    auth_dev_role: str = "user"
 
 
 @lru_cache

@@ -63,7 +63,7 @@ export function RangeSlider({
     const upperPercent = span === 0 ? 100 : ((upper - min) / span) * 100
 
     return (
-        <div className="rounded-lg border-2 border-accent bg-white/90 px-3 py-2 text-black">
+        <div className="rounded-lg border-2 border-accent-start bg-white/90 px-3 py-2 text-black">
             <div className="text-center text-sm font-semibold">{label}</div>
 
             {disabled ? (

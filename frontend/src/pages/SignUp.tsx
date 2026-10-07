@@ -6,7 +6,7 @@ import { USERNAME_PATTERN, authErrorMessage, signUp } from '@/lib/auth/account'
 import { useAuth } from '@/lib/auth/useAuth'
 
 const FIELD_CLASS =
-  'rounded-lg border border-line bg-base-middle px-3 py-2 text-ink placeholder:text-faint'
+  'rounded-lg border border-base-middle bg-base-middle px-3 py-2 text-ink placeholder:text-faint'
 
 export function SignUp() {
   const navigate = useNavigate()

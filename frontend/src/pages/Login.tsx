@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { authErrorMessage, sendResetEmail, signIn } from '@/lib/auth/account'
+
+import { authErrorMessage, sendResetEmail, signIn, signInWithGoogle } from '@/lib/auth/account'
 import { useTheme, type Theme } from '@/context/ThemeContext'
 import { useAuth } from '@/lib/auth/useAuth'
 import { getUserSettings, } from "@/lib/profile/UserSettings";
@@ -85,6 +86,20 @@ export function Login() {
     }
   }
 
+  async function handleGoogle() {
+    setError(null)
+    setNotice(null)
+    setBusy(true)
+    try {
+      await signInWithGoogle()
+      navigate(from, { replace: true })
+    } catch (caught) {
+      setError(authErrorMessage(caught))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function handleReset() {
     setError(null)
     setNotice(null)
@@ -127,7 +142,7 @@ export function Login() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="rounded-lg border border-line bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
+              className="rounded-lg border border-base-middle bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
             />
           </label>
 
@@ -140,7 +155,7 @@ export function Login() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="rounded-lg border border-line bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
+              className="rounded-lg border border-base-middle bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
             />
           </label>
 
@@ -172,6 +187,15 @@ export function Login() {
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={busy}
+          className="mt-3 w-full rounded-lg border border-base-middle bg-base-end px-4 py-2.5 font-medium text-ink transition-colors hover:bg-accent-base-middle disabled:opacity-60"
+        >
+          Continue with Google
+        </button>
 
         <div className="mt-6 mx-2 flex items-center justify-between text-sm">
           <Link
