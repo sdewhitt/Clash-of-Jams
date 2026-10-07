@@ -53,6 +53,14 @@ class Visibility(StrEnum):
     PUBLIC = "public"
 
 
+class RankTier(StrEnum):
+    BRONZE = "bronze"
+    SILVER = "silver"
+    GOLD = "gold"
+    PLATINUM = "platinum"
+    DIAMOND = "diamond"
+
+
 class ScenarioCreate(ApiModel):
     """What a client sends to create a scenario. Server fills in the rest."""
 
@@ -62,6 +70,7 @@ class ScenarioCreate(ApiModel):
     visibility: Visibility = Visibility.PRIVATE
     tags: list[str] = []
     author_difficulty: int = Field(default=1, ge=1, le=10)
+
 
 
 class Scenario(ApiModel):
@@ -77,6 +86,85 @@ class Scenario(ApiModel):
     author_difficulty: int
     play_count: int = 0
     created_at: datetime
+    avg_rating: float | None
+    crowd_difficulty: float | None
+    rating_count: int
+    current_version_id: str | None
+    current_version_number: int
+    updated_at: datetime
+
+
+class ScenarioWithAuthor(ApiModel):
+    scenario: Scenario
+    author_name: str
+
+
+class FilterResponse(ApiModel):
+    max_plays: int | None = None
+    min_plays: int | None = None
+    max_rating: float = 5.0
+    min_rating: float = 0.0
+    max_difficulty: float | None = None # TODO: for now this is the difficulty set by the author.  I would like to make this the avg_rating eventually
+    min_difficulty: float | None = None
+
+
+class ReviewUpsert(ApiModel):
+    comment: str = Field(default="", max_length=200)
+    rating: int = Field(ge=1, le=5)
+
+
+class ScenarioReview(ApiModel):
+    id: str
+    scenario_id: str
+    reviewer_uid: str
+    rating: int # 1-5 stars
+    comment: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class PublicReview(ScenarioReview):
+    display_name: str
+
+
+class SkillRating(ApiModel):
+    """users/{uid}/skillRatings/{instrument}: one rating per user per instrument."""
+
+    uid: str
+    instrument: Instrument
+    elo: float = 400  # matches STARTING_ELO in collections.ts and initial_elo in algs/elo.py
+    tier: RankTier = RankTier.BRONZE
+    games_played: int = 0
+    is_provisional: bool = True  # until PROVISIONAL_MATCHES (10) games are played
+    updated_at: datetime
+
+
+class RunSummary(ApiModel):
+    """The slice of a run a scenario leaderboard shows — not the full breakdown."""
+
+    run_id: str
+    played_at: datetime
+
+
+class LeaderboardEntry(ApiModel):
+    uid: str
+    display_name: str # TODO: will also want to bring in pfp at some point
+    ranking: int
+    key: float # this will be ELO or score so we can use this for both
+    skill_rating: SkillRating | None = None # will be used only in ELO leaderboard
+    run: RunSummary | None = None # will be used only in scenario leaderboards
+
+class LeaderboardResponse(ApiModel):
+    entries: list[LeaderboardEntry]
+    my_entry: LeaderboardEntry | None = None
+    total_players: int
+    percentile: float | None # caller's rank / total_players, i.e. "top X%" (0.05 = top 5%)
+    # Range of played_at across all runs, for the scenario board's date slider. None on the ELO board.
+    earliest_played_at: datetime | None = None
+    latest_played_at: datetime | None = None
+
+
+
 
 
 class Role(StrEnum):

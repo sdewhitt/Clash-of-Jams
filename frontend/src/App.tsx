@@ -5,7 +5,8 @@ import { AuthProvider } from '@/lib/auth/AuthProvider'
 import { Home } from '@/pages/Home'
 import { Login } from '@/pages/Login'
 import { SignUp } from '@/pages/SignUp'
-import { UserProfile } from '@/pages/UserProfile'
+import { UserProfile } from '@/pages/user-profiles/UserProfile'
+import { EditProfile } from '@/pages/user-profiles/EditProfile'
 import { MyFriends } from '@/pages/social/MyFriends'
 import { FindFriends } from '@/pages/social/FindFriends'
 import { MyCommunities } from '@/pages/social/MyCommunities'
@@ -15,11 +16,14 @@ import { Tuner } from '@/pages/Tuner'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
+import { PlayScenario } from '@/pages/PlayScenario'
+import { EloLeaderboard } from '@/pages/EloLeaderboard'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
   { path: '/home', element: <Home /> },
   { path: '/profile', element: <UserProfile /> },
+  { path: '/profile/edit_profile', element: <EditProfile /> },
   { path: '/friends/my_friends', element: <MyFriends /> },
   { path: '/friends/find_friends', element: <FindFriends /> },
   { path: '/friends/my_communities', element: <MyCommunities /> },
@@ -29,6 +33,8 @@ const PROTECTED_ROUTES = [
   { path: '/scenario_editor', element: <ScenarioEditor /> },
   { path: '/scenario_search', element: <ScenarioSearch /> },
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
+  { path: '/play/:scenarioId', element: <PlayScenario /> },
+  { path: '/leaderboards', element: <EloLeaderboard /> },
 ]
 
 /** The route table, separate from the router so tests can mount it in a MemoryRouter. */

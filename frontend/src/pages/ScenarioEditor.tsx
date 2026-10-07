@@ -49,8 +49,9 @@ export function ScenarioEditor() {
   return (
     <main className="flex min-h-dvh flex-col">
       <header
-        className="flex items-center justify-between gap-4 border-b-2 border-accent
-          bg-accent-base pt-6 pb-6"
+        className="flex items-center justify-between gap-4 border-b-4 border-accent-start
+          bg-linear-to-r from-accent-base-start from-10 via-accent-base-middle via-80
+          to-accent-base-end to-90 py-6"
       >
         <div className="ml-12 flex items-center gap-6">
           <button

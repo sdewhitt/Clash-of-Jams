@@ -70,7 +70,7 @@ def make_client(monkeypatch: pytest.MonkeyPatch, *, auth_disabled: bool) -> Iter
 @pytest.fixture
 def auth_client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """Auth enabled, with the Admin SDK's verifier faked."""
-    monkeypatch.setattr(dependencies, "_ensure_firebase", lambda settings: None)
+    monkeypatch.setattr(dependencies, "ensure_firebase", lambda: None)
     monkeypatch.setattr(firebase_auth, "verify_id_token", fake_verify_id_token)
     yield from make_client(monkeypatch, auth_disabled=False)
 
@@ -234,7 +234,7 @@ def real_verifier_client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient
         app = firebase_admin.initialize_app(
             _NoCredential(), {"projectId": get_settings().firebase_project_id}
         )
-    monkeypatch.setattr(dependencies, "_ensure_firebase", lambda settings: None)
+    monkeypatch.setattr(dependencies, "ensure_firebase", lambda: None)
     yield from make_client(monkeypatch, auth_disabled=False)
     if app is not None:
         firebase_admin.delete_app(app)

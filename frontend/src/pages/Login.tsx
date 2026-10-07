@@ -81,7 +81,7 @@ export function Login() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint"
+              className="rounded-lg border border-line bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
             />
           </label>
 
@@ -94,17 +94,34 @@ export function Login() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-faint"
+              className="rounded-lg border border-line bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
             />
           </label>
 
-          {error && <p className="text-sm text-accent-soft">{error}</p>}
+          {error && <p className="text-sm text-accent-middle">{error}</p>}
           {notice && <p className="text-sm text-muted">{notice}</p>}
 
           <button
             type="submit"
             disabled={busy}
-            className="mt-2 rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition-colors hover:bg-accent-soft disabled:opacity-60"
+            className={`
+              mt-2
+              mx-2
+              rounded-lg 
+              bg-linear-to-b
+              from-accent-start from-50
+              via-accent-middle
+              to-accent-end to-70
+              font-medium
+              text-ink
+              hover:brightness-125
+              hover:scale-105
+              active:scale-95
+              disabled:opacity-60
+              transition-colors 
+              px-4 
+              py-2.5
+            `}
           >
             {busy ? 'Signing in…' : 'Sign in'}
           </button>
@@ -119,17 +136,42 @@ export function Login() {
           Continue with Google
         </button>
 
-        <div className="mt-6 flex items-center justify-between text-sm">
+        <div className="mt-6 mx-2 flex items-center justify-between text-sm">
           <Link
             to="/signup"
-            className="text-muted underline-offset-4 hover:text-ink hover:underline"
+            className={`
+              text-ink 
+              bg-linear-to-b
+              from-accent-start from-50
+              via-accent-middle
+              to-accent-end to-70
+              hover:brightness-125
+              hover:scale-105
+              hover:underline
+              active:scale-95
+              rounded-lg
+              px-4
+              py-4
+            `}
           >
             Create an account
           </Link>
           <button
-            type="button"
             onClick={handleReset}
-            className="text-muted underline-offset-4 hover:text-ink hover:underline"
+            className={`
+              text-ink 
+              bg-linear-to-b
+              from-accent-start from-50
+              via-accent-middle
+              to-accent-end to-70
+              hover:brightness-125
+              hover:scale-105
+              hover:underline
+              active:scale-95
+              rounded-lg
+              px-4
+              py-4
+            `}
           >
             Forgot password?
           </button>

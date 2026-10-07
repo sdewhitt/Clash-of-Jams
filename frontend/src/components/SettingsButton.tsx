@@ -1,21 +1,16 @@
-type NavButtonProps = {
+type SettingsButtonProps = {
   children: React.ReactNode;
   onClick?: () => void;
 };
 
-export function NavButton({children, onClick,}: NavButtonProps) {
+export function SettingsButton({children, onClick,}: SettingsButtonProps) {
     return (
         <button
             onClick={onClick}
             className={`
-                bg-linear-to-b
-                from-accent-start from-50
-                via-accent-middle
-                to-accent-end to-70
-                hover:brightness-125
+                bg-accent
+                hover:bg-accent-middle
                 hover:-translate-y-1
-                hover:drop-shadow-lg
-                hover:drop-shadow-contrast-start
                 active:scale-95
                 text-ink
                 text-xl

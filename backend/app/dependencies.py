@@ -16,31 +16,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.config import Settings, get_settings
+from app.firebase import ensure_firebase
 from app.schemas import CurrentUser, Role
 
 # auto_error=False so a missing header produces our own 401 rather than a 403.
 bearer_scheme = HTTPBearer(auto_error=False)
-
-_firebase_ready = False
-
-
-def _ensure_firebase(settings: Settings) -> None:
-    """Initialize the Admin SDK once, on first use."""
-    global _firebase_ready
-    if _firebase_ready:
-        return
-
-    import firebase_admin
-    from firebase_admin import credentials
-
-    if not firebase_admin._apps:
-        cred = (
-            credentials.Certificate(settings.google_application_credentials)
-            if settings.google_application_credentials
-            else credentials.ApplicationDefault()
-        )
-        firebase_admin.initialize_app(cred, {"projectId": settings.firebase_project_id})
-    _firebase_ready = True
 
 
 def get_current_user(
@@ -60,7 +40,7 @@ def get_current_user(
 
     from firebase_admin import auth as firebase_auth
 
-    _ensure_firebase(settings)
+    ensure_firebase()
     try:
         claims = firebase_auth.verify_id_token(credentials.credentials)
     except Exception as exc:  # invalid signature, expired, wrong project, ...
