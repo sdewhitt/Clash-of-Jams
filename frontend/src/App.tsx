@@ -16,6 +16,8 @@ import { Tuner } from '@/pages/Tuner'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
+import { PlayScenario } from '@/pages/PlayScenario'
+import { EloLeaderboard } from '@/pages/EloLeaderboard'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
@@ -31,6 +33,8 @@ const PROTECTED_ROUTES = [
   { path: '/scenario_editor', element: <ScenarioEditor /> },
   { path: '/scenario_search', element: <ScenarioSearch /> },
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
+  { path: '/play/:scenarioId', element: <PlayScenario /> },
+  { path: '/leaderboards', element: <EloLeaderboard /> },
 ]
 
 export default function App() {

@@ -102,10 +102,29 @@ class ScenarioWithAuthor(ApiModel):
 class FilterResponse(ApiModel):
     max_plays: int | None = None
     min_plays: int | None = None
-    max_rating: float | None = None # TODO: once ratings are implemented we need to fill this in dynamically
-    min_rating: float | None = None
+    max_rating: float = 5.0
+    min_rating: float = 0.0
     max_difficulty: float | None = None # TODO: for now this is the difficulty set by the author.  I would like to make this the avg_rating eventually
     min_difficulty: float | None = None
+
+
+class ReviewUpsert(ApiModel):
+    comment: str = Field(default="", max_length=200)
+    rating: int = Field(ge=1, le=5)
+
+
+class ScenarioReview(ApiModel):
+    id: str
+    scenario_id: str
+    reviewer_uid: str
+    rating: int # 1-5 stars
+    comment: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class PublicReview(ScenarioReview):
+    display_name: str
 
 
 class SkillRating(ApiModel):
@@ -118,6 +137,34 @@ class SkillRating(ApiModel):
     games_played: int = 0
     is_provisional: bool = True  # until PROVISIONAL_MATCHES (10) games are played
     updated_at: datetime
+
+
+class RunSummary(ApiModel):
+    """The slice of a run a scenario leaderboard shows — not the full breakdown."""
+
+    run_id: str
+    played_at: datetime
+
+
+class LeaderboardEntry(ApiModel):
+    uid: str
+    display_name: str # TODO: will also want to bring in pfp at some point
+    ranking: int
+    key: float # this will be ELO or score so we can use this for both
+    skill_rating: SkillRating | None = None # will be used only in ELO leaderboard
+    run: RunSummary | None = None # will be used only in scenario leaderboards
+
+class LeaderboardResponse(ApiModel):
+    entries: list[LeaderboardEntry]
+    my_entry: LeaderboardEntry | None = None
+    total_players: int
+    percentile: float | None # caller's rank / total_players, i.e. "top X%" (0.05 = top 5%)
+    # Range of played_at across all runs, for the scenario board's date slider. None on the ELO board.
+    earliest_played_at: datetime | None = None
+    latest_played_at: datetime | None = None
+
+
+
 
 
 class CurrentUser(BaseModel):

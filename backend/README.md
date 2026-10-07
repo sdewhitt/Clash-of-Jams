@@ -98,3 +98,7 @@ Firestore wants `model_dump(by_alias=True)`.
 - Replace `_STORE` in `routers/scenarios.py` with Firestore via the Admin SDK.
 - Port the remaining shapes from `frontend/src/lib/schema/types.ts`.
 - Routers for runs, matches and leaderboards.
+- Run submission: when a run is created, also increment its scenario's
+  `playCount` (`firestore.Increment(1)`, in the same batch as the run). Every
+  run counts as a play, accepted or not. Until then,
+  `python scripts/seed_leaderboards.py` recounts it from existing runs.
