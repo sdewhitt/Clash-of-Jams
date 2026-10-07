@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router"
-
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { RangeSlider } from "@/components/RangeSlider"
@@ -66,6 +65,12 @@ const controlClass =
 export function ScenarioSearch() {
     const { user, profile } = useAuth()
     const navigate = useNavigate()
+
+    const navigate = useNavigate()
+
+    function navPortal(location: string) {
+        navigate(location)
+    }
 
     // Filter and sort state is wired to the controls but not applied to the list yet.
     const [search, setSearch] = useState("")
@@ -190,17 +195,17 @@ export function ScenarioSearch() {
                 flex
                 items-center
                 justify-between
-                bg-linear-to-r
-                from-accent-base-start from-10
-                via-accent-base-middle via-80
-                to-accent-base-end to-90
+                bg-linear-to-r 
+                from-accent-base-start from-10%
+                via-accent-base-middle via-70%
+                to-accent-base-end to-90%
                 border-b-4
                 border-accent-start
                 pt-6
                 pb-6
             `}>
                 <div className="flex ml-12">
-                    <BackButton></BackButton>
+                    <BackButton onClick={() => navPortal('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Scenario Search</h1>
                 </div>
                 <div className="mr-6">
@@ -230,9 +235,9 @@ export function ScenarioSearch() {
                             items-center
                             px-4 py-5
                             bg-linear-to-b
-                            from-accent-start from-50
+                            from-accent-start
                             via-accent-middle
-                            to-accent-end to-70
+                            to-accent-end
                             brightness-110
                             border-b-3
                             border-accent-start
@@ -317,9 +322,9 @@ export function ScenarioSearch() {
                             min-h-0
                             overflow-y-auto
                             bg-linear-to-br
-                            from-accent-start from-50
+                            from-accent-start
                             via-accent-middle
-                            to-accent-end to-70
+                            to-accent-end
                             brightness-90
                             px-4
                             py-4

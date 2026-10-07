@@ -1,11 +1,11 @@
-import { useNavigate } from "react-router"
+type BackButtonProps = {
+  onClick?: () => void;
+};
 
-export function BackButton() {
-    const navigate = useNavigate()
-
+export function BackButton({ onClick, }: BackButtonProps) {
     return (
         <button
-            onClick={() => navigate(-1)}
+            onClick={onClick}
             className={`
                 bg-linear-to-b
                 from-contrast-start

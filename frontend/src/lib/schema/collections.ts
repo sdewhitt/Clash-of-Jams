@@ -167,10 +167,10 @@ export function newUserSettings(args: {
 }): WithFieldValue<UserSettings> {
   return {
     uid: args.uid,
-    theme: 'system',
-    colorblindMode: 'off',
+    theme: 'default',
     reduceFlashing: false,
     preferredInstrument: args.preferredInstrument ?? 'piano',
+    preferredGenres: [],
     inputLatencyOffsetMs: 0,
     masterVolume: 0.8,
     metronomeEnabled: true,
@@ -194,6 +194,7 @@ export function newScenario(args: {
     title: args.title,
     description: args.description ?? '',
     instrument: args.instrument,
+    genres: [],
     visibility: args.visibility ?? 'private',
     tags: args.tags ?? [],
     authorDifficulty: args.authorDifficulty ?? 1,

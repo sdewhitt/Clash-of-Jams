@@ -24,6 +24,9 @@ export type Role = (typeof ROLES)[number]
 export const INSTRUMENTS = ['piano', 'guitar', 'woodwind', 'vocals', 'midi'] as const
 export type Instrument = (typeof INSTRUMENTS)[number]
 
+export const GENRES = ['blues', 'jazz', 'electronic', 'hip-hop', 'pop', 'r&b', 'rock', 'indie', 'alternative', 'folk', 'metal'] as const
+export type Genre = (typeof GENRES)[number]
+
 export const VISIBILITIES = ['private', 'unlisted', 'public'] as const
 export type Visibility = (typeof VISIBILITIES)[number]
 
@@ -105,9 +108,13 @@ export interface UsernameReservation {
 export interface UserSettings {
   uid: string
   theme: string
-  colorblindMode: 'off' | 'protanopia' | 'deuteranopia' | 'tritanopia'
   reduceFlashing: boolean
+  publicBio: boolean
   preferredInstrument: Instrument
+  publicInstrument: boolean
+  preferredGenres: Genre[]
+  publicGenres: Genre[]
+  publicElos: Instrument[]
   /** Milliseconds of input latency the gameplay engine compensates for. */
   inputLatencyOffsetMs: number
   masterVolume: number
@@ -127,6 +134,7 @@ export interface Scenario {
   title: string
   description: string
   instrument: Instrument
+  genres: Genre[]
   visibility: Visibility
   tags: string[]
   /** The author's own grading, 1-10. */

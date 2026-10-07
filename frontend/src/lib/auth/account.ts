@@ -20,9 +20,11 @@ import { doc, getDoc, writeBatch } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 import {
   COLLECTIONS,
+  newSkillRating,
   newUserProfile,
   newUserSettings,
   newUsernameReservation,
+  skillRatingsPath,
   usernameKey,
 } from '@/lib/schema/collections'
 
@@ -74,6 +76,13 @@ export async function signUp(args: {
       newUsernameReservation({ uid: user.uid, username }),
     )
     batch.set(doc(db, COLLECTIONS.userSettings, user.uid), newUserSettings({ uid: user.uid }))
+
+    batch.set(doc(db, skillRatingsPath(user.uid), "piano"), newSkillRating({ uid:user.uid, instrument:"piano" }))
+    batch.set(doc(db, skillRatingsPath(user.uid), "guitar"), newSkillRating({ uid:user.uid, instrument:"guitar" }))
+    batch.set(doc(db, skillRatingsPath(user.uid), "woodwind"), newSkillRating({ uid:user.uid, instrument:"woodwind" }))
+    batch.set(doc(db, skillRatingsPath(user.uid), "vocals"), newSkillRating({ uid:user.uid, instrument:"vocals" }))
+    batch.set(doc(db, skillRatingsPath(user.uid), "midi"), newSkillRating({ uid:user.uid, instrument:"midi" }))
+
     await batch.commit()
   } catch (error) {
     // Roll the auth account back, otherwise the email is locked to a user with
