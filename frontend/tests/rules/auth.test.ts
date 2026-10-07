@@ -8,10 +8,13 @@ import { describe, expect, it } from 'vitest'
 import {
   COLLECTIONS,
   newModerationAction,
+  newSkillRating,
   newUserSettings,
   newUsernameReservation,
+  skillRatingsPath,
   usernameKey,
 } from '../../src/lib/schema/collections.ts'
+import { INSTRUMENTS } from '../../src/lib/schema/types.ts'
 import {
   ALICE,
   aliceProfile,
@@ -45,8 +48,13 @@ function firstSignInBatch(uid: string, username: string) {
     newUsernameReservation({ uid, username }),
   )
   batch.set(doc(db, path.settings(uid)), newUserSettings({ uid }))
+  for (const instrument of INSTRUMENTS) {
+    batch.set(doc(db, skillRatingsPath(uid), instrument), newSkillRating({ uid, instrument }))
+  }
   return batch
 }
+
+const rating = (uid: string, instrument: string) => `${skillRatingsPath(uid)}/${instrument}`
 
 describe('first sign-in', () => {
   it('may create exactly the account documents keyed to the caller uid', async () => {
@@ -68,6 +76,30 @@ describe('first sign-in', () => {
     // The whole batch fails, so Bob is not left with a half-created account.
     await assertFails(firstSignInBatch(BOB, 'alice').commit())
     expect((await getDoc(doc(as(env(), BOB), path.settings(BOB)))).exists()).toBe(false)
+  })
+})
+
+describe('skill ratings', () => {
+  it('start at the default for every instrument when the account is created', async () => {
+    await assertSucceeds(firstSignInBatch(ALICE, 'Alice').commit())
+
+    const snapshot = await getDoc(doc(as(env(), ALICE), rating(ALICE, 'guitar')))
+    expect(snapshot.data()).toMatchObject({ uid: ALICE, instrument: 'guitar', elo: 400 })
+  })
+
+  it('cannot be created above the starting elo, or for someone else', async () => {
+    const start = newSkillRating({ uid: ALICE, instrument: 'piano' })
+
+    await assertFails(
+      setDoc(doc(as(env(), ALICE), rating(ALICE, 'piano')), { ...start, elo: 2400 }),
+    )
+    await assertFails(setDoc(doc(as(env(), BOB), rating(ALICE, 'piano')), start))
+  })
+
+  it('cannot be changed by their owner afterwards', async () => {
+    await assertSucceeds(firstSignInBatch(ALICE, 'Alice').commit())
+
+    await assertFails(updateDoc(doc(as(env(), ALICE), rating(ALICE, 'piano')), { elo: 2400 }))
   })
 })
 

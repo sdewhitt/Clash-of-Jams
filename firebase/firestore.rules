@@ -75,14 +75,15 @@ service cloud.firestore {
     }
 
     function isValidScenario(d, scenarioId) {
-      return hasExactly(d, ['id', 'authorUid', 'title', 'description', 'instrument', 'visibility',
-            'tags', 'authorDifficulty', 'crowdDifficulty', 'avgRating', 'ratingCount', 'playCount',
+      return hasExactly(d, ['id', 'authorUid', 'title', 'description', 'instrument', 'genres',
+            'visibility', 'tags', 'authorDifficulty', 'crowdDifficulty', 'avgRating', 'ratingCount', 'playCount',
             'currentVersionId', 'currentVersionNumber', 'createdAt', 'updatedAt'])
         && d.id == scenarioId
         && d.authorUid is string
         && d.title is string && d.title.size() >= 1 && d.title.size() <= 120
         && d.description is string
         && d.instrument in ['piano', 'guitar', 'woodwind', 'vocals', 'midi']
+        && d.genres is list
         && d.visibility in ['private', 'unlisted', 'public']
         && d.tags is list
         && d.authorDifficulty is int && d.authorDifficulty >= 1 && d.authorDifficulty <= 10
@@ -153,10 +154,23 @@ service cloud.firestore {
               && unchanged('isSocialRestricted')));
       allow delete: if isAdmin();
 
-      // Ratings are readable for leaderboards but only the server writes them.
+      // Ratings are readable for leaderboards. Sign-up creates one per
+      // instrument at the starting values; every change after that is the
+      // server's, so a client can never move its own elo.
       match /skillRatings/{instrument} {
         allow read: if signedIn();
-        allow write: if false;
+        allow create: if isSelf(uid)
+          && hasExactly(request.resource.data, ['uid', 'instrument', 'elo', 'tier', 'gamesPlayed',
+                'isProvisional', 'updatedAt'])
+          && request.resource.data.uid == uid
+          && instrument in ['piano', 'guitar', 'woodwind', 'vocals', 'midi']
+          && request.resource.data.instrument == instrument
+          && request.resource.data.elo == 400
+          && request.resource.data.tier == 'bronze'
+          && request.resource.data.gamesPlayed == 0
+          && request.resource.data.isProvisional == true
+          && stampedNow(request.resource.data.updatedAt);
+        allow update, delete: if false;
       }
     }
 

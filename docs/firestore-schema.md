@@ -66,7 +66,7 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 | Path                                          | Document              | Notes                                                                         |
 | --------------------------------------------- | --------------------- | ----------------------------------------------------------------------------- |
 | `users/{uid}`                                 | `UserProfile`         | Id is the Firebase Auth uid. No credentials, ever — Firebase Auth owns those. |
-| `users/{uid}/skillRatings/{instrument}`       | `SkillRating`         | One per instrument. Server-written only.                                      |
+| `users/{uid}/skillRatings/{instrument}`       | `SkillRating`         | One per instrument. Created at sign-up, then server-written.                  |
 | `usernames/{usernameLower}`                   | `UsernameReservation` | Reservation doc; the key is what makes usernames unique.                      |
 | `userSettings/{uid}`                          | `UserSettings`        | Theme, accessibility, instrument preferences.                                 |
 | `scenarios/{scenarioId}`                      | `Scenario`            | Ownership, metadata and aggregates.                                           |
@@ -139,7 +139,7 @@ later cannot silently rewrite old scores.
 | 2. Scenario version numbers unique            | `versionNumber` is assigned from `scenarios/{id}.currentVersionNumber + 1` inside a transaction that also advances the parent.                      |
 | 3. One review per user per scenario           | The review's document id is `{scenarioId}_{uid}`, and `firebase/firestore.rules` requires the id to match the body.                                 |
 | 4. Foreign keys required                      | Every reference field is non-optional in `types.ts`; the factories in `collections.ts` cannot produce a document that omits one.                    |
-| 5. Match finalization and elo commit together | Both are server-side writes in a single Firestore transaction — the client is denied writes to `matches/{id}` and to any `skillRatings` document.   |
+| 5. Match finalization and elo commit together | Both are server-side writes in a single Firestore transaction — the client is denied writes to `matches/{id}`, and may only create a `skillRatings` document at its starting values.   |
 
 Invariants 1, 2 and 5 need transactional writes that do not exist yet; they
 belong to the data access layer, not to the schema. Until that lands, the
