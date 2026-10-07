@@ -3,13 +3,23 @@ import { useNavigate } from "react-router"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { RangeSlider } from "@/components/RangeSlider"
+import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
+import { StarDisplay } from "@/components/StarRating"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
-import { INSTRUMENTS, type Scenario } from "@/lib/schema/types"
+import { INSTRUMENTS, type Scenario, type ScenarioReview } from "@/lib/schema/types"
 
 type ScenarioWithAuthor = {
     scenario: Scenario
     authorName: string
+}
+
+// Mirrors backend/app/schemas.py's PublicReview; timestamps arrive as ISO strings.
+type ApiReview = Omit<ScenarioReview, "createdAt" | "updatedAt"> & {
+    createdAt: string
+    updatedAt: string
+    /** The reviewer's display name, or "Anonymous" for private profiles. */
+    displayName: string
 }
 
 // Mirrors backend/app/schemas.py's FilterResponse (camelCase on the wire).
@@ -33,6 +43,13 @@ const SORT_OPTIONS = [
 
 type SortKey = (typeof SORT_OPTIONS)[number]["value"]
 
+const DETAILS_TABS = [
+    { value: "leaderboard", label: "Leaderboard" },
+    { value: "reviews", label: "Reviews" },
+] as const
+
+type DetailsTab = (typeof DETAILS_TABS)[number]["value"]
+
 function ScenarioStat({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div className="w-20">
@@ -47,6 +64,7 @@ const controlClass =
 
 export function ScenarioSearch() {
     const { user, profile } = useAuth()
+    const navigate = useNavigate()
 
     const navigate = useNavigate()
 
@@ -62,7 +80,17 @@ export function ScenarioSearch() {
 
     const [scenarios, setScenarios] = useState<ScenarioWithAuthor[]>([])
     const [selectedId, setSelectedId] = useState<string | null>(null)
+    // Kept across selections, so someone reading reviews can flip between scenarios without re-picking the tab.
+    const [detailsTab, setDetailsTab] = useState<DetailsTab>("leaderboard")
     const selected = scenarios.find(({ scenario }) => scenario.id === selectedId) ?? null
+
+    // Tagged with the scenario they belong to, so switching selection never shows
+    // the previous scenario's reviews. reviews is null if the fetch failed.
+    const [loadedReviews, setLoadedReviews] = useState<{
+        scenarioId: string
+        reviews: ApiReview[] | null
+    } | null>(null)
+    const selectedReviews = loadedReviews?.scenarioId === selectedId ? loadedReviews : null
 
     // Each range is null until we know the real bounds from the API — a
     // slider with a null range renders disabled instead of guessing 0-0.
@@ -82,6 +110,22 @@ export function ScenarioSearch() {
             .then(setFilterBounds)
             .catch(console.error)
     }, [])
+
+    useEffect(() => {
+        if (!selectedId) return
+        let cancelled = false
+        apiFetch<ApiReview[]>(`/ratings/${selectedId}`)
+            .then((reviews) => {
+                if (!cancelled) setLoadedReviews({ scenarioId: selectedId, reviews })
+            })
+            .catch((err) => {
+                console.error(err)
+                if (!cancelled) setLoadedReviews({ scenarioId: selectedId, reviews: null })
+            })
+        return () => {
+            cancelled = true
+        }
+    }, [selectedId])
 
     // Seed each slider's range from the fetched bounds, once they arrive.
     // Left null (and the slider left disabled) if a bound isn't available yet,
@@ -325,7 +369,7 @@ export function ScenarioSearch() {
                                                     {scenario.authorDifficulty}
                                                 </ScenarioStat>
                                                 <ScenarioStat label="Rating">
-                                                    {scenario.avgRating ?? "—"}
+                                                    <StarDisplay value={scenario.avgRating} />
                                                 </ScenarioStat>
                                             </dl>
 
@@ -407,12 +451,13 @@ export function ScenarioSearch() {
                                         <ScenarioStat label="Instrument">
                                             <span className="capitalize">{selected.scenario.instrument}</span>
                                         </ScenarioStat>
+                                        {/* playCount is incremented by run submission (not built yet); until then the seed script recounts it. */}
                                         <ScenarioStat label="Plays">{selected.scenario.playCount}</ScenarioStat>
                                         <ScenarioStat label="Difficulty">
                                             {selected.scenario.authorDifficulty}
                                         </ScenarioStat>
                                         <ScenarioStat label="Rating">
-                                            {selected.scenario.avgRating ?? "—"}
+                                            <StarDisplay value={selected.scenario.avgRating} />
                                         </ScenarioStat>
                                     </dl>
 
@@ -428,6 +473,83 @@ export function ScenarioSearch() {
                                             ))}
                                         </ul>
                                     )}
+
+                                    <div role="tablist" aria-label="Scenario details" className="mt-6 flex gap-2 border-b-2 border-accent-start">
+                                        {DETAILS_TABS.map((tab) => {
+                                            const isActive = tab.value === detailsTab
+                                            return (
+                                                <button
+                                                    key={tab.value}
+                                                    type="button"
+                                                    role="tab"
+                                                    id={`details-tab-${tab.value}`}
+                                                    aria-selected={isActive}
+                                                    aria-controls="details-tabpanel"
+                                                    onClick={() => setDetailsTab(tab.value)}
+                                                    className={`
+                                                        -mb-0.5
+                                                        rounded-t-lg
+                                                        border-2
+                                                        border-b-0
+                                                        px-4
+                                                        py-1.5
+                                                        text-lg
+                                                        font-bold
+                                                        ${isActive
+                                                            ? "border-accent-start bg-accent-start text-ink"
+                                                            : "border-transparent text-muted hover:text-ink"}
+                                                    `}
+                                                >
+                                                    {tab.label}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+
+                                    <div
+                                        role="tabpanel"
+                                        id="details-tabpanel"
+                                        aria-labelledby={`details-tab-${detailsTab}`}
+                                        className="pt-3"
+                                    >
+                                    {detailsTab === "leaderboard" ? (
+                                        <ScenarioLeaderboard
+                                            key={selected.scenario.id}
+                                            scenarioId={selected.scenario.id}
+                                            versionId={selected.scenario.currentVersionId}
+                                        />
+                                    ) : selectedReviews === null ? (
+                                        <p className="text-sm text-muted">Loading reviews…</p>
+                                    ) : selectedReviews.reviews === null ? (
+                                        <p className="text-sm text-muted">Couldn't load reviews.</p>
+                                    ) : selectedReviews.reviews.length === 0 ? (
+                                        <p className="text-sm italic text-muted">No reviews yet.</p>
+                                    ) : (
+                                        <ul className="flex flex-col gap-3">
+                                            {selectedReviews.reviews.map((review) => (
+                                                <li
+                                                    key={review.id}
+                                                    className="rounded-lg border-2 border-accent-start px-3 py-2"
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="truncate font-semibold text-ink">
+                                                            {review.displayName}
+                                                        </span>
+                                                        <span className="shrink-0 text-xs text-muted">
+                                                            {new Date(review.createdAt).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <StarDisplay value={review.rating} />
+                                                    {review.comment && (
+                                                        <p className="mt-1 wrap-break-word text-sm text-ink">
+                                                            {review.comment}
+                                                        </p>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    </div>
                                 </>
                             ) : (
                                 <p className="flex h-full items-center justify-center text-center text-muted">
@@ -436,10 +558,16 @@ export function ScenarioSearch() {
                             )}
                         </section>
 
-                        {/* No play route exists yet, so this only enables once something is selected. */}
+                        {/* Goes to a placeholder page until gameplay exists; it only offers rating. */}
                         <button
                             type="button"
                             disabled={!selected}
+                            onClick={() => {
+                                if (!selected) return
+                                // Gameplay always plays the current version; scenarios without one still open for now.
+                                const version = selected.scenario.currentVersionId
+                                navigate(`/play/${selected.scenario.id}${version ? `?version=${version}` : ""}`)
+                            }}
                             className={`
                                 shrink-0
                                 rounded-xl

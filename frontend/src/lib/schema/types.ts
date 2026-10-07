@@ -374,7 +374,7 @@ export interface PlaylistItem {
 }
 
 /**
- * scenarioReviews/{scenarioId}_{uid} — one review per user per scenario.
+ * scenarioReviews/{scenarioId}/{uid} — one review per user per scenario.
  *
  * The composite id is what enforces invariant 3.
  */
