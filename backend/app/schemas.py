@@ -80,7 +80,7 @@ class ScenarioCreate(ApiModel):
     title: str = Field(min_length=1, max_length=120)
     description: str = ""
     instrument: Instrument
-    genre: list[Genre]
+    genres: list[Genre] = []
     visibility: Visibility = Visibility.PRIVATE
     tags: list[str] = []
     author_difficulty: int = Field(default=1, ge=1, le=10)

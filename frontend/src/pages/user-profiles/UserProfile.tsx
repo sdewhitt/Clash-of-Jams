@@ -35,17 +35,6 @@ export function UserProfile() {
         }
     }
 
-    if (loading) { 
-        return ( 
-            <main className="h-screen flex items-center justify-center"> 
-                <div className="flex flex-col items-center gap-4"> 
-                <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin" /> 
-                    <p className="text-xl font-semibold text-ink"> Loading profile... </p> 
-                </div> 
-            </main> 
-        ); 
-    }
-
     useEffect(
         () => { 
             if (loading) return; 
@@ -59,6 +48,17 @@ export function UserProfile() {
             setPreferredInstrument( userSettings?.preferredInstrument ?? "" );
             }, [userSettings]
     );
+
+    if (loading) { 
+        return ( 
+            <main className="h-screen flex items-center justify-center"> 
+                <div className="flex flex-col items-center gap-4"> 
+                <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin" /> 
+                    <p className="text-xl font-semibold text-ink"> Loading profile... </p> 
+                </div> 
+            </main> 
+        ); 
+    }
 
 
     function navPortal(location: string) {
