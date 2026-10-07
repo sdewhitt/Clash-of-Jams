@@ -23,6 +23,7 @@ import {
   parseEditorTab,
 } from '@/pages/scenario_editor/tabs'
 import type { EditorTabId } from '@/pages/scenario_editor/tabs'
+import { BackButton } from '@/components/BackButton'
 
 const ID_PREFIX = 'scenario-editor'
 
@@ -33,6 +34,10 @@ export function ScenarioEditor() {
 
   const selected = parseEditorTab(searchParams.get(EDITOR_TAB_PARAM))
   const scenarioId = searchParams.get(EDITOR_SCENARIO_PARAM)
+
+  function navPortal(location: string) {
+      navigate(location)
+  }
 
   // replace: the back button should leave the editor, not walk back through
   // every tab the author happened to look at.
@@ -54,14 +59,7 @@ export function ScenarioEditor() {
           to-accent-base-end to-90 py-6"
       >
         <div className="ml-12 flex items-center gap-6">
-          <button
-            type="button"
-            onClick={() => navigate('/home')}
-            className="rounded-lg px-3 py-2 font-bold text-ink transition-colors
-              hover:bg-accent-start active:scale-95"
-          >
-            &larr; Home
-          </button>
+          <BackButton onClick={() => navPortal('/home')}></BackButton>
           <h1 className="text-4xl font-bold text-ink">Scenario Editor</h1>
         </div>
         <div className="mr-6">
