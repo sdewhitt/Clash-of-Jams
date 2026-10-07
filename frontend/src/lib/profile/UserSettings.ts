@@ -1,16 +1,19 @@
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import type { Instrument, SkillRating, UserSettings } from '@/lib/schema/types'
 import { db } from "@/lib/firebase";
-import { skillRatingsPath } from "../schema/collections";
+import { COLLECTIONS, skillRatingsPath } from "../schema/collections";
 
 export async function getUserSettings(uid: string): Promise<UserSettings> {
-    const settingsQuery = query(collection(db, "userSettings"), where("uid", "==", uid));
-    const snapshot = await getDocs(settingsQuery);
-    const userDoc = snapshot.docs[0];
-    
+    // Read by id, not by query: the rules grant userSettings/{uid} to its owner by
+    // document id, which a collection query can't be shown to satisfy.
+    const snapshot = await getDoc(doc(db, COLLECTIONS.userSettings, uid));
+    if (!snapshot.exists()) {
+        throw new Error("No settings found for this user.");
+    }
+
     return {
-        uid: userDoc.id,
-        ...userDoc.data(),
+        uid: snapshot.id,
+        ...snapshot.data(),
     } as UserSettings;
 }
 

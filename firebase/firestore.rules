@@ -187,6 +187,12 @@ service cloud.firestore {
       allow read, write: if isSelf(uid);
     }
 
+    // The preset avatars offered on the profile editor. Read-only to clients.
+    match /avatars/{avatarId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
     match /scenarios/{scenarioId} {
       // A missing document reads as empty (not denied), so a deleted scenario
       // or a stale link resolves cleanly; it discloses nothing but absence.
