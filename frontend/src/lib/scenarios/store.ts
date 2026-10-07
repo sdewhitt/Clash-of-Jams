@@ -114,17 +114,19 @@ export interface LoadedScenario {
   version: ScenarioVersion | null
 }
 
-/** Reads a scenario and the version it currently points at. */
-export async function loadScenario(scenarioId: string): Promise<LoadedScenario> {
+/** Reads a scenario and one of its versions: `versionId`, or the one it currently points at. */
+export async function loadScenario(
+  scenarioId: string,
+  versionId?: string | null,
+): Promise<LoadedScenario> {
   const snapshot = await getDoc(doc(db, COLLECTIONS.scenarios, scenarioId))
   if (!snapshot.exists()) throw new Error('That scenario no longer exists.')
   const scenario = snapshot.data() as Scenario
 
-  if (!scenario.currentVersionId) return { scenario, version: null }
+  const wanted = versionId || scenario.currentVersionId
+  if (!wanted) return { scenario, version: null }
 
-  const versionSnapshot = await getDoc(
-    doc(db, scenarioVersionsPath(scenarioId), scenario.currentVersionId),
-  )
+  const versionSnapshot = await getDoc(doc(db, scenarioVersionsPath(scenarioId), wanted))
   return {
     scenario,
     version: versionSnapshot.exists() ? (versionSnapshot.data() as ScenarioVersion) : null,

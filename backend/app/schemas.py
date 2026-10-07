@@ -169,6 +169,20 @@ class LeaderboardEntry(ApiModel):
     skill_rating: SkillRating | None = None # will be used only in ELO leaderboard
     run: RunSummary | None = None # will be used only in scenario leaderboards
 
+class RunValidation(StrEnum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
+class RunValidationResult(ApiModel):
+    """What POST /runs/{runId}/validate decided, and why if the run was rejected."""
+
+    run_id: str
+    validation: RunValidation
+    reason: str | None = None
+
+
 class LeaderboardResponse(ApiModel):
     entries: list[LeaderboardEntry]
     my_entry: LeaderboardEntry | None = None
