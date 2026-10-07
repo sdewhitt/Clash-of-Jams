@@ -23,6 +23,21 @@ router = APIRouter(prefix="/scenarios", tags=["scenarios"])
 _STORE: dict[str, Scenario] = {}
 db = get_firestore_client()
 
+
+def _searchable_scenarios(uid: str) -> list[Scenario]:
+    """Every public scenario, plus the caller's own at any visibility.
+
+    Two equality queries merged by id rather than one OR query, so neither
+    needs a composite index. An author can then find and play what they made
+    without publishing it first.
+    """
+    scenarios = db.collection("scenarios")
+    public = scenarios.where(filter=FieldFilter("visibility", "==", "public")).stream()
+    own = scenarios.where(filter=FieldFilter("authorUid", "==", uid)).stream()
+    by_id = {doc.id: Scenario(**doc.to_dict()) for doc in [*public, *own]}
+    return list(by_id.values())
+
+
 @router.get("", response_model=list[Scenario])
 def list_scenarios(user: CurrentUserDep) -> list[Scenario]:
     """Every scenario the caller can see. For now: the ones they authored."""
@@ -69,15 +84,10 @@ def list_public_scenarios() -> list[Scenario]:
 
 
 @router.get("/filter_items", response_model=FilterResponse)
-def list_filter_items() -> FilterResponse:
+def list_filter_items(user: CurrentUserDep) -> FilterResponse:
     """Get the possible filters for scenarios to populate dropdowns and sliders"""
-    docs = (
-        db.collection("scenarios")
-        .where(filter=FieldFilter("visibility", "==", "public"))
-        .stream()
-    )
-
-    scenario_list = [Scenario(**doc.to_dict()) for doc in docs]
+    # Same set the search lists, or a slider's bounds could hide the caller's own scenario.
+    scenario_list = _searchable_scenarios(user.uid)
     filter_response = FilterResponse()
 
     for s in scenario_list:
@@ -94,14 +104,9 @@ def list_filter_items() -> FilterResponse:
 
 
 @router.get("/scenario_with_author", response_model=list[ScenarioWithAuthor])
-def list_scenario_with_author() -> list[ScenarioWithAuthor]:
-    """List all public scenarios and their authors for search feature"""
-    docs = (
-        db.collection("scenarios")
-        .where(filter=FieldFilter("visibility", "==", "public"))
-        .stream()
-    )
-    scenario_list = [Scenario(**doc.to_dict()) for doc in docs]
+def list_scenario_with_author(user: CurrentUserDep) -> list[ScenarioWithAuthor]:
+    """List public scenarios and the caller's own, with their authors, for search feature"""
+    scenario_list = _searchable_scenarios(user.uid)
     out_list = []
     for s in scenario_list:
         doc = db.collection("users").document(s.author_uid).get(field_paths=["displayName"])

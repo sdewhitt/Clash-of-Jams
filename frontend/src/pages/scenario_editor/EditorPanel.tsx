@@ -29,8 +29,8 @@ import {
 import type { ScenarioDraft } from '@/pages/scenario_editor/draft'
 
 const FIELD_CLASS =
-  'w-full rounded-lg border-2 border-line bg-surface px-3 py-2 text-ink ' +
-  'placeholder:text-faint focus:border-accent focus:outline-none transition-colors'
+  'w-full rounded-lg border-2 border-base-middle bg-base-end px-3 py-2 text-ink ' +
+  'placeholder:text-faint focus:border-accent-start focus:outline-none transition-colors'
 
 const LABEL_CLASS = 'mb-1 block text-sm font-bold text-muted'
 
@@ -145,9 +145,10 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
           type="button"
           onClick={handleSave}
           disabled={!canSave}
-          className="rounded-lg bg-accent px-6 py-3 font-bold text-ink transition-all
-            hover:bg-accent-soft active:scale-95 disabled:cursor-not-allowed
-            disabled:bg-surface disabled:text-faint"
+          className="rounded-lg bg-linear-to-b from-accent-start from-50 via-accent-middle
+            to-accent-end to-70 px-6 py-3 font-bold text-ink transition-all hover:brightness-125
+            active:scale-95 disabled:cursor-not-allowed disabled:bg-base-end disabled:bg-none
+            disabled:text-faint disabled:hover:brightness-100"
         >
           {status.kind === 'saving' ? 'Saving...' : scenarioId ? 'Save Version' : 'Save Scenario'}
         </button>
@@ -156,8 +157,8 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
           <button
             type="button"
             onClick={onStartNew}
-            className="rounded-lg border-2 border-line px-6 py-3 font-bold text-ink
-              transition-colors hover:border-accent hover:bg-accent-base"
+            className="rounded-lg border-2 border-base-middle px-6 py-3 font-bold text-ink
+              transition-colors hover:border-accent-start hover:bg-accent-base-middle"
           >
             New Scenario
           </button>
@@ -293,7 +294,7 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
             step={1}
             value={draft.authorDifficulty}
             onChange={(event) => edit({ ...draft, authorDifficulty: Number(event.target.value) })}
-            className="w-full accent-accent"
+            className="w-full accent-accent-start"
           />
         </div>
       </div>
@@ -323,7 +324,7 @@ function SaveStatus({
   hasTitle: boolean
 }) {
   if (status.kind === 'error') {
-    return <p className="text-sm font-bold text-accent-soft">{status.message}</p>
+    return <p className="text-sm font-bold text-accent-end">{status.message}</p>
   }
   if (status.kind === 'saved') {
     return <p className="text-sm text-muted">Saved as version {status.versionNumber}.</p>

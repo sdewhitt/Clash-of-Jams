@@ -53,7 +53,7 @@ export function TabBar<Id extends string>({
       role="tablist"
       aria-label={label}
       onKeyDown={handleKeyDown}
-      className="flex flex-wrap gap-2 border-b-2 border-line"
+      className="flex flex-wrap gap-2 border-b-2 border-base-middle"
     >
       {tabs.map((tab) => {
         const isSelected = tab.id === selected
@@ -69,8 +69,8 @@ export function TabBar<Id extends string>({
             onClick={() => onSelect(tab.id)}
             className={`-mb-0.5 rounded-t-lg border-b-4 px-5 py-3 font-bold transition-colors ${
               isSelected
-                ? 'border-accent-soft bg-accent text-ink'
-                : 'border-transparent text-muted hover:bg-accent-base hover:text-ink'
+                ? 'border-accent-end bg-linear-to-b from-accent-start from-50 via-accent-middle to-accent-end to-70 text-ink'
+                : 'border-transparent text-muted hover:bg-accent-base-middle hover:text-ink'
             }`}
           >
             {tab.label}

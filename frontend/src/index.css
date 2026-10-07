@@ -31,44 +31,55 @@
   'Dark Mode' associated with the Clash of Jams application
 */
 [data-theme="dark"] {
-  --color-base: #050505;
-  --color-surface: #111111;
-  --color-line: #2a2a2a;
+  --color-base-start: #050505;
+  --color-base-middle: #2a2a2a;
+  --color-base-end: #111111;
+
   --color-ink: #ffffff;
   --color-inverse-ink:#07060b;
   --color-muted: #a3a3a3;
   --color-faint: #737373;
-  --color-accent-base: #7b2fc7;
-  --color-accent: #3b82f6;
-  --color-accent-soft: #60a5fa;
-  --color-accent-soft-x2: #d7afff;
 
-  --color-contrast: #5755f7;
-  --color-contrast-soft: #7774fb;
-  --color-contrast-soft-x2: #a7a6ff;
+  --color-accent-base-start: #321251;
+  --color-accent-base-middle: #7b2fc7;
+  --color-accent-base-end: #461873;
+
+  --color-accent-start: #3b82f6;
+  --color-accent-middle: #3a5378;
+  --color-accent-end: #60a5fa;
+
+  --color-contrast-start: #5755f7;
+  --color-contrast-middle: #45446c;
+  --color-contrast-end: #7774fb;
 }
 
 /*
   Neon theme
 */
 [data-theme="neon"] {
-  --color-base: #080014;
-  --color-surface: #140021;
-  --color-line: #3b155c;
+  --color-base-start: #080014;
+  --color-base-middle: #3b155c;
+  --color-base-end: #140021;
+
   --color-ink: #ffffff;
   --color-inverse-ink:#07060b;
   --color-muted: #d8b4fe;
   --color-faint: #a855f7;
-  --color-accent-base: #7b2fc7;
-  --color-accent: #ec4899;
-  --color-accent-soft: #f472b6;
-  --color-accent-soft-x2: #d7afff;
-  --color-contrast: #5755f7;
-  --color-contrast-soft: #7774fb;
-  --color-contrast-soft-x2: #a7a6ff;
+
+  --color-accent-base-start: #321251;
+  --color-accent-base-middle: #7b2fc7;
+  --color-accent-base-end: #461873;
+
+  --color-accent-start: #ec4899;
+  --color-accent-middle: #7a3e5c;
+  --color-accent-end: #f472b6;
+
+  --color-contrast-start: #5755f7;
+  --color-contrast-middle: #45446c;
+  --color-contrast-end: #7774fb;
 }
 
-/* Tailwind v4 reads these and generates matching utilities (bg-surface, text-muted, ...). */
+/* Tailwind v4 reads these and generates matching utilities (bg-base-end, text-muted, ...). */
 @theme {
   --color-base-start: var(--color-base-start);
   --color-base-middle: var(--color-base-middle);

@@ -8,7 +8,7 @@ export function SettingsButton({children, onClick,}: SettingsButtonProps) {
         <button
             onClick={onClick}
             className={`
-                bg-accent
+                bg-accent-start
                 hover:bg-accent-middle
                 hover:-translate-y-1
                 active:scale-95

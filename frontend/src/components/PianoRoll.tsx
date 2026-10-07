@@ -227,8 +227,8 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
           type="button"
           disabled={selected === null}
           onClick={() => selected !== null && deleteNote(selected)}
-          className="rounded-lg border-2 border-line px-4 py-2 text-sm font-bold text-ink
-            transition-colors hover:border-accent hover:bg-accent-base
+          className="rounded-lg border-2 border-base-middle px-4 py-2 text-sm font-bold text-ink
+            transition-colors hover:border-accent-start hover:bg-accent-base-middle
             disabled:cursor-not-allowed disabled:text-faint disabled:hover:bg-transparent"
         >
           Delete note
@@ -239,14 +239,17 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
       </div>
 
       <div
-        className="overflow-auto rounded-xl border-2 border-line bg-surface"
+        className="overflow-auto rounded-xl border-2 border-base-middle bg-base-end"
         style={{ maxHeight: 440 }}
       >
         <div className="relative" style={{ width: KEY_WIDTH + totalBeats * BEAT_WIDTH }}>
           <div className="sticky top-0 z-20 flex" style={{ height: RULER_HEIGHT }}>
-            <div className="sticky left-0 z-30 shrink-0 bg-base" style={{ width: KEY_WIDTH }} />
             <div
-              className="relative shrink-0 border-b-2 border-line bg-base"
+              className="sticky left-0 z-30 shrink-0 bg-base-start"
+              style={{ width: KEY_WIDTH }}
+            />
+            <div
+              className="relative shrink-0 border-b-2 border-base-middle bg-base-start"
               style={{ width: totalBeats * BEAT_WIDTH }}
             >
               {Array.from({ length: bars }, (_, bar) => (
@@ -262,12 +265,12 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
           </div>
 
           <div className="flex">
-            <div className="sticky left-0 z-10 shrink-0 bg-base" style={{ width: KEY_WIDTH }}>
+            <div className="sticky left-0 z-10 shrink-0 bg-base-start" style={{ width: KEY_WIDTH }}>
               {pitches.map((pitch) => (
                 <div
                   key={pitch}
                   className={`flex items-center justify-end pr-2 text-xs ${
-                    isBlackKey(pitch) ? 'bg-base text-faint' : 'bg-surface text-muted'
+                    isBlackKey(pitch) ? 'bg-base-start text-faint' : 'bg-base-end text-muted'
                   }`}
                   style={{ height: ROW_HEIGHT }}
                 >
@@ -293,7 +296,7 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
               {pitches.map((pitch, row) => (
                 <div
                   key={pitch}
-                  className={`absolute w-full ${isBlackKey(pitch) ? 'bg-base' : 'bg-surface'}`}
+                  className={`absolute w-full ${isBlackKey(pitch) ? 'bg-base-start' : 'bg-base-end'}`}
                   style={{ top: row * ROW_HEIGHT, height: ROW_HEIGHT }}
                 />
               ))}
@@ -318,7 +321,9 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
                     }}
                     title={`${pitchName(view.midiPitch)} at beat ${round(view.startBeat)}`}
                     className={`absolute cursor-grab rounded border-2 ${
-                      isSelected ? 'border-ink bg-accent-soft' : 'border-accent-soft bg-accent'
+                      isSelected
+                        ? 'border-ink bg-accent-start'
+                        : 'border-accent-end bg-accent-base-middle'
                     }`}
                     style={{
                       top: (EDITOR_LIMITS.maxPitch - view.midiPitch) * ROW_HEIGHT + 1,
@@ -362,8 +367,8 @@ function ToolbarSelect({
         id={id}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="rounded-lg border-2 border-line bg-surface px-2 py-1 text-ink
-          focus:border-accent focus:outline-none"
+        className="rounded-lg border-2 border-base-middle bg-base-end px-2 py-1 text-ink
+          focus:border-accent-start focus:outline-none"
       >
         {choices.map((choice) => (
           <option key={choice.value} value={choice.value}>
@@ -379,8 +384,8 @@ function ToolbarSelect({
 function gridLines(barBeats: number) {
   return [
     `repeating-linear-gradient(to right, var(--color-faint) 0 1px, transparent 1px ${barBeats * BEAT_WIDTH}px)`,
-    `repeating-linear-gradient(to right, var(--color-line) 0 1px, transparent 1px ${BEAT_WIDTH}px)`,
-    `repeating-linear-gradient(to bottom, var(--color-line) 0 1px, transparent 1px ${12 * ROW_HEIGHT}px)`,
+    `repeating-linear-gradient(to right, var(--color-base-middle) 0 1px, transparent 1px ${BEAT_WIDTH}px)`,
+    `repeating-linear-gradient(to bottom, var(--color-base-middle) 0 1px, transparent 1px ${12 * ROW_HEIGHT}px)`,
   ].join(',')
 }
 

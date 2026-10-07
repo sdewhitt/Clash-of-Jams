@@ -58,7 +58,7 @@ export function ScenarioEditor() {
             type="button"
             onClick={() => navigate('/home')}
             className="rounded-lg px-3 py-2 font-bold text-ink transition-colors
-              hover:bg-accent active:scale-95"
+              hover:bg-accent-start active:scale-95"
           >
             &larr; Home
           </button>

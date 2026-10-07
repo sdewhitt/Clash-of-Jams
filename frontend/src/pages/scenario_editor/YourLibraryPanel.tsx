@@ -84,7 +84,7 @@ export function YourLibraryPanel({ onOpenScenario, onCreateNew }: YourLibraryPan
         <li
           key={scenario.id}
           className="flex flex-wrap items-center justify-between gap-4 rounded-xl border-2
-            border-line bg-surface px-6 py-4"
+            border-base-middle bg-base-end px-6 py-4"
         >
           <div>
             <h3 className="text-xl font-bold text-ink">{scenario.title}</h3>
@@ -97,9 +97,9 @@ export function YourLibraryPanel({ onOpenScenario, onCreateNew }: YourLibraryPan
           <button
             type="button"
             onClick={() => onOpenScenario(scenario.id)}
-            className="rounded-lg bg-contrast px-5 py-2 font-bold text-ink outline-3
-              outline-contrast-soft transition-all hover:bg-contrast-soft
-              hover:outline-contrast active:scale-95"
+            className="rounded-lg bg-linear-to-b from-contrast-start from-50 via-contrast-middle
+              to-contrast-end to-70 px-5 py-2 font-bold text-ink outline-3
+              outline-contrast-middle transition-all hover:brightness-125 active:scale-95"
           >
             Open in Editor
           </button>

@@ -81,7 +81,7 @@ export function Login() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="rounded-lg border border-line bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
+              className="rounded-lg border border-base-middle bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
             />
           </label>
 
@@ -94,7 +94,7 @@ export function Login() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="rounded-lg border border-line bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
+              className="rounded-lg border border-base-middle bg-base-middle px-3 py-2 text-ink placeholder:text-faint"
             />
           </label>
 
@@ -131,7 +131,7 @@ export function Login() {
           type="button"
           onClick={handleGoogle}
           disabled={busy}
-          className="mt-3 w-full rounded-lg border border-line bg-surface px-4 py-2.5 font-medium text-ink transition-colors hover:bg-accent-base disabled:opacity-60"
+          className="mt-3 w-full rounded-lg border border-base-middle bg-base-end px-4 py-2.5 font-medium text-ink transition-colors hover:bg-accent-base-middle disabled:opacity-60"
         >
           Continue with Google
         </button>
