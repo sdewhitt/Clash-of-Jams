@@ -15,6 +15,11 @@ vi.mock('@/lib/auth/account', async (importOriginal) => ({
   signInWithGoogle: vi.fn(),
 }))
 
+// Login reads the saved theme before moving a signed-in user on.
+vi.mock('@/lib/profile/UserSettings', () => ({
+  getUserSettings: vi.fn().mockResolvedValue({ theme: 'default' }),
+}))
+
 beforeEach(() => {
   vi.mocked(signInWithGoogle).mockReset()
 })
@@ -45,9 +50,9 @@ describe('Login with Google', () => {
     expect(screen.queryByTestId('location')).not.toBeInTheDocument()
   })
 
-  it('sends an already signed-in user straight on', () => {
+  it('sends an already signed-in user straight on', async () => {
     renderAtRoute(<Login />, { path: '/login', auth: signedIn() })
 
-    expect(screen.getByTestId('location')).toHaveTextContent('/home')
+    expect(await screen.findByTestId('location')).toHaveTextContent('/home')
   })
 })

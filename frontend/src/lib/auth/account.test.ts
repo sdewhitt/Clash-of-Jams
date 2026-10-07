@@ -7,6 +7,8 @@
 import type { User } from 'firebase/auth'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { INSTRUMENTS } from '@/lib/schema/types'
+
 const store = new Map<string, Record<string, unknown>>()
 const commits: string[][] = []
 
@@ -63,7 +65,8 @@ function popupReturns(user: User) {
   >)
 }
 
-const userDocs = () => [...store.keys()].filter((key) => key.startsWith('users/'))
+// Top-level entries only: each user also gets a skillRatings subcollection.
+const userDocs = () => [...store.keys()].filter((key) => /^users\/[^/]+$/.test(key))
 
 beforeEach(() => {
   store.clear()
@@ -105,7 +108,12 @@ describe('signInWithGoogle', () => {
 
     expect(userDocs()).toEqual(['users/google-uid-12345'])
     expect(commits).toEqual([
-      ['users/google-uid-12345', 'usernames/adalovelace', 'userSettings/google-uid-12345'],
+      [
+        'users/google-uid-12345',
+        'usernames/adalovelace',
+        'userSettings/google-uid-12345',
+        ...INSTRUMENTS.map((instrument) => `users/google-uid-12345/skillRatings/${instrument}`),
+      ],
     ])
     expect(store.get('users/google-uid-12345')).toMatchObject({
       uid: 'google-uid-12345',

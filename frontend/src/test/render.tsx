@@ -9,6 +9,7 @@ import type { ReactElement } from 'react'
 import type { User } from 'firebase/auth'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 
+import { ThemeProvider } from '@/context/ThemeContext'
 import { AuthContext } from '@/lib/auth/context'
 import type { AuthState } from '@/lib/auth/context'
 import type { UserProfile } from '@/lib/schema/types'
@@ -47,9 +48,11 @@ export function renderWithAuth(
   { auth = SIGNED_OUT, route = '/' }: { auth?: AuthState; route?: string } = {},
 ) {
   return render(
-    <AuthContext.Provider value={auth}>
-      <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
-    </AuthContext.Provider>,
+    <ThemeProvider>
+      <AuthContext.Provider value={auth}>
+        <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
+      </AuthContext.Provider>
+    </ThemeProvider>,
   )
 }
 

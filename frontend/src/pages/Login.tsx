@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 
 import { authErrorMessage, sendResetEmail, signIn, signInWithGoogle } from '@/lib/auth/account'
+import { useTheme, type Theme } from '@/context/ThemeContext'
 import { useAuth } from '@/lib/auth/useAuth'
+import { getUserSettings, } from "@/lib/profile/UserSettings";
 
 export function Login() {
   const navigate = useNavigate()
@@ -16,11 +18,59 @@ export function Login() {
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // Where RequireAuth bounced the user from, if anywhere.
-  const from = (location.state as { from?: string } | null)?.from ?? '/home'
+  const {setTheme} = useTheme()
 
-  if (loading) return null
-  if (user) return <Navigate to={from} replace />
+  // Where RequireAuth bounced the user from, if anywhere.
+  const from = (location.state as { from?: string } | null)?.from ?? '/home';
+
+  useEffect(() => {
+    if (loading || !user) { 
+      return 
+    } 
+    
+    let cancelled = false 
+    
+    async function initializeUser() {
+      try {
+        if (!user) {
+            return;
+        }
+        const settings = await getUserSettings(user.uid);
+        if (cancelled) { 
+          return;
+        }
+        
+        const theme: Theme = settings?.theme as Theme ?? "default";
+        setTheme(theme);
+
+        navigate(from, { replace: true });
+      } catch (error) { 
+        console.error('Failed to load user settings:', error);
+        
+        if (!cancelled) {
+          setTheme('default');
+          navigate(from, { replace: true }); 
+        } 
+      } 
+    } 
+    
+    initializeUser();
+    
+    return () => { 
+      cancelled = true 
+    } 
+  }, [user, loading, from, navigate, setTheme])
+
+  if (loading) { 
+    return ( 
+        <main className="h-screen flex items-center justify-center"> 
+            <div className="flex flex-col items-center gap-4"> 
+            <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin" /> 
+                <p className="text-xl font-semibold text-ink"> Loading profile... </p> 
+            </div> 
+        </main> 
+    ); 
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -29,7 +79,6 @@ export function Login() {
     setBusy(true)
     try {
       await signIn(email, password)
-      navigate(from, { replace: true })
     } catch (caught) {
       setError(authErrorMessage(caught))
     } finally {
@@ -64,6 +113,18 @@ export function Login() {
     } catch (caught) {
       setError(authErrorMessage(caught))
     }
+  }
+
+  if (user) { 
+    return ( 
+      <main className="h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4"> 
+          <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin" /> 
+          <p className="text-xl font-semibold text-ink"> Loading profile... </p> 
+        </div>
+      </main> 
+    ) 
+
   }
 
   return (
@@ -109,9 +170,9 @@ export function Login() {
               mx-2
               rounded-lg 
               bg-linear-to-b
-              from-accent-start from-50
+              from-accent-start
               via-accent-middle
-              to-accent-end to-70
+              to-accent-end
               font-medium
               text-ink
               hover:brightness-125
@@ -142,9 +203,9 @@ export function Login() {
             className={`
               text-ink 
               bg-linear-to-b
-              from-accent-start from-50
+              from-accent-start
               via-accent-middle
-              to-accent-end to-70
+              to-accent-end
               hover:brightness-125
               hover:scale-105
               hover:underline
@@ -161,9 +222,9 @@ export function Login() {
             className={`
               text-ink 
               bg-linear-to-b
-              from-accent-start from-50
+              from-accent-start
               via-accent-middle
-              to-accent-end to-70
+              to-accent-end
               hover:brightness-125
               hover:scale-105
               hover:underline

@@ -5,10 +5,10 @@ import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 
 export function MyCommunities() {
-    const navigate = useNavigate()
     const { user, profile } = useAuth()
     const [search, setSearch] = useState<string>("");
     const [, setCommunitySearch] = useState<string>("");
+    const navigate = useNavigate()
     {/*Add a variable to track search state to determine whether or not there are any results to customize look of page*/}
     
     useEffect(() => {
@@ -24,9 +24,9 @@ export function MyCommunities() {
     
     return (
         <main className="h-screen flex flex-col overflow-hidden">
-            <header className="flex items-center justify-between bg-linear-to-r from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 border-b-4 border-accent-start py-6">
+            <header className="flex items-center justify-between bg-linear-to-r from-accent-base-start from-10% via-accent-base-middle via-70% to-accent-base-end to-90% border-b-4 border-accent-start py-6">
                 <div className="flex ml-12">
-                    <BackButton></BackButton>
+                    <BackButton onClick={() => navPortal('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Jamming With Your Friends</h1>
                 </div>
                 <div className="mr-6">
@@ -43,9 +43,9 @@ export function MyCommunities() {
                     justify-between
                     rounded-lg
                     bg-linear-to-b
-                    from-accent-start from-30
+                    from-accent-start
                     via-accent-middle
-                    to-accent-end to-90
+                    to-accent-end
                     border-4
                     border-accent-start
                     px-6
@@ -56,9 +56,9 @@ export function MyCommunities() {
                         className={`
                             rounded-lg
                             bg-linear-to-b 
-                            from-contrast-start from-50 
+                            from-contrast-start
                             via-contrast-middle 
-                            to-contrast-end to-70
+                            to-contrast-end
                             outline-3
                             outline-contrast-middle
                             text-ink

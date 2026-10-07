@@ -23,11 +23,14 @@ import { doc, getDoc, writeBatch } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 import {
   COLLECTIONS,
+  newSkillRating,
   newUserProfile,
   newUserSettings,
   newUsernameReservation,
+  skillRatingsPath,
   usernameKey,
 } from '@/lib/schema/collections'
+import { INSTRUMENTS } from '@/lib/schema/types'
 
 /** Lowercased form is the reservation key, so the pattern is case-insensitive. */
 export const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/
@@ -88,6 +91,9 @@ async function writeAccountDocuments(args: { uid: string; username: string; disp
     newUsernameReservation({ uid, username }),
   )
   batch.set(doc(db, COLLECTIONS.userSettings, uid), newUserSettings({ uid }))
+  for (const instrument of INSTRUMENTS) {
+    batch.set(doc(db, skillRatingsPath(uid), instrument), newSkillRating({ uid, instrument }))
+  }
   await batch.commit()
 }
 
