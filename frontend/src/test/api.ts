@@ -9,9 +9,14 @@ import { vi } from 'vitest'
 
 type Route = { status?: number; body: unknown }
 
+// apiFetch uses relative URLs through Vite's proxy; Request objects already carry an origin.
+function requestUrl(input: RequestInfo | URL): URL {
+  return new URL(input instanceof Request ? input.url : String(input), window.location.href)
+}
+
 export function stubApi(routes: Record<string, Route>) {
   const fetchMock = vi.fn<typeof fetch>(async (input) => {
-    const url = new URL(String(input))
+    const url = requestUrl(input)
     const path = url.pathname.replace(/^\/api\/v1/, '')
     const route = routes[path]
     // A fresh Response per call: a body can only be read once.
@@ -26,7 +31,7 @@ export function stubApi(routes: Record<string, Route>) {
 /** The query string of every call made to `path`, in order. */
 export function callsTo(fetchMock: ReturnType<typeof stubApi>, path: string): URLSearchParams[] {
   return fetchMock.mock.calls
-    .map(([input]) => new URL(String(input)))
+    .map(([input]) => requestUrl(input))
     .filter((url) => url.pathname === `/api/v1${path}`)
     .map((url) => url.searchParams)
 }
