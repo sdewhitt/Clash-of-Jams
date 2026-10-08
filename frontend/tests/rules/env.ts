@@ -39,12 +39,18 @@ export function setupRulesEnv(): () => RulesTestEnvironment {
   let env: RulesTestEnvironment
 
   beforeAll(async () => {
+    const emulator = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080'
+    const [host, port] = emulator.split(':')
+    const projectId = process.env.RULES_TEST_PROJECT_ID ?? 'demo-clash-of-jams'
+    if (!['127.0.0.1', 'localhost'].includes(host) || !projectId.startsWith('demo-')) {
+      throw new Error('Rules tests require a local emulator and a demo project')
+    }
     env = await initializeTestEnvironment({
-      projectId: 'demo-clash-of-jams',
+      projectId,
       firestore: {
         rules: readFileSync(RULES_PATH, 'utf8'),
-        host: '127.0.0.1',
-        port: 8080,
+        host,
+        port: Number(port),
       },
     })
   })

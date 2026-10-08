@@ -43,6 +43,8 @@ export function Home() {
 
             <NavButton onClick={() => navPortal('/scenario_editor')}>Scenario Editor</NavButton>
 
+            <NavButton onClick={() => navPortal('/scenario_difficulty')}>Scenario Difficulty</NavButton>
+
             <NavButton onClick={() => navPortal('/tuner')}>Tuner</NavButton>
 
             <NavButton onClick={() => navPortal('/settings')}>Settings</NavButton>

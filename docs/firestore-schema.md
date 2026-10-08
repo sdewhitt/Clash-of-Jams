@@ -72,6 +72,7 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 | `userSettings/{uid}`                                      | `UserSettings`        | Theme, accessibility, instrument preferences.                                 |
 | `scenarios/{scenarioId}`                                  | `Scenario`            | Ownership, metadata and aggregates.                                           |
 | `scenarios/{scenarioId}/versions/{versionId}`             | `ScenarioVersion`     | Immutable musical content.                                                    |
+| `scenarios/{scenarioId}/difficultyEstimates/{versionId}` | Server aggregate | Version-scoped band scores, difficulty, coverage/confidence, part/speed and computation metadata; no raw players. |
 | `mediaAssets/{assetId}`                                   | `MediaAsset`          | Pointer into Cloud Storage plus its owner.                                    |
 | `runs/{runId}`                                            | `Run`                 | One completed attempt, with its embedded `ScoreBreakdown`.                    |
 | `matches/{matchId}`                                       | `GameMatch`           | Mode, rules, timings, speed multiplier.                                       |
@@ -158,3 +159,12 @@ migration; see [matchmaking implementation and demo](matchmaking.md). The queue
 itself is transient server memory, separate from durable lobby assignments.
 
 Invariants 1 and 2 still need transactional writes in the data access layer.
+
+Scenario difficulty publication atomically saves the version aggregate and the
+parent's `crowdDifficulty`/optional `crowdDifficultyVersionId`. A stale version
+marker makes matchmaking fall back to `authorDifficulty`; provisional evidence
+does not replace the author grade. Accepted musical runs may gain server-owned
+`normalizedScore`, `ratingAtPlay`, `inputSource`, and `completionReason`. These
+are not permitted in browser-created pending runs. See
+[scenario difficulty and demo](scenario-difficulty.md) for the handoff contract,
+eligibility filters, confidence thresholds, and tests.
