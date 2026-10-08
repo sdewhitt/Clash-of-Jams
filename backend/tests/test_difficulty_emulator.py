@@ -63,7 +63,7 @@ def evidence():
                 "scoringRules": rules,
                 "validation": "accepted",
                 "ratingAtPlay": 1100,
-                "finalScore": 65,
+                "finalScore": 65_000,
                 "inputSource": "midi",
                 "completionReason": "completed",
                 "playedAt": datetime.now(UTC),
@@ -97,7 +97,7 @@ def test_filters_incomparable_untrusted_and_nonmusical_runs(evidence):
         "score": {"normalizedScore": 4},
     }.items():
         add(label, **changes)
-    add("percent", finalScore=65)
+    add("percent", finalScore=65_000)
     add("normalized", normalizedScore=0.65, finalScore=999)
     detail = FirestoreDifficultyStore(db).detail(scenario.id, author)
     assert detail.estimate.distinct_players == 2
