@@ -7,9 +7,10 @@ import { signOutCurrentUser } from "@/lib/auth/account";
 type ProfileButtonProps = {
     username: string;
     userAvatar: string;
+    className?: string;
 };
 
-export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
+export function ProfileButton({ username, userAvatar, className = "w-50" }: ProfileButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
     const { setTheme } = useTheme();
     const navigate = useNavigate();
@@ -25,7 +26,7 @@ export function ProfileButton({ username, userAvatar }: ProfileButtonProps) {
     }
 
     return (
-        <div className="relative w-50">
+        <div className={"relative " + className}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="group relative flex w-full items-center cursor-pointer"

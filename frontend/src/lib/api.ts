@@ -7,7 +7,9 @@
  */
 import { auth } from '@/lib/firebase'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+// Local development forwards /api through Vite to the shared backend. An
+// explicit origin remains available for separately hosted frontends.
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
 const API_PREFIX = '/api/v1'
 
 export class ApiError extends Error {
@@ -32,12 +34,23 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     headers.set('Content-Type', 'application/json')
   }
 
-  const response = await fetch(`${BASE_URL}${API_PREFIX}${path}`, { ...init, headers })
+  let response: Response
+  try {
+    response = await fetch(`${BASE_URL}${API_PREFIX}${path}`, { ...init, headers })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error
+    throw new ApiError(0, 'Could not reach the server. Please try again.')
+  }
 
   if (!response.ok) {
     // FastAPI puts the reason in `detail`; fall back to the status text.
     const body = await response.json().catch(() => null)
-    const detail = body && typeof body.detail === 'string' ? body.detail : response.statusText
+    const detail =
+      body && typeof body.detail === 'string'
+        ? body.detail
+        : response.status >= 500
+          ? 'The server is unavailable. Please try again.'
+          : response.statusText
     throw new ApiError(response.status, detail)
   }
 

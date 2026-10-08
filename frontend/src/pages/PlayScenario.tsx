@@ -4,21 +4,35 @@ import { useNavigate, useParams, useSearchParams } from "react-router"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
+import { ScenarioPlayer, type FinishedRun } from "@/components/ScenarioPlayer"
+import { ScoreReport } from "@/components/ScoreReport"
 import { StarPicker } from "@/components/StarRating"
 import { ApiError, apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
-import { VERDICT_LABEL } from "@/lib/play/verdicts"
+import { buildTimeline, resolveScoringRules } from "@/lib/play/timeline"
+import { getUserSettings } from "@/lib/profile/UserSettings"
 import { submitRun, type SubmittedRun } from "@/lib/runs/store"
-import { loadScenario, type LoadedScenario } from "@/lib/scenarios/store"
-import type { HitVerdict, ScenarioReview } from "@/lib/schema/types"
+import { loadScenario } from "@/lib/scenarios/store"
+import type { ExpectedNote, Instrument, ScenarioReview, ScoringRules, TempoMapEntry } from "@/lib/schema/types"
 import { NoteHighway } from "@/pages/play/NoteHighway"
-import { PlayStage, type PlayOutcome } from "@/pages/play/PlayStage"
 
 // Matches ReviewUpsert.comment's max_length in backend/app/schemas.py.
 const MAX_COMMENT_LENGTH = 200
 
 // Only the fields the form uses; the API sends timestamps as ISO strings, not Firestore Timestamps.
 type ExistingReview = Pick<ScenarioReview, "rating" | "comment">
+
+/** What the player needs from the scenario, its current version, and the user's settings. */
+type PlayableScenario = {
+    title: string
+    versionId: string
+    partId: string
+    expected: ExpectedNote[]
+    tempoMap: TempoMapEntry[]
+    rules: ScoringRules
+    instrument: Instrument
+    latencyMs: number
+}
 
 const buttonClass = `
     rounded-xl
@@ -33,11 +47,8 @@ const buttonClass = `
     disabled:opacity-50
 `
 
-// Shown beside the score, in the order a player cares about them.
-const REVIEW_VERDICTS: HitVerdict[] = ["hit", "early", "late", "wrong_pitch", "missed"]
-
 /** What the results screen says about the run's trip to the leaderboard. */
-function saveMessage(saved: SubmittedRun | null, saveError: string | null, fullSpeed: boolean): string {
+function saveMessage(saved: SubmittedRun | null, saveError: string | null): string {
     if (saveError) return saveError
     if (!saved) return "Saving your run…"
     if (saved.validation === "rejected") {
@@ -46,13 +57,12 @@ function saveMessage(saved: SubmittedRun | null, saveError: string | null, fullS
     if (saved.validation === "pending") {
         return "Run saved, but it could not be checked for the leaderboard yet."
     }
-    return fullSpeed ? "Run saved to the leaderboard." : "Run saved. Only full-speed runs are ranked."
+    return "Run saved to the leaderboard."
 }
 
 /**
- * Everything around one run of a scenario: load the version, play it
- * (PlayStage), save the scored run, see where it landed on the leaderboard,
- * then rate the scenario.
+ * Plays a scenario, saves the scored run, then shows the score, where you
+ * landed on the leaderboard, and lets you rate the scenario.
  */
 export function PlayScenario() {
     const { scenarioId } = useParams()
@@ -63,51 +73,64 @@ export function PlayScenario() {
     const navigate = useNavigate()
 
     const [phase, setPhase] = useState<"playing" | "results">("playing")
-    const [loaded, setLoaded] = useState<LoadedScenario | null>(null)
-    const [loadError, setLoadError] = useState<string | null>(null)
-    const [outcome, setOutcome] = useState<PlayOutcome | null>(null)
-    const [saved, setSaved] = useState<SubmittedRun | null>(null)
-    const [saveError, setSaveError] = useState<string | null>(null)
     const [ratingOpen, setRatingOpen] = useState(false)
     const [rating, setRating] = useState(0)
     const [comment, setComment] = useState("")
     const [submitting, setSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [playable, setPlayable] = useState<PlayableScenario | null>(null)
+    const [loadError, setLoadError] = useState<string | null>(null)
+    const [run, setRun] = useState<FinishedRun | null>(null)
+    const [saved, setSaved] = useState<SubmittedRun | null>(null)
+    const [saveError, setSaveError] = useState<string | null>(null)
 
     useEffect(() => {
-        if (!scenarioId) return
-        let cancelled = false
-        loadScenario(scenarioId, versionId)
-            .then((result) => {
-                if (!cancelled) setLoaded(result)
-            })
-            .catch((err) => {
-                if (!cancelled) setLoadError(err instanceof Error ? err.message : "Could not load this scenario.")
-            })
-        return () => {
-            cancelled = true
+        if (!scenarioId || !user) return
+        async function load(id: string, uid: string) {
+            try {
+                const { scenario, version } = await loadScenario(id, versionId)
+                const part = version?.chart.parts.find((candidate) => candidate.notes.length > 0)
+                const notes = part?.notes ?? []
+                if (!version || !part || notes.length === 0) {
+                    setLoadError("This scenario has no notes to play yet.")
+                    return
+                }
+                // Settings are optional: play with defaults if they can't be read.
+                const settings = await getUserSettings(uid).catch(() => null)
+                setPlayable({
+                    title: scenario.title,
+                    versionId: version.id,
+                    partId: part.partId,
+                    expected: notes,
+                    tempoMap: version.chart.tempoMap,
+                    rules: resolveScoringRules(version.scoringRules),
+                    instrument: scenario.instrument,
+                    latencyMs: settings?.inputLatencyOffsetMs ?? 0,
+                })
+            } catch (err) {
+                setLoadError(err instanceof Error ? err.message : "Could not load this scenario.")
+            }
         }
-    }, [scenarioId, versionId])
+        void load(scenarioId, user.uid)
+    }, [scenarioId, versionId, user])
 
-    const version = loaded?.version ?? null
-
-    function finishRun(played: PlayOutcome) {
-        setOutcome(played)
+    function finishRun(finished: FinishedRun) {
+        setRun(finished)
         setSaved(null)
         setSaveError(null)
         setPhase("results")
-        if (!scenarioId || !version) return
+        if (!scenarioId || !playable) return
         submitRun({
             uid: user?.uid ?? null,
             scenarioId,
-            scenarioVersionId: version.id,
-            instrument: played.instrument,
-            partId: played.partId,
-            speedMultiplier: played.speedMultiplier,
-            scoringRules: played.scoringRules,
-            finalScore: played.score.finalScore,
-            breakdown: played.score.breakdown,
+            scenarioVersionId: playable.versionId,
+            instrument: finished.instrument,
+            partId: playable.partId,
+            speedMultiplier: 1,
+            scoringRules: playable.rules,
+            finalScore: finished.result.finalScore,
+            breakdown: finished.result.breakdown,
         })
             .then(setSaved)
             .catch((err) => {
@@ -162,7 +185,7 @@ export function PlayScenario() {
             >
                 <div className="flex ml-12">
                     <BackButton></BackButton>
-                    <h1 className="ml-4 text-4xl font-bold text-ink">{loaded?.scenario.title ?? "Play Scenario"}</h1>
+                    <h1 className="ml-4 text-4xl font-bold text-ink">Play Scenario</h1>
                 </div>
 
                 <div className="mr-6">
@@ -174,45 +197,46 @@ export function PlayScenario() {
             </header>
 
             {phase === "playing" ? (
-                <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-6">
-                    {loadError ? (
-                        <p role="alert" className="text-lg text-ink">{loadError}</p>
-                    ) : !loaded ? (
-                        <p className="text-lg text-muted">Loading scenario…</p>
-                    ) : !version ? (
-                        <p className="text-lg text-muted">This scenario has no playable version yet.</p>
-                    ) : (
-                        <PlayStage version={version} uid={user?.uid ?? null} onFinish={finishRun} />
+                <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6">
+                    <p className="text-3xl font-bold text-ink">{playable?.title ?? "Play scenario"}</p>
+                    {playable && (
+                        <ScenarioPlayer
+                            expected={playable.expected}
+                            tempoMap={playable.tempoMap}
+                            rules={playable.rules}
+                            defaultInstrument={playable.instrument}
+                            latencyMs={playable.latencyMs}
+                            onFinish={finishRun}
+                        />
+                    )}
+                    {!playable && !loadError && <p className="text-muted">Loading scenario…</p>}
+                    {loadError && (
+                        <>
+                            <p className="text-muted">{loadError}</p>
+                            <button
+                                type="button"
+                                onClick={() => setPhase("results")}
+                                className={`${buttonClass} bg-accent-start text-ink hover:brightness-110`}
+                            >
+                                Skip to results
+                            </button>
+                        </>
                     )}
                 </div>
             ) : (
                 <div className="flex flex-1 min-h-0 flex-col items-center gap-4 overflow-y-auto px-6 py-6">
                     <h2 className="text-3xl font-bold text-ink">Results</h2>
 
-                    {outcome && (
-                        <section className="flex w-full max-w-4xl flex-col gap-3">
-                            <div className="flex flex-wrap items-baseline justify-center gap-x-8 gap-y-2">
-                                <p className="text-6xl font-bold tabular-nums text-ink" aria-label="Final score">
-                                    {outcome.score.finalScore}
-                                </p>
-                                <ScoreStat label="Pitch" value={outcome.score.breakdown.pitchAccuracy} />
-                                <ScoreStat label="Rhythm" value={outcome.score.breakdown.rhythmAccuracy} />
-                                <ScoreStat label="Completeness" value={outcome.score.breakdown.completeness} />
-                                <ScoreStat label="Extra notes" value={outcome.score.breakdown.extraNotes} />
-                            </div>
-                            <p className="text-center text-sm text-muted">
-                                {REVIEW_VERDICTS.map((verdict) => {
-                                    const count = outcome.score.breakdown.noteResults.filter(
-                                        (result) => result.verdict === verdict,
-                                    ).length
-                                    return `${VERDICT_LABEL[verdict]} ${count}`
-                                }).join(" · ")}
-                            </p>
+                    {run && (
+                        <ScoreReport finalScore={run.result.finalScore} explanation={run.explanation} />
+                    )}
+                    {run && playable && (
+                        <div className="flex w-full max-w-xl shrink-0 flex-col gap-2">
                             <NoteHighway
-                                timeline={outcome.timeline}
+                                timeline={buildTimeline({ notes: playable.expected, tempoMap: playable.tempoMap })}
                                 verdicts={
                                     new Map(
-                                        outcome.score.breakdown.noteResults.map((result) => [
+                                        run.result.breakdown.noteResults.map((result) => [
                                             result.expectedNoteIndex,
                                             result.verdict,
                                         ]),
@@ -220,9 +244,9 @@ export function PlayScenario() {
                                 }
                             />
                             <p role="status" className="text-center text-sm font-semibold text-ink">
-                                {saveMessage(saved, saveError, outcome.speedMultiplier === 1)}
+                                {saveMessage(saved, saveError)}
                             </p>
-                        </section>
+                        </div>
                     )}
 
                     {/* TODO: highlight the run just played; the highlighted row is the player's best run. */}
@@ -247,7 +271,7 @@ export function PlayScenario() {
                             <ScenarioLeaderboard
                                 key={saved?.runId ?? "unsaved"}
                                 scenarioId={scenarioId}
-                                versionId={version?.id ?? versionId}
+                                versionId={playable?.versionId ?? versionId}
                             />
                         )}
                     </section>
@@ -255,7 +279,10 @@ export function PlayScenario() {
                     <div className="flex w-full max-w-xl gap-4">
                         <button
                             type="button"
-                            onClick={() => setPhase("playing")}
+                            onClick={() => {
+                                setRun(null)
+                                setPhase("playing")
+                            }}
                             className={`${buttonClass} flex-1 bg-white text-black hover:brightness-95`}
                         >
                             Play again
@@ -345,14 +372,5 @@ export function PlayScenario() {
                 </div>
             )}
         </main>
-    )
-}
-
-function ScoreStat({ label, value }: { label: string; value: number }) {
-    return (
-        <div className="flex flex-col items-center">
-            <span className="text-xs text-muted">{label}</span>
-            <span className="text-2xl font-semibold tabular-nums text-ink">{value}</span>
-        </div>
     )
 }

@@ -61,7 +61,7 @@ SCORING_RULES = {
     "pitchWeight": 0.4,
     "rhythmWeight": 0.4,
     "completenessWeight": 0.2,
-    "hitWindowBeats": 0.25,
+    "hitWindowMs": 120,
     "pitchToleranceCents": 50,
 }
 

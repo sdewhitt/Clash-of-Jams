@@ -74,7 +74,8 @@ export function buildTimeline(args: {
 
 /**
  * The rules a run is scored under and snapshots: the version's, with defaults for any field it
- * lacks. Versions saved before hitWindowBeats existed carry hitWindowMs instead, which is dropped.
+ * lacks. Versions saved while the window was briefly stored as hitWindowBeats carry that field
+ * instead of hitWindowMs; it is dropped.
  */
 export function resolveScoringRules(rules: Partial<ScoringRules> | undefined): ScoringRules {
   const merged = { ...DEFAULT_SCORING_RULES, ...rules }
@@ -82,7 +83,7 @@ export function resolveScoringRules(rules: Partial<ScoringRules> | undefined): S
     pitchWeight: merged.pitchWeight,
     rhythmWeight: merged.rhythmWeight,
     completenessWeight: merged.completenessWeight,
-    hitWindowBeats: merged.hitWindowBeats,
+    hitWindowMs: merged.hitWindowMs,
     pitchToleranceCents: merged.pitchToleranceCents,
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router"
 
 import { BackButton } from "@/components/BackButton"
 import { LeaderboardRow, LeaderboardStat, MyStanding } from "@/components/Leaderboard"
@@ -14,6 +15,11 @@ const controlClass =
 /** Top players by ELO for one instrument, with the caller's own standing highlighted. */
 export function EloLeaderboard() {
     const { user, profile } = useAuth()
+    const navigate = useNavigate()
+
+    function navPortal(location: string) {
+        navigate(location)
+    }
 
     const [instrument, setInstrument] = useState<Instrument>("piano")
 
@@ -56,7 +62,7 @@ export function EloLeaderboard() {
                 `}
             >
                 <div className="flex ml-12">
-                    <BackButton></BackButton>
+                    <BackButton onClick={() => navPortal('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Leaderboards</h1>
                 </div>
 

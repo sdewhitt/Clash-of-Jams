@@ -24,7 +24,19 @@ export type Role = (typeof ROLES)[number]
 export const INSTRUMENTS = ['piano', 'guitar', 'woodwind', 'vocals', 'midi'] as const
 export type Instrument = (typeof INSTRUMENTS)[number]
 
-export const GENRES = ['blues', 'jazz', 'electronic', 'hip-hop', 'pop', 'r&b', 'rock', 'indie', 'alternative', 'folk', 'metal'] as const
+export const GENRES = [
+  'blues',
+  'jazz',
+  'electronic',
+  'hip-hop',
+  'pop',
+  'r&b',
+  'rock',
+  'indie',
+  'alternative',
+  'folk',
+  'metal',
+] as const
 export type Genre = (typeof GENRES)[number]
 
 export const VISIBILITIES = ['private', 'unlisted', 'public'] as const
@@ -187,8 +199,8 @@ export interface ScoringRules {
   pitchWeight: number
   rhythmWeight: number
   completenessWeight: number
-  /** Timing window, in beats, within which a note counts as on time. Scales with tempo. */
-  hitWindowBeats: number
+  /** Timing window, in ms, within which a note counts as on time. */
+  hitWindowMs: number
   /** Cents of pitch deviation tolerated before a note counts as wrong. */
   pitchToleranceCents: number
 }
@@ -283,6 +295,27 @@ export interface GameMatch {
   createdAt: Timestamp
   startedAt: Timestamp | null
   endedAt: Timestamp | null
+  completionReason?: RatingEvent['reason']
+  ratingModelVersion?: string
+  /** Server-written queue decisions and pinned scenario-selection metadata. */
+  matchmaking?: {
+    policyVersion: string
+    instrument: Instrument
+    scenarioTitle: string
+    ratingGap: number
+    isRematch: boolean
+    scenarioDifficulty: number
+    difficultySource: 'crowd' | 'author'
+    scenarioTargetElo: number
+    players: {
+      uid: string
+      opponentUid: string
+      elo: number
+      isProvisional: boolean
+      waitSeconds: number
+      ratingWindow: number
+    }[]
+  }
 }
 
 /** matches/{matchId}/participants/{uid} — assigned part, team, readiness. */
@@ -296,6 +329,12 @@ export interface MatchParticipant {
   finalScore: number | null
   runId: string | null
   eloDelta: number | null
+  /** Added by server finalization; absent on older/lobby documents. */
+  eloBefore?: number
+  eloAfter?: number
+  displayName?: string
+  eloAtQueue?: number
+  isProvisionalAtQueue?: boolean
   joinedAt: Timestamp
 }
 
@@ -313,6 +352,31 @@ export interface SkillRating {
   gamesPlayed: number
   isProvisional: boolean
   updatedAt: Timestamp
+}
+
+/** Immutable, server-written instrument rating history, keyed by matchId. */
+export interface RatingEvent {
+  matchId: string
+  uid: string
+  opponentUid: string
+  instrument: Instrument
+  outcome: MatchOutcome
+  reason: 'completed' | 'resigned' | 'disconnected'
+  score: number
+  opponentScore: number
+  eloBefore: number
+  opponentEloBefore: number
+  eloAfter: number
+  eloDelta: number
+  expectedScore: number
+  actualScore: number
+  kFactor: number
+  gamesPlayedBefore: number
+  gamesPlayedAfter: number
+  isProvisional: boolean
+  tierAfter: RankTier
+  modelVersion: string
+  appliedAt: Timestamp
 }
 
 /* -------------------------------------------------------- social database */

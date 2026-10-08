@@ -72,6 +72,9 @@ export const matchParticipantsPath = (matchId: string) =>
 
 export const skillRatingsPath = (uid: string) => `${COLLECTIONS.users}/${uid}/skillRatings`
 
+export const ratingHistoryPath = (uid: string, instrument: Instrument) =>
+  skillRatingsPath(uid) + '/' + instrument + '/history'
+
 export const communityMembersPath = (communityId: string) =>
   `${COLLECTIONS.communities}/${communityId}/members`
 
@@ -102,8 +105,8 @@ export const DEFAULT_SCORING_RULES: ScoringRules = {
   pitchWeight: 0.4,
   rhythmWeight: 0.4,
   completenessWeight: 0.2,
-  hitWindowBeats: 0.25,
-  pitchToleranceCents: 20,
+  hitWindowMs: 120,
+  pitchToleranceCents: 50,
 }
 
 /** Starting elo for a player who has never been rated on an instrument. */
