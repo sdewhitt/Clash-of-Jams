@@ -44,7 +44,17 @@ The home header shows the preferred instrument's live rating beside the username
 
 History lives at `users/{uid}/skillRatings/{instrument}/history/{matchId}`. Each event includes the rating inputs, model version and transaction timestamp for replay. Only its owner can read history; clients cannot write it. No extra composite index is needed for the per-instrument `appliedAt` ordering.
 
-The Firestore history rules must be deployed before using the history UI against the cloud project. No cloud deployment or production data mutation was performed during this implementation.
+The Firestore history rules must be deployed before using the history UI against the cloud project. Firestore read permissions on a rating document do not extend to its history subcollection. If live rules omit the nested owner-only history read, the page can show the current Elo while its history query fails.
+
+The cloud `clash-of-jams` rules were updated on October 8, 2026 to match the repository rules and restore owner-only history reads. The deployment targeted rules only; no match, rating, or history records were changed. After a terminal subscription error, Recent Matches offers **Try again** to create a new listener without reloading. The underlying Firestore error code and message are logged for diagnosis.
+
+Deploy future rule changes explicitly from the repository root:
+
+```bash
+npx -y firebase-tools@15.32.1 deploy --config firebase/firebase.json --project clash-of-jams --only firestore:rules
+```
+
+For history fixes, verify an owner's descending `appliedAt` query succeeds, other players and signed-out reads fail, and client history writes remain denied. A missing composite index is not the cause of this per-instrument query.
 
 ## Local demo
 
