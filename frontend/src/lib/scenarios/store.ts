@@ -4,7 +4,8 @@
  * Versions are immutable under firestore.rules, so every save writes a new
  * scenarios/{id}/versions/{versionId} document and repoints the parent at it.
  * Both writes go in one batch: a scenario whose currentVersionId names a
- * version that was never written would be unplayable.
+ * version that was never written would be unplayable. Deleting is the mirror
+ * image: the scenario and all of its versions go in one batch.
  */
 import {
   collection,
@@ -114,21 +115,51 @@ export interface LoadedScenario {
   version: ScenarioVersion | null
 }
 
-/** Reads a scenario and the version it currently points at. */
-export async function loadScenario(scenarioId: string): Promise<LoadedScenario> {
+/** Reads a scenario and one of its versions: `versionId`, or the one it currently points at. */
+export async function loadScenario(
+  scenarioId: string,
+  versionId?: string | null,
+): Promise<LoadedScenario> {
   const snapshot = await getDoc(doc(db, COLLECTIONS.scenarios, scenarioId))
   if (!snapshot.exists()) throw new Error('That scenario no longer exists.')
   const scenario = snapshot.data() as Scenario
 
-  if (!scenario.currentVersionId) return { scenario, version: null }
+  const wanted = versionId || scenario.currentVersionId
+  if (!wanted) return { scenario, version: null }
 
-  const versionSnapshot = await getDoc(
-    doc(db, scenarioVersionsPath(scenarioId), scenario.currentVersionId),
-  )
+  const versionSnapshot = await getDoc(doc(db, scenarioVersionsPath(scenarioId), wanted))
   return {
     scenario,
     version: versionSnapshot.exists() ? (versionSnapshot.data() as ScenarioVersion) : null,
   }
+}
+
+/**
+ * Removes a scenario the caller owns, together with every version of it.
+ * Firestore does not cascade, so the versions are deleted explicitly; one
+ * batch keeps a failure from leaving versions behind without their parent.
+ * Runs already played against it are history and stay where they are.
+ */
+export async function deleteScenario(args: {
+  uid: string | null
+  scenarioId: string
+}): Promise<void> {
+  const { uid, scenarioId } = args
+  if (!uid) throw new Error('Sign in before deleting a scenario.')
+
+  const scenarioRef = doc(db, COLLECTIONS.scenarios, scenarioId)
+  const snapshot = await getDoc(scenarioRef)
+  // Already gone, which is what the caller wanted.
+  if (!snapshot.exists()) return
+  if ((snapshot.data() as Scenario).authorUid !== uid) {
+    throw new Error('You can only delete your own scenarios.')
+  }
+
+  const versions = await getDocs(collection(db, scenarioVersionsPath(scenarioId)))
+  const batch = writeBatch(db)
+  for (const version of versions.docs) batch.delete(version.ref)
+  batch.delete(scenarioRef)
+  await batch.commit()
 }
 
 /** The caller's own scenarios, most recently touched first. */

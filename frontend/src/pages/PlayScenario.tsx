@@ -9,10 +9,12 @@ import { ScoreReport } from "@/components/ScoreReport"
 import { StarPicker } from "@/components/StarRating"
 import { ApiError, apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
+import { buildTimeline, resolveScoringRules } from "@/lib/play/timeline"
 import { getUserSettings } from "@/lib/profile/UserSettings"
+import { submitRun, type SubmittedRun } from "@/lib/runs/store"
 import { loadScenario } from "@/lib/scenarios/store"
-import { DEFAULT_SCORING_RULES } from "@/lib/schema/collections"
 import type { ExpectedNote, Instrument, ScenarioReview, ScoringRules, TempoMapEntry } from "@/lib/schema/types"
+import { NoteHighway } from "@/pages/play/NoteHighway"
 
 // Matches ReviewUpsert.comment's max_length in backend/app/schemas.py.
 const MAX_COMMENT_LENGTH = 200
@@ -23,6 +25,8 @@ type ExistingReview = Pick<ScenarioReview, "rating" | "comment">
 /** What the player needs from the scenario, its current version, and the user's settings. */
 type PlayableScenario = {
     title: string
+    versionId: string
+    partId: string
     expected: ExpectedNote[]
     tempoMap: TempoMapEntry[]
     rules: ScoringRules
@@ -43,9 +47,22 @@ const buttonClass = `
     disabled:opacity-50
 `
 
+/** What the results screen says about the run's trip to the leaderboard. */
+function saveMessage(saved: SubmittedRun | null, saveError: string | null): string {
+    if (saveError) return saveError
+    if (!saved) return "Saving your run…"
+    if (saved.validation === "rejected") {
+        return `This run was not accepted${saved.reason ? `: ${saved.reason}` : ""}.`
+    }
+    if (saved.validation === "pending") {
+        return "Run saved, but it could not be checked for the leaderboard yet."
+    }
+    return "Run saved to the leaderboard."
+}
+
 /**
- * Plays a scenario, then shows the score, where you landed on the leaderboard,
- * and lets you rate the scenario.
+ * Plays a scenario, saves the scored run, then shows the score, where you
+ * landed on the leaderboard, and lets you rate the scenario.
  */
 export function PlayScenario() {
     const { scenarioId } = useParams()
@@ -65,14 +82,17 @@ export function PlayScenario() {
     const [playable, setPlayable] = useState<PlayableScenario | null>(null)
     const [loadError, setLoadError] = useState<string | null>(null)
     const [run, setRun] = useState<FinishedRun | null>(null)
+    const [saved, setSaved] = useState<SubmittedRun | null>(null)
+    const [saveError, setSaveError] = useState<string | null>(null)
 
     useEffect(() => {
         if (!scenarioId || !user) return
         async function load(id: string, uid: string) {
             try {
-                const { scenario, version } = await loadScenario(id)
-                const notes = version?.chart.parts.find((part) => part.notes.length > 0)?.notes ?? []
-                if (!version || notes.length === 0) {
+                const { scenario, version } = await loadScenario(id, versionId)
+                const part = version?.chart.parts.find((candidate) => candidate.notes.length > 0)
+                const notes = part?.notes ?? []
+                if (!version || !part || notes.length === 0) {
                     setLoadError("This scenario has no notes to play yet.")
                     return
                 }
@@ -80,9 +100,11 @@ export function PlayScenario() {
                 const settings = await getUserSettings(uid).catch(() => null)
                 setPlayable({
                     title: scenario.title,
+                    versionId: version.id,
+                    partId: part.partId,
                     expected: notes,
                     tempoMap: version.chart.tempoMap,
-                    rules: { ...DEFAULT_SCORING_RULES, ...version.scoringRules },
+                    rules: resolveScoringRules(version.scoringRules),
                     instrument: scenario.instrument,
                     latencyMs: settings?.inputLatencyOffsetMs ?? 0,
                 })
@@ -91,11 +113,30 @@ export function PlayScenario() {
             }
         }
         void load(scenarioId, user.uid)
-    }, [scenarioId, user])
+    }, [scenarioId, versionId, user])
 
     function finishRun(finished: FinishedRun) {
         setRun(finished)
+        setSaved(null)
+        setSaveError(null)
         setPhase("results")
+        if (!scenarioId || !playable) return
+        submitRun({
+            uid: user?.uid ?? null,
+            scenarioId,
+            scenarioVersionId: playable.versionId,
+            instrument: finished.instrument,
+            partId: playable.partId,
+            speedMultiplier: 1,
+            scoringRules: playable.rules,
+            finalScore: finished.result.finalScore,
+            breakdown: finished.result.breakdown,
+        })
+            .then(setSaved)
+            .catch((err) => {
+                console.error(err)
+                setSaveError("Your run could not be saved.")
+            })
     }
 
     // Pre-fill the form if the user has rated this scenario before.
@@ -189,15 +230,31 @@ export function PlayScenario() {
                     {run && (
                         <ScoreReport finalScore={run.result.finalScore} explanation={run.explanation} />
                     )}
+                    {run && playable && (
+                        <div className="flex w-full max-w-xl shrink-0 flex-col gap-2">
+                            <NoteHighway
+                                timeline={buildTimeline({ notes: playable.expected, tempoMap: playable.tempoMap })}
+                                verdicts={
+                                    new Map(
+                                        run.result.breakdown.noteResults.map((result) => [
+                                            result.expectedNoteIndex,
+                                            result.verdict,
+                                        ]),
+                                    )
+                                }
+                            />
+                            <p role="status" className="text-center text-sm font-semibold text-ink">
+                                {saveMessage(saved, saveError)}
+                            </p>
+                        </div>
+                    )}
 
-                    {/* TODO: highlight the run just played once runs can be created in the app;
-                        until then the highlighted row is the player's best run. */}
+                    {/* TODO: highlight the run just played; the highlighted row is the player's best run. */}
                     <section className={`
-                        min-h-0
+                        min-h-64
                         w-full
                         max-w-xl
-                        flex-1
-                        overflow-y-auto
+                        shrink-0
                         rounded-xl
                         border-3
                         border-accent-start
@@ -209,7 +266,14 @@ export function PlayScenario() {
                         py-4
                     `}>
                         <h3 className="mb-3 text-lg font-bold text-ink">Leaderboard</h3>
-                        {scenarioId && <ScenarioLeaderboard scenarioId={scenarioId} versionId={versionId} />}
+                        {/* Remounts once the run is decided, so the board includes it. */}
+                        {scenarioId && (
+                            <ScenarioLeaderboard
+                                key={saved?.runId ?? "unsaved"}
+                                scenarioId={scenarioId}
+                                versionId={playable?.versionId ?? versionId}
+                            />
+                        )}
                     </section>
 
                     <div className="flex w-full max-w-xl gap-4">

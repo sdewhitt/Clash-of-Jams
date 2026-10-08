@@ -78,6 +78,27 @@ describe('AuthProvider', () => {
     expect(screen.getByText('signed out')).toBeInTheDocument()
   })
 
+  it('picks the session back up after a page reload, with no new sign-in', () => {
+    const first = render(
+      <AuthProvider>
+        <SessionProbe />
+      </AuthProvider>,
+    )
+    act(() => announce({ uid: 'ada-uid' } as User))
+    first.unmount()
+
+    // A reload remounts the tree; Firebase then replays the persisted user.
+    render(
+      <AuthProvider>
+        <SessionProbe />
+      </AuthProvider>,
+    )
+    expect(screen.getByText('loading')).toBeInTheDocument()
+    act(() => announce({ uid: 'ada-uid' } as User))
+
+    expect(screen.getByText('signed in as ada-uid (Ada)')).toBeInTheDocument()
+  })
+
   it('throws when useAuth is used outside the provider', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(() => render(<SessionProbe />)).toThrow('useAuth must be used inside <AuthProvider>')

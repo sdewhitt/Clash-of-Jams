@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { openAudioInput, type AudioInput } from '@/audio/input'
 import { getInstrumentProfile, keepNotesInRange, notesOutOfRange } from '@/audio/instruments'
@@ -11,6 +11,7 @@ import {
 } from '@/audio/midi-input'
 import { toPerformedNotes } from '@/audio/performance'
 import { pitchName } from '@/lib/chart/notes'
+import { buildTimeline } from '@/lib/play/timeline'
 import {
   INSTRUMENTS,
   type ExpectedNote,
@@ -18,6 +19,7 @@ import {
   type ScoringRules,
   type TempoMapEntry,
 } from '@/lib/schema/types'
+import { NoteHighway } from '@/pages/play/NoteHighway'
 import { explainScore, type ScoreExplanation } from '@/scoring/explain'
 import { beatToMs, scorePerformance, type PerformedNote, type ScoreResult } from '@/scoring/score'
 
@@ -110,6 +112,17 @@ export function ScenarioPlayer({
   const [heldPitch, setHeldPitch] = useState<number | null>(null)
 
   const session = useRef<Session | null>(null)
+  /** The pitch sounding now, unrounded, for the marker on the note highway. */
+  const livePitch = useRef<number | null>(null)
+  const timeline = useMemo(
+    () => (expected.length > 0 ? buildTimeline({ notes: expected, tempoMap }) : null),
+    [expected, tempoMap],
+  )
+  const getPositionMs = useCallback(() => {
+    const current = session.current
+    return current ? (current.context.currentTime - current.startTime) * 1000 : null
+  }, [])
+  const getLivePitch = useCallback(() => livePitch.current, [])
   const profile = getInstrumentProfile(instrument)
   const unplayable = notesOutOfRange(expected, profile)
 
@@ -165,6 +178,7 @@ export function ScenarioPlayer({
     setStarting(true)
     setLiveNotes([])
     setHeldPitch(null)
+    livePitch.current = null
 
     const context = new AudioContext({ latencyHint: 'interactive' })
     let microphone: AudioInput | null = null
@@ -188,6 +202,7 @@ export function ScenarioPlayer({
           // Rounded, so React only re-renders when the note name changes.
           onFrame: (frame) => {
             const clear = frame.midi !== null && frame.clarity > 0.8
+            livePitch.current = clear ? frame.midi : null
             setHeldPitch(clear ? Math.round(frame.midi as number) : null)
           },
         })
@@ -196,8 +211,12 @@ export function ScenarioPlayer({
         midi = openMidiInput({
           access: midiAccess,
           deviceId: midiDeviceId,
-          onNoteOn: (pitch) => setHeldPitch(pitch),
+          onNoteOn: (pitch) => {
+            livePitch.current = pitch
+            setHeldPitch(pitch)
+          },
           onNote: (note) => {
+            if (livePitch.current === note.midiPitch) livePitch.current = null
             setHeldPitch((current) => (current === note.midiPitch ? null : current))
             addLiveNote(note)
           },
@@ -288,6 +307,13 @@ export function ScenarioPlayer({
     const progress = Math.min(100, Math.max(0, (elapsedMs / endMs) * 100))
     return (
       <div className="flex w-full max-w-xl flex-col items-center gap-6 text-ink">
+        {timeline && (
+          <NoteHighway
+            timeline={timeline}
+            getPositionMs={getPositionMs}
+            getLivePitch={getLivePitch}
+          />
+        )}
         {countIn ? (
           <p className="text-6xl font-bold tabular-nums">
             {Math.ceil(-elapsedMs / 1000 / (60 / tempoMap[0].bpm))}
