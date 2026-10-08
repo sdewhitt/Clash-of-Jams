@@ -1,0 +1,28 @@
+{
+  "counts": {
+    "connections": 75,
+    "accepted": 375,
+    "duplicate": 50,
+    "rejected": 50,
+    "disconnects": 25
+  },
+  "sampleCount": 375,
+  "p50Ms": 9.000458987429738,
+  "p95Ms": 44.305458024609834,
+  "p99Ms": 57.30225000297651,
+  "passes50Ms": true,
+  "measurement": "accepted event receipt to response enqueue",
+  "lastTiming": {
+    "receipt": 407203.485449916,
+    "completion": 407203.5425695,
+    "responseEnqueue": 407203.543257833
+  },
+  "players": 50,
+  "simultaneousMatches": 25,
+  "recoveredPlayers": 25,
+  "duplicateEvents": 50,
+  "staleEvents": 50,
+  "completedMatches": 25,
+  "inputSource": "synthetic demo taps",
+  "environment": "local Firebase emulators"
+}

@@ -176,16 +176,11 @@ describe('matchmaking UI', () => {
     expect(cancelQueue).toHaveBeenCalledWith('ticket-1')
   })
 
-  it('shows the opponent and shared version, then explicitly leaves the lobby', async () => {
+  it('hands the assigned lobby to the multiplayer session route', async () => {
     vi.mocked(joinQueue).mockResolvedValue(matched)
     renderAtRoute(<MultiplayerConnect />, { path: '/multiplayer', auth: signedIn() })
-    const panel = await screen.findByRole('region', { name: 'Matched opponent' })
-    expect(panel).toHaveAttribute('data-scenario-version', 'version-1')
-    expect(panel).toHaveTextContent('Player Two · 410 Elo')
-    expect(panel).toHaveTextContent('Shared riff')
-    await userEvent.click(screen.getByRole('button', { name: 'Leave lobby' }))
-    expect(await screen.findByTestId('location')).toHaveTextContent('/home')
-    expect(cancelQueue).toHaveBeenCalledWith('ticket-1')
+    expect(await screen.findByTestId('location')).toHaveTextContent('/multiplayer/match-1')
+    expect(cancelQueue).not.toHaveBeenCalledWith('ticket-1')
   })
 
   it('failed join is visible and the player can still exit', async () => {

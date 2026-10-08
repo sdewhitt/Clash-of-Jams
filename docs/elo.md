@@ -31,7 +31,7 @@ For forfeits, supply `reason="resigned"` or `"disconnected"` and `forfeiting_uid
 
 One Firestore transaction completes the active versus match, updates both participant results and instrument ratings, and creates two immutable history events. Repeating the same result returns its original events without updating again. Conflicting results, incorrect participants/instruments, inactive matches and missing ratings are rejected. Shared-rating transactions retry when concurrent matches race.
 
-Matches and both instrument ratings must already exist. The future session server will call this function after authoritative scoring; actual gameplay and its completion handler are outside this change.
+Matches and both instrument ratings must already exist. The [multiplayer session server](multiplayer.md) now calls this function on natural completion, resignation, or disconnect expiry. Its current gameplay input is explicitly synthetic demo taps.
 
 Authenticated GET routes expose only the caller's rating and history:
 

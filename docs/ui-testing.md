@@ -22,7 +22,9 @@ playwright.config.ts
        ├── support/       shared environment, data lifecycle, fixtures and login helpers
        ├── shell.spec.ts  route guards, login/logout, keyboard access and responsive header
        ├── scenarios/     scenario browsing through the authenticated API
-       └── elo/           rating journeys + a feature-specific server result adapter
+       ├── elo/           rating journeys + a feature-specific server result adapter
+       ├── matchmaking/   automatic queue, shared lobby and cancellation
+       └── multiplayer/   real WebSocket sessions, rejoin, forfeits and results
 ```
 
 The Firebase project is always `demo-clash-of-jams-ui`. Its Auth, Firestore, API and frontend ports are 9199, 8180, 8190 and 5190; these are separate from the normal developer/demo servers. The configuration refuses to reuse an arbitrary already-running API/frontend. No production Firebase credentials are required.
@@ -74,7 +76,7 @@ The browser runner still manages the API/frontend. `E2E_PYTHON` optionally selec
 
 Example: `tests/e2e/scenarios/browse.spec.ts` creates a private scenario with `newScenario`, signs in, selects it in the real scenario browser, and checks that Play is enabled. It demonstrates reuse of the same harness outside Elo.
 
-For multiplayer, use two isolated browser contexts and the same shared identity/data fixtures; the existing two-player Elo test is an example. Implement its session fixture alongside the multiplayer specs when the session server exists.
+Multiplayer specs use two isolated browser contexts with the shared identity/data fixtures. They exercise the real session server, both players' rejoin paths, preset messages, resignation, the 20-second disconnect grace, and a full one-minute completion. Difficulty ranges and instruments isolate concurrently running pairs. See [multiplayer.md](multiplayer.md) for the protocol and measured load benchmark.
 
 ## Results and CI
 

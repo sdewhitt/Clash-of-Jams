@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router'
+import { useEffect } from 'react'
 
 import { BackButton } from '@/components/BackButton'
 import { LiveElo } from '@/components/LiveElo'
@@ -11,7 +12,10 @@ export function MultiplayerConnect() {
   const navigate = useNavigate()
   const { status, error, leaving, cancel, retry } = useMatchmaking(user?.uid)
   const match = status?.match
-  const opponent = match?.participants.find((participant) => participant.uid !== user?.uid)
+
+  useEffect(() => {
+    if (match) navigate('/multiplayer/' + encodeURIComponent(match.id), { replace: true })
+  }, [match, navigate])
 
   async function leave() {
     try {
@@ -44,32 +48,12 @@ export function MultiplayerConnect() {
       </header>
       <div className="flex flex-1 items-center justify-center px-4 py-12">
         <section
-          aria-label={match ? 'Matched opponent' : 'Matchmaking queue'}
-          data-match-id={match?.id}
-          data-scenario-version={match?.scenarioVersionId}
+          aria-label="Matchmaking queue"
           className="flex min-w-0 w-full max-w-lg flex-col items-center gap-6 rounded-xl border-3 border-accent-start bg-linear-to-br from-accent-base-start via-accent-base-middle to-accent-base-end p-6 text-center text-ink wrap-anywhere sm:p-10"
         >
-          {match && opponent ? (
-            <>
-              <h2 className="text-2xl font-bold">Opponent found</h2>
-              <p className="text-xl">
-                {opponent.displayName} · {Math.round(opponent.elo)} Elo
-              </p>
-              <div className="w-full rounded-lg border-2 border-accent-start p-4">
-                <p className="mb-2 text-sm text-ink/80">Shared scenario · {match.instrument}</p>
-                <h3 className="text-xl font-bold">{match.scenarioTitle}</h3>
-                <p className="mt-2 text-sm text-ink/80">
-                  Difficulty {match.scenarioDifficulty}/10
-                  {match.difficultySource === 'author' ? ' · Provisional' : ''}
-                </p>
-              </div>
-              <p role="status">Waiting for the match to begin.</p>
-            </>
-          ) : (
-            <p role="status" className="text-xl font-bold">
-              Finding a suitable opponent…
-            </p>
-          )}
+          <p role="status" className="text-xl font-bold">
+            {match ? 'Opening your match…' : 'Finding a suitable opponent…'}
+          </p>
           {error && (
             <div className="flex flex-col gap-3">
               <p role="alert">{error}</p>
@@ -91,7 +75,7 @@ export function MultiplayerConnect() {
             disabled={leaving}
             className="cursor-pointer rounded-lg border-2 border-accent-start bg-white px-6 py-3 font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {leaving ? 'Leaving…' : match ? 'Leave lobby' : 'Cancel'}
+            {leaving ? 'Leaving…' : 'Cancel'}
           </button>
         </section>
       </div>

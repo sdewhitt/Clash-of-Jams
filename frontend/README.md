@@ -3,6 +3,8 @@
 React + TypeScript single-page app, built with Vite, Firebase authentication and
 persistence, and a FastAPI backend. See [UI testing](../docs/ui-testing.md) for
 the shared browser harness, test layers, and contributor instructions.
+See [Multiplayer demo](../docs/multiplayer.md) for the two-player flow, emulator
+accounts, shared backend setup and reconnect behavior.
 
 ## Running it
 
