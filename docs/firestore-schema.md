@@ -63,18 +63,20 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 
 ### Primary
 
-| Path                                          | Document              | Notes                                                                         |
-| --------------------------------------------- | --------------------- | ----------------------------------------------------------------------------- |
-| `users/{uid}`                                 | `UserProfile`         | Id is the Firebase Auth uid. No credentials, ever — Firebase Auth owns those. |
-| `users/{uid}/skillRatings/{instrument}`       | `SkillRating`         | One per instrument. Created at sign-up, then server-written.                  |
-| `usernames/{usernameLower}`                   | `UsernameReservation` | Reservation doc; the key is what makes usernames unique.                      |
-| `userSettings/{uid}`                          | `UserSettings`        | Theme, accessibility, instrument preferences.                                 |
-| `scenarios/{scenarioId}`                      | `Scenario`            | Ownership, metadata and aggregates.                                           |
-| `scenarios/{scenarioId}/versions/{versionId}` | `ScenarioVersion`     | Immutable musical content.                                                    |
-| `mediaAssets/{assetId}`                       | `MediaAsset`          | Pointer into Cloud Storage plus its owner.                                    |
-| `runs/{runId}`                                | `Run`                 | One completed attempt, with its embedded `ScoreBreakdown`.                    |
-| `matches/{matchId}`                           | `GameMatch`           | Mode, rules, timings, speed multiplier.                                       |
-| `matches/{matchId}/participants/{uid}`        | `MatchParticipant`    | Part, team, readiness, outcome.                                               |
+| Path                                                      | Document              | Notes                                                                         |
+| --------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------- |
+| `users/{uid}`                                             | `UserProfile`         | Id is the Firebase Auth uid. No credentials, ever — Firebase Auth owns those. |
+| `users/{uid}/skillRatings/{instrument}`                   | `SkillRating`         | One per instrument. Created at sign-up, then server-written.                  |
+| `users/{uid}/skillRatings/{instrument}/history/{matchId}` | `RatingEvent`         | Owner-readable, server-created immutable Elo update and replay inputs.        |
+| `usernames/{usernameLower}`                               | `UsernameReservation` | Reservation doc; the key is what makes usernames unique.                      |
+| `userSettings/{uid}`                                      | `UserSettings`        | Theme, accessibility, instrument preferences.                                 |
+| `scenarios/{scenarioId}`                                  | `Scenario`            | Ownership, metadata and aggregates.                                           |
+| `scenarios/{scenarioId}/versions/{versionId}`             | `ScenarioVersion`     | Immutable musical content.                                                    |
+| `mediaAssets/{assetId}`                                   | `MediaAsset`          | Pointer into Cloud Storage plus its owner.                                    |
+| `runs/{runId}`                                            | `Run`                 | One completed attempt, with its embedded `ScoreBreakdown`.                    |
+| `matches/{matchId}`                                       | `GameMatch`           | Mode, rules, timings, speed multiplier.                                       |
+| `matches/{matchId}/participants/{uid}`                    | `MatchParticipant`    | Part, team, readiness, outcome.                                               |
+| `matchmakingReservations/{uid}`                          | Server reservation    | Active assignment and queue ticket; API-only access under default-deny rules. |
 
 ### Social
 
@@ -104,11 +106,11 @@ time. The top of a leaderboard is:
 ```ts
 query(
   collection(db, COLLECTIONS.runs),
-  where('scenarioVersionId', '==', versionId),
-  where('validation', '==', 'accepted'),
-  orderBy('finalScore', 'desc'),
+  where("scenarioVersionId", "==", versionId),
+  where("validation", "==", "accepted"),
+  orderBy("finalScore", "desc"),
   limit(50),
-)
+);
 ```
 
 Scoping to `scenarioVersionId` rather than `scenarioId` is what makes the
@@ -133,14 +135,26 @@ later cannot silently rewrite old scores.
 
 ## How the invariants are enforced
 
-| Design document invariant                     | Mechanism                                                                                                                                           |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Usernames unique                           | `usernames/{usernameLower}` reservation; claim it in the same transaction as the profile write. Profanity filtering is a separate check at sign-up. |
-| 2. Scenario version numbers unique            | `versionNumber` is assigned from `scenarios/{id}.currentVersionNumber + 1` inside a transaction that also advances the parent.                      |
-| 3. One review per user per scenario           | The review's document id is `{scenarioId}_{uid}`, and `firebase/firestore.rules` requires the id to match the body.                                 |
-| 4. Foreign keys required                      | Every reference field is non-optional in `types.ts`; the factories in `collections.ts` cannot produce a document that omits one.                    |
-| 5. Match finalization and elo commit together | Both are server-side writes in a single Firestore transaction — the client is denied writes to `matches/{id}`, and may only create a `skillRatings` document at its starting values.   |
+| Design document invariant                     | Mechanism                                                                                                                                                                            |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1. Usernames unique                           | `usernames/{usernameLower}` reservation; claim it in the same transaction as the profile write. Profanity filtering is a separate check at sign-up.                                  |
+| 2. Scenario version numbers unique            | `versionNumber` is assigned from `scenarios/{id}.currentVersionNumber + 1` inside a transaction that also advances the parent.                                                       |
+| 3. One review per user per scenario           | The review's document id is `{scenarioId}_{uid}`, and `firebase/firestore.rules` requires the id to match the body.                                                                  |
+| 4. Foreign keys required                      | Every reference field is non-optional in `types.ts`; the factories in `collections.ts` cannot produce a document that omits one.                                                     |
+| 5. Match finalization and elo commit together | Both are server-side writes in a single Firestore transaction — the client is denied writes to `matches/{id}`, and may only create a `skillRatings` document at its starting values. |
 
-Invariants 1, 2 and 5 need transactional writes that do not exist yet; they
-belong to the data access layer, not to the schema. Until that lands, the
-factories and rules here are what keep the shapes honest.
+Invariant 5 is implemented by `backend/app/services/skill_ratings.py`: an active
+versus match, both participants, both ratings and both history events commit
+atomically. A duplicate result returns its original history; conflicting retries
+are rejected. Match documents gain optional `completionReason` and
+`ratingModelVersion`; participant results gain optional `eloBefore` and `eloAfter`.
+See [Elo implementation and demo](elo.md) for the integration contract and tests.
+
+Matchmaking atomically creates the lobby, two participants and both reservations.
+`GameMatch.matchmaking` records policy version, rating windows/waits/gap, repeat
+status, instrument and scenario difficulty/source/target. Participants gain optional
+`displayName`, `eloAtQueue` and `isProvisionalAtQueue`. Existing documents need no
+migration; see [matchmaking implementation and demo](matchmaking.md). The queue
+itself is transient server memory, separate from durable lobby assignments.
+
+Invariants 1 and 2 still need transactional writes in the data access layer.

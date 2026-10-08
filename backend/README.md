@@ -1,8 +1,19 @@
 # Clash of Jams — Backend
 
-FastAPI service for scoring, scenarios and match state. Skeleton only: a health
-check plus one worked CRUD router backed by an in-memory dict. No Firestore
-wiring yet.
+FastAPI service for scenario, review, leaderboard and instrument-rating APIs.
+Elo match finalization uses Firestore transactions. See
+[Elo implementation and demo](../docs/elo.md) for the rating policy, trusted
+server integration and local emulator walkthrough.
+
+Matchmaking creates a shared persistent lobby from an automatically joined
+rating-based queue. Run one API worker/replica. See
+[Matchmaking implementation and demo](../docs/matchmaking.md) for the policy,
+500-player fixture, tests and multiplayer handoff.
+
+The authenticated WebSocket session server now supports shared readiness,
+one-minute demo play, preset messages, reconnect/forfeit and Elo results. See
+[Multiplayer implementation and demo](../docs/multiplayer.md) for setup and
+the measured 50-player benchmark. Use one worker without reload during matches.
 
 ## Running it
 
@@ -17,11 +28,11 @@ uvicorn app.main:app --reload   # http://127.0.0.1:8000
 
 Interactive docs at `/docs`, OpenAPI JSON at `/openapi.json`.
 
-| Command                | What it does              |
-| ---------------------- | ------------------------- |
-| `pytest`               | Test suite                |
-| `ruff check .`         | Lint                      |
-| `ruff format .`        | Format, write in place    |
+| Command         | What it does           |
+| --------------- | ---------------------- |
+| `pytest`        | Test suite             |
+| `ruff check .`  | Lint                   |
+| `ruff format .` | Format, write in place |
 
 ## Layout
 
@@ -42,12 +53,20 @@ tests/
 Versioned routes live under `/api/v1`; `/health` sits outside it so deployment
 probes do not track the API version.
 
-| Method | Path                       | Notes                    |
-| ------ | -------------------------- | ------------------------ |
-| GET    | `/health`                  | No auth                  |
-| GET    | `/api/v1/scenarios`        | The caller's scenarios   |
-| POST   | `/api/v1/scenarios`        | 201 with the new record  |
-| GET    | `/api/v1/scenarios/{id}`   | 404 if not the caller's  |
+| Method | Path                                         | Notes                   |
+| ------ | -------------------------------------------- | ----------------------- |
+| GET    | `/health`                                    | No auth                 |
+| GET    | `/api/v1/scenarios`                          | The caller's scenarios  |
+| POST   | `/api/v1/scenarios`                          | 201 with the new record |
+| GET    | `/api/v1/scenarios/{id}`                     | 404 if not the caller's |
+| GET    | `/api/v1/skill-ratings/{instrument}`         | Caller’s instrument Elo |
+| GET    | `/api/v1/skill-ratings/{instrument}/history` | Caller’s rating events  |
+| POST   | `/api/v1/matchmaking/queue`                 | Join caller's queue     |
+| GET    | `/api/v1/matchmaking/queue`                 | Queue or assigned lobby |
+| DELETE | `/api/v1/matchmaking/queue`                 | Ticket-scoped leave     |
+| GET    | `/api/v1/multiplayer/{matchId}`             | Participant snapshot    |
+| WS     | `/api/v1/multiplayer/{matchId}/socket`      | Authenticated session   |
+| GET    | `/api/v1/multiplayer/metrics`               | Admin-only latency data |
 
 ## Auth
 
@@ -97,7 +116,8 @@ Firestore wants `model_dump(by_alias=True)`.
 
 - Replace `_STORE` in `routers/scenarios.py` with Firestore via the Admin SDK.
 - Port the remaining shapes from `frontend/src/lib/schema/types.ts`.
-- Routers for runs, matches and leaderboards.
+- Session/match lifecycle and run-submission routers; call `finalize_match`
+  after authoritative scoring to complete a rated versus match.
 - Run submission: when a run is created, also increment its scenario's
   `playCount` (`firestore.Increment(1)`, in the same batch as the run). Every
   run counts as a play, accepted or not. Until then,

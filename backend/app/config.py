@@ -8,6 +8,7 @@ the first request that happens to need it.
 
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -39,6 +40,15 @@ class Settings(BaseSettings):
     auth_dev_uid: str = "dev-user"
     # Role given to that dev user, so admin-only routes can be tried locally.
     auth_dev_role: str = "user"
+
+    # Provisional scale mapping; it can be calibrated without changing queue code.
+    matchmaking_scenario_window: float = 250
+    matchmaking_difficulty_base_elo: float = 400
+    matchmaking_difficulty_elo_step: float = 200
+
+    multiplayer_duration_seconds: float = Field(default=60, ge=1, le=600)
+    multiplayer_recovery_seconds: float = Field(default=20, ge=1, le=120)
+    multiplayer_countdown_seconds: float = Field(default=3, ge=0, le=10)
 
 
 @lru_cache

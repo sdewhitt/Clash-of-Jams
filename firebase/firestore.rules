@@ -171,6 +171,12 @@ service cloud.firestore {
           && request.resource.data.isProvisional == true
           && stampedNow(request.resource.data.updatedAt);
         allow update, delete: if false;
+
+        // Immutable match history: only the owner reads; Admin SDK writes it.
+        match /history/{matchId} {
+          allow read: if isSelf(uid);
+          allow write: if false;
+        }
       }
     }
 
@@ -252,19 +258,15 @@ service cloud.firestore {
     }
 
     match /matches/{matchId} {
-      allow read: if signedIn();
-      allow create: if isSelf(request.resource.data.hostUid);
-      // State transitions and the winner are decided server-side.
-      allow update, delete: if false;
+      allow read: if signedIn()
+        && (isAdmin() || request.auth.uid in resource.data.participantUids);
+      // Matchmaking/session servers own membership, scores and all transitions.
+      allow write: if false;
 
       match /participants/{uid} {
-        allow read: if signedIn();
-        // A player may join and toggle their own readiness; outcomes are server-written.
-        allow create: if isSelf(uid);
-        allow update: if isSelf(uid)
-          && request.resource.data.outcome == resource.data.outcome
-          && request.resource.data.eloDelta == resource.data.eloDelta;
-        allow delete: if isSelf(uid) || isAdmin();
+        allow read: if signedIn() && (isAdmin()
+          || request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.participantUids);
+        allow write: if false;
       }
     }
 

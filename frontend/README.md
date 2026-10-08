@@ -1,7 +1,10 @@
 # Clash of Jams — Frontend
 
-React + TypeScript single-page app, built with Vite. Scaffolding only: a login
-form and an empty home route. No backend.
+React + TypeScript single-page app, built with Vite, Firebase authentication and
+persistence, and a FastAPI backend. See [UI testing](../docs/ui-testing.md) for
+the shared browser harness, test layers, and contributor instructions.
+See [Multiplayer demo](../docs/multiplayer.md) for the two-player flow, emulator
+accounts, shared backend setup and reconnect behavior.
 
 ## Running it
 
@@ -19,14 +22,18 @@ Keep the override until Firebase includes a patched gRPC dependency, then
 remove it and verify `npm audit` again. Avoid `npm audit fix --force`, which can
 downgrade Firebase to an older major version.
 
-| Script              | What it does                                |
-| ------------------- | ------------------------------------------- |
-| `npm run dev`       | Dev server with hot reload                  |
-| `npm run build`     | Typecheck, then production build to `dist/` |
-| `npm run preview`   | Serve the production build locally          |
-| `npm run typecheck` | TypeScript only                             |
-| `npm run lint`      | oxlint                                      |
-| `npm run format`    | Prettier, write in place                    |
+| Script                    | What it does                                                     |
+| ------------------------- | ---------------------------------------------------------------- |
+| `npm run dev`             | Dev server with hot reload                                       |
+| `npm run build`           | Typecheck, then production build to `dist/`                      |
+| `npm run preview`         | Serve the production build locally                               |
+| `npm run typecheck`       | TypeScript only                                                  |
+| `npm run lint`            | oxlint                                                           |
+| `npm run format`          | Prettier, write in place                                         |
+| `npm test`                | Component/module tests without emulators                         |
+| `npm run test:rules`      | Firestore authorization tests                                    |
+| `npm run test:e2e`        | Starts isolated emulators, API and frontend; runs browser suites |
+| `npm run test:e2e:report` | Opens the latest browser report                                  |
 
 ## Layout
 
@@ -47,11 +54,11 @@ Import with the `@/` alias (`@/pages/Home`), which maps to `src/`.
 
 ## Routes
 
-| Path      | Screen                                     |
-| --------- | ------------------------------------------ |
-| `/login`  | Email/password sign-in, password reset     |
-| `/signup` | Account creation; reserves the username    |
-| `/home`   | Nav hub (guarded)                          |
+| Path      | Screen                                  |
+| --------- | --------------------------------------- |
+| `/login`  | Email/password sign-in, password reset  |
+| `/signup` | Account creation; reserves the username |
+| `/home`   | Nav hub (guarded)                       |
 
 `/login` and `/signup` are the only public routes. Everything else is wrapped in
 `<RequireAuth>`, which sends a signed-out visitor to `/login` and remembers where
