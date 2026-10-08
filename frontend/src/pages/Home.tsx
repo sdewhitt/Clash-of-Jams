@@ -3,10 +3,12 @@ import { NavButton } from '@/components/NavButton'
 import { ProfileButton } from '@/components/ProfileButton'
 import { LiveElo } from '@/components/LiveElo'
 import { useAuth } from '@/lib/auth/useAuth'
+import { useActiveMatch } from '@/lib/matchmaking/useMatchmaking'
 
 export function Home() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
+  const activeMatch = useActiveMatch(user?.uid)
 
   function navPortal(location: string) {
     navigate(location)
@@ -31,7 +33,9 @@ export function Home() {
           <nav className="flex flex-col gap-6 justify-center">
             <NavButton onClick={() => navPortal('/scenario_search')}>Solo Play</NavButton>
 
-            <NavButton onClick={() => navPortal('/multiplayer_connect')}>Online Play</NavButton>
+            <NavButton onClick={() => navPortal('/multiplayer_connect')}>
+              {activeMatch ? 'Rejoin Multiplayer' : 'Online Play'}
+            </NavButton>
 
             <NavButton onClick={() => navPortal('/leaderboards')}>Leaderboards</NavButton>
 

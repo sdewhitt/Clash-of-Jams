@@ -76,6 +76,7 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 | `runs/{runId}`                                            | `Run`                 | One completed attempt, with its embedded `ScoreBreakdown`.                    |
 | `matches/{matchId}`                                       | `GameMatch`           | Mode, rules, timings, speed multiplier.                                       |
 | `matches/{matchId}/participants/{uid}`                    | `MatchParticipant`    | Part, team, readiness, outcome.                                               |
+| `matchmakingReservations/{uid}`                          | Server reservation    | Active assignment and queue ticket; API-only access under default-deny rules. |
 
 ### Social
 
@@ -148,5 +149,12 @@ atomically. A duplicate result returns its original history; conflicting retries
 are rejected. Match documents gain optional `completionReason` and
 `ratingModelVersion`; participant results gain optional `eloBefore` and `eloAfter`.
 See [Elo implementation and demo](elo.md) for the integration contract and tests.
+
+Matchmaking atomically creates the lobby, two participants and both reservations.
+`GameMatch.matchmaking` records policy version, rating windows/waits/gap, repeat
+status, instrument and scenario difficulty/source/target. Participants gain optional
+`displayName`, `eloAtQueue` and `isProvisionalAtQueue`. Existing documents need no
+migration; see [matchmaking implementation and demo](matchmaking.md). The queue
+itself is transient server memory, separate from durable lobby assignments.
 
 Invariants 1 and 2 still need transactional writes in the data access layer.
