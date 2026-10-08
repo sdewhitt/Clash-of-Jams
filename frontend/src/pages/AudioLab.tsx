@@ -35,7 +35,13 @@ import {
   type Instrument,
   type TempoMapEntry,
 } from '@/lib/schema/types'
-import { beatToMs, scorePerformance, type PerformedNote, type ScoreResult } from '@/scoring/score'
+import {
+  beatToMs,
+  MAX_SCORE,
+  scorePerformance,
+  type PerformedNote,
+  type ScoreResult,
+} from '@/scoring/score'
 
 const primary =
   'rounded-xl border-3 border-accent-start bg-accent-start px-4 py-2 font-bold text-ink hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50'
@@ -160,7 +166,8 @@ function LiveInput({
     <section className={panel}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold">1. Live microphone</h2>        </div>
+          <h2 className="text-xl font-bold">1. Live microphone</h2>{' '}
+        </div>
         <div className="flex items-center gap-3">
           <select
             className={`capitalize ${field}`}
@@ -347,7 +354,8 @@ function MidiController() {
     <section className={panel}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold">2. MIDI controller</h2>        </div>
+          <h2 className="text-xl font-bold">2. MIDI controller</h2>{' '}
+        </div>
         <div className="flex items-center gap-3">
           {access && (
             <select
@@ -946,13 +954,49 @@ function TranscribeFile({ audioContext }: { audioContext: () => AudioContext }) 
             <span className="font-semibold">{audio.name}</span>: {audio.notes.length} notes detected
           </p>
           {key && evaluation?.score && (
-            <div className="flex flex-wrap items-baseline gap-6">
-              <div className="text-4xl font-bold tabular-nums">{evaluation.score.finalScore}</div>
-              <Stat label="Pitch" value={evaluation.score.breakdown.pitchAccuracy} />
-              <Stat label="Rhythm" value={evaluation.score.breakdown.rhythmAccuracy} />
-              <Stat label="Completeness" value={evaluation.score.breakdown.completeness} />
-              <Stat label="Extra notes" value={evaluation.score.breakdown.extraNotes} />
-              <Stat label={`Matched of ${key.expected.length}`} value={evaluation.withinSemitone} />
+            <div className="flex flex-col gap-3">
+              <h4 className="font-semibold">Scoring Engine</h4>
+              <div className="flex flex-wrap items-baseline gap-6">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold tabular-nums">
+                    {evaluation.score.finalScore.toLocaleString()}
+                  </span>
+                  <span className="text-faint">/ {MAX_SCORE.toLocaleString()}</span>
+                </div>
+                <Stat label="Pitch" value={evaluation.score.breakdown.pitchAccuracy} />
+                <Stat label="Rhythm" value={evaluation.score.breakdown.rhythmAccuracy} />
+                <Stat label="Completeness" value={evaluation.score.breakdown.completeness} />
+                <Stat label="Notes hit" value={evaluation.score.breakdown.notesHit} />
+                <Stat label="Notes missed" value={evaluation.score.breakdown.notesMissed} />
+                <Stat label="Extra notes" value={evaluation.score.breakdown.extraNotes} />
+                <Stat
+                  label={`Matched of ${key.expected.length}`}
+                  value={evaluation.withinSemitone}
+                />
+              </div>
+              <table className="w-full text-sm tabular-nums">
+                <thead className="text-left text-faint">
+                  <tr>
+                    <th className="py-1">Expected</th>
+                    <th className="py-1">Verdict</th>
+                    <th className="py-1">Timing (ms)</th>
+                    <th className="py-1">Cents</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evaluation.score.breakdown.noteResults.map((r) => {
+                    const note = key.expected.find((n) => n.index === r.expectedNoteIndex)
+                    return (
+                      <tr key={r.expectedNoteIndex} className="border-t border-accent-start">
+                        <td className="py-1">{note ? midiToNoteName(note.midiPitch) : '—'}</td>
+                        <td className="py-1">{r.verdict}</td>
+                        <td className="py-1">{signed(Math.round(r.timingDeltaMs))}</td>
+                        <td className="py-1">{signed(Math.round(r.centsDeviation))}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
           <NoteTable notes={audio.notes} emptyText="No notes detected." />
