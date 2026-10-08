@@ -35,7 +35,7 @@ function score(performed: PerformedNote[], rules = {}) {
 describe('scorePerformance', () => {
   it('gives 100 for an exact performance', () => {
     const { finalScore, breakdown } = score(exact)
-    expect(finalScore).toBe(100)
+    expect(finalScore).toBe(100_000)
     expect(breakdown.pitchAccuracy).toBe(100)
     expect(breakdown.rhythmAccuracy).toBe(100)
     expect(breakdown.completeness).toBe(100)
@@ -47,7 +47,7 @@ describe('scorePerformance', () => {
     expect(breakdown.pitchAccuracy).toBe(33.33)
     expect(breakdown.rhythmAccuracy).toBe(66.67)
     expect(breakdown.completeness).toBe(66.67)
-    expect(finalScore).toBe(53.33)
+    expect(finalScore).toBe(53_333)
     expect(breakdown.noteResults).toEqual([
       { expectedNoteIndex: 0, verdict: 'hit', timingDeltaMs: 20, centsDeviation: 0 },
       { expectedNoteIndex: 1, verdict: 'wrong_pitch', timingDeltaMs: 0, centsDeviation: 100 },
@@ -77,7 +77,7 @@ describe('scorePerformance', () => {
       pitchToleranceCents: 150,
     })
     expect(breakdown.pitchAccuracy).toBe(66.67)
-    expect(finalScore).toBe(66.67)
+    expect(finalScore).toBe(66_667)
   })
 
   it('scores fractional pitch against the cents tolerance', () => {
@@ -92,7 +92,7 @@ describe('scorePerformance', () => {
     const { finalScore, breakdown } = score([...exact, played(62, 250)])
     expect(breakdown.extraNotes).toBe(1)
     expect(breakdown.completeness).toBe(100)
-    expect(finalScore).toBe(100)
+    expect(finalScore).toBe(100_000)
   })
 
   it('scores an empty performance as zero', () => {
@@ -116,7 +116,7 @@ describe('scorePerformance', () => {
       tempoMap,
       performed: [played(64, 5), played(60, 10)],
     })
-    expect(result.finalScore).toBe(100)
+    expect(result.finalScore).toBe(100_000)
   })
 
   it('fills unset rules from the defaults', () => {
@@ -126,7 +126,7 @@ describe('scorePerformance', () => {
     })
     expect(breakdown.noteResults[0].verdict).toBe('late')
     expect(breakdown.rhythmAccuracy).toBe(83.33)
-    expect(finalScore).toBe(93.33)
+    expect(finalScore).toBe(93_333)
   })
 
   it('follows the scenario weights', () => {
@@ -134,13 +134,13 @@ describe('scorePerformance', () => {
     const performed = [played(60, 20), played(65, 500)]
     expect(
       score(performed, { pitchWeight: 1, rhythmWeight: 0, completenessWeight: 0 }).finalScore,
-    ).toBe(33.33)
+    ).toBe(33_333)
     expect(
       score(performed, { pitchWeight: 0, rhythmWeight: 1, completenessWeight: 0 }).finalScore,
-    ).toBe(66.67)
+    ).toBe(66_667)
     expect(
       score(performed, { pitchWeight: 1, rhythmWeight: 1, completenessWeight: 2 }).finalScore,
-    ).toBe(58.33)
+    ).toBe(58_333)
   })
 
   it('rejects a scenario with no notes', () => {
@@ -150,7 +150,7 @@ describe('scorePerformance', () => {
   it('stretches expected timing by the speed multiplier', () => {
     const slow = exact.map((note) => ({ ...note, startMs: note.startMs * 2 }))
     const result = scorePerformance({ expected, tempoMap, performed: slow, speedMultiplier: 0.5 })
-    expect(result.finalScore).toBe(100)
+    expect(result.finalScore).toBe(100_000)
   })
 })
 
@@ -176,6 +176,6 @@ describe('performanceFromMidi', () => {
 
     const performed = performanceFromMidi(midi.toArray())
     expect(performed.map((n) => n.midiPitch)).toEqual([60, 64, 67])
-    expect(scorePerformance({ expected, tempoMap, performed }).finalScore).toBe(100)
+    expect(scorePerformance({ expected, tempoMap, performed }).finalScore).toBe(100_000)
   })
 })

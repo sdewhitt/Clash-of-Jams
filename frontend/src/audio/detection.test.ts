@@ -256,7 +256,7 @@ describe('acceptance', () => {
     expect(performed).toHaveLength(3)
     expect(breakdown.extraNotes).toBe(0)
     expect(breakdown.noteResults.map((r) => r.verdict)).toEqual(['hit', 'hit', 'hit'])
-    expect(finalScore).toBe(100)
+    expect(finalScore).toBe(100_000)
   })
 
   it('subtracts input latency before scoring', () => {

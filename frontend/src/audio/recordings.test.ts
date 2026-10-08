@@ -27,7 +27,7 @@ describe('test recordings', () => {
       expect(performed).toHaveLength(rec.notes.length)
       expect(withinSemitone).toBe(rec.notes.length)
       expect(score?.breakdown.extraNotes).toBe(0)
-      expect(score?.finalScore).toBeGreaterThanOrEqual(95)
+      expect(score?.finalScore).toBeGreaterThanOrEqual(95_000)
     },
   )
 

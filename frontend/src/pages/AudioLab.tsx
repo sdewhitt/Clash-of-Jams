@@ -93,11 +93,6 @@ export function AudioLab() {
       </header>
 
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-8 py-8">
-        <p className="text-muted">
-          The audio input pipeline end to end: live microphone capture, note detection on the audio
-          clock, MIDI controller input, a scored take through the Scoring Engine, and evaluation
-          against test recordings with known answers.
-        </p>
         <LiveInput input={input} onInput={setInput} />
         <MidiController />
         <ScoredTake input={input} />
@@ -165,11 +160,7 @@ function LiveInput({
     <section className={panel}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold">1. Live microphone</h2>
-          <p className="text-sm text-muted">
-            Opens the mic with echo cancellation, noise suppression and auto gain off.
-          </p>
-        </div>
+          <h2 className="text-xl font-bold">1. Live microphone</h2>        </div>
         <div className="flex items-center gap-3">
           <select
             className={`capitalize ${field}`}
@@ -356,12 +347,7 @@ function MidiController() {
     <section className={panel}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold">2. MIDI controller</h2>
-          <p className="text-sm text-muted">
-            Plug in a MIDI keyboard. Note On and Note Off messages become notes, timed in
-            milliseconds from when you start listening.
-          </p>
-        </div>
+          <h2 className="text-xl font-bold">2. MIDI controller</h2>        </div>
         <div className="flex items-center gap-3">
           {access && (
             <select
