@@ -346,6 +346,7 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                 }
                 else {
                     updateScenarioThemeAccompany(user?.uid, chosenScenarioTheme, draftAccompanyTheme ?? "default");
+                    updateScenarioThemeDefault(user?.uid, chosenScenarioTheme);
                 }
             }
             else {
