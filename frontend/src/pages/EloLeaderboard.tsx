@@ -8,7 +8,6 @@ import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
 import type { LeaderboardResponse } from "@/lib/leaderboards"
 import { INSTRUMENTS, type Instrument } from "@/lib/schema/types"
-import { useNavigate } from "react-router"
 
 const controlClass =
     "rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black"
