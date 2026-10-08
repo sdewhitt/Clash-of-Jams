@@ -65,6 +65,10 @@ class MatchmakingService:
         if heartbeat:
             entry.last_seen = now
         player = entry.player
+        window = rating_window(player, now, self.policy)
+        initial_window = (
+            self.policy.provisional_window if player.provisional else self.policy.initial_window
+        )
         target_available = any(
             scenario.instrument == player.instrument
             and abs(
@@ -82,7 +86,8 @@ class MatchmakingService:
             queue_id=player.ticket,
             instrument=player.instrument,
             wait_seconds=max(0, now - player.joined_at),
-            rating_window=rating_window(player, now, self.policy),
+            rating_window=window,
+            search_expanded=window > initial_window,
             waiting_for="opponent" if target_available else "scenario",
             policy_version=self.policy.version,
         )

@@ -86,7 +86,16 @@ export function RatingHistory() {
         {loading || history.loading ? (
           <p>Loading history…</p>
         ) : history.error ? (
-          <p role="alert">{history.error}</p>
+          <div className="space-y-3">
+            <p role="alert">{history.error}</p>
+            <button
+              type="button"
+              onClick={history.retry}
+              className="cursor-pointer rounded-lg border-2 border-accent-start px-4 py-2 font-bold"
+            >
+              Try again
+            </button>
+          </div>
         ) : history.events.length === 0 ? (
           <p className="rounded-xl border-2 border-accent-start p-5 text-muted">
             No previous matches. Your match results will appear here.

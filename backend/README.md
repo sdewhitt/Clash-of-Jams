@@ -10,6 +10,11 @@ rating-based queue. Run one API worker/replica. See
 [Matchmaking implementation and demo](../docs/matchmaking.md) for the policy,
 500-player fixture, tests and multiplayer handoff.
 
+The authenticated WebSocket session server now supports shared readiness,
+one-minute demo play, preset messages, reconnect/forfeit and Elo results. See
+[Multiplayer implementation and demo](../docs/multiplayer.md) for setup and
+the measured 50-player benchmark. Use one worker without reload during matches.
+
 ## Running it
 
 ```bash
@@ -59,6 +64,9 @@ probes do not track the API version.
 | POST   | `/api/v1/matchmaking/queue`                 | Join caller's queue     |
 | GET    | `/api/v1/matchmaking/queue`                 | Queue or assigned lobby |
 | DELETE | `/api/v1/matchmaking/queue`                 | Ticket-scoped leave     |
+| GET    | `/api/v1/multiplayer/{matchId}`             | Participant snapshot    |
+| WS     | `/api/v1/multiplayer/{matchId}/socket`      | Authenticated session   |
+| GET    | `/api/v1/multiplayer/metrics`               | Admin-only latency data |
 
 ## Auth
 

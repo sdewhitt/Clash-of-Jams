@@ -45,5 +45,12 @@ def queue_status(user: CurrentUserDep, matchmaker: MatchmakerDep):
 
 
 @router.delete("/queue", response_model=QueueStatus)
-def cancel_queue(payload: QueueCancel, user: CurrentUserDep, matchmaker: MatchmakerDep):
-    return _call(matchmaker.cancel, user.uid, payload.queue_id, payload.leave_lobby)
+def cancel_queue(
+    payload: QueueCancel, user: CurrentUserDep, matchmaker: MatchmakerDep, request: Request
+):
+    previous = _call(matchmaker.status, user.uid) if payload.leave_lobby else None
+    status = _call(matchmaker.cancel, user.uid, payload.queue_id, payload.leave_lobby)
+    sessions = getattr(request.app.state, "sessions", None)
+    if sessions and previous and previous.match and status.state == "idle":
+        sessions.lobby_left(previous.match.id)
+    return status

@@ -144,6 +144,19 @@ describe('live rating subscriptions', () => {
     expect(result.current.events).toEqual([])
     expect(previous.unsubscribe).toHaveBeenCalledOnce()
   })
+
+  it('ignores callbacks from a cancelled history subscription', () => {
+    const { result, rerender } = renderHook(
+      ({ instrument }: { instrument: Instrument }) => useRatingHistory('user-1', instrument),
+      { initialProps: { instrument: 'piano' as Instrument } },
+    )
+    const previous = listeners.get('users/user-1/skillRatings/piano/history')!
+    rerender({ instrument: 'guitar' })
+    emit('users/user-1/skillRatings/guitar/history')
+    act(() => previous.next({ docs: [{ data: () => event }], data: () => ({}) }))
+    expect(result.current.loading).toBe(false)
+    expect(result.current.events).toEqual([])
+  })
 })
 
 describe('Elo UI', () => {
@@ -230,5 +243,26 @@ describe('Elo UI', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(2)
     expect(screen.getByText('Could not load your rating history.')).toBeInTheDocument()
     expect(screen.queryByText(/No previous matches/)).not.toBeInTheDocument()
+  })
+
+  it('retries a failed history listener and renders committed results without a reload', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      renderWithAuth(<RatingHistory />, { auth: signedIn() })
+      emitRating(416)
+      const failed = listeners.get('users/user-1/skillRatings/piano/history')!
+      act(() => failed.error())
+      expect(screen.getByRole('alert')).toHaveTextContent('Could not load your rating history')
+      await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+      expect(failed.unsubscribe).toHaveBeenCalledOnce()
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(screen.getByText('Loading history…')).toBeInTheDocument()
+      expect(listeners.get('users/user-1/skillRatings/piano/history')).not.toBe(failed)
+      emit('users/user-1/skillRatings/piano/history', [event])
+      expect(screen.getByRole('heading', { name: 'Win' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Rating change')).toHaveTextContent('400 → 416 (+16)')
+    } finally {
+      warning.mockRestore()
+    }
   })
 })

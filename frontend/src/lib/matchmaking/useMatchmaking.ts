@@ -10,6 +10,7 @@ interface Entry {
   uid: string
   status: QueueStatus | null
   error: string | null
+  receivedAt: number
 }
 
 /** Ticket-scoped cancellation and heartbeat; refresh preserves an assigned lobby. */
@@ -40,7 +41,7 @@ export function useMatchmaking(uid: string | undefined) {
     function publish(status: QueueStatus) {
       if (!active || state.cancelling) return
       state.ticket = status.queueId
-      setEntry({ uid: uid!, status, error: null })
+      setEntry({ uid: uid!, status, error: null, receivedAt: performance.now() })
     }
     async function poll() {
       if (!active || state.cancelling) return
@@ -58,6 +59,7 @@ export function useMatchmaking(uid: string | undefined) {
             uid: uid!,
             status: previous && previous.uid === uid ? previous.status : null,
             error: message(error),
+            receivedAt: previous && previous.uid === uid ? previous.receivedAt : performance.now(),
           }))
       } finally {
         if (active && !state.cancelling) pollTimer = setTimeout(poll, 1500)
@@ -72,7 +74,12 @@ export function useMatchmaking(uid: string | undefined) {
       })
       .catch((error) => {
         if (active && !state.cancelling)
-          setEntry({ uid: uid!, status: null, error: message(error) })
+          setEntry({
+            uid: uid!,
+            status: null,
+            error: message(error),
+            receivedAt: performance.now(),
+          })
       })
 
     function release() {
@@ -115,6 +122,7 @@ export function useMatchmaking(uid: string | undefined) {
         uid: uid!,
         status: previous?.status ?? null,
         error: message(error),
+        receivedAt: previous?.receivedAt ?? performance.now(),
       }))
       setAttempt((value) => value + 1)
       throw error
@@ -126,6 +134,7 @@ export function useMatchmaking(uid: string | undefined) {
   const owned = entry?.uid === uid ? entry : null
   return {
     status: owned?.status ?? null,
+    receivedAt: owned?.receivedAt ?? 0,
     error: owned?.error ?? null,
     leaving,
     cancel,
@@ -142,10 +151,16 @@ export function useActiveMatch(uid: string | undefined) {
     const load = () => {
       void getQueueStatus()
         .then((status) => {
-          if (active) setEntry({ uid, status, error: null })
+          if (active) setEntry({ uid, status, error: null, receivedAt: performance.now() })
         })
         .catch(() => {
-          if (active) setEntry({ uid, status: null, error: 'Multiplayer unavailable' })
+          if (active)
+            setEntry({
+              uid,
+              status: null,
+              error: 'Multiplayer unavailable',
+              receivedAt: performance.now(),
+            })
         })
     }
     load()

@@ -295,8 +295,18 @@ export interface GameMatch {
   createdAt: Timestamp
   startedAt: Timestamp | null
   endedAt: Timestamp | null
-  completionReason?: RatingEvent['reason']
+  completionReason?:
+    | RatingEvent['reason']
+    | 'lobby_left'
+    | 'lobby_timeout'
+    | 'both_disconnected'
+    | 'server_restarted'
   ratingModelVersion?: string
+  /** Live demo sessions are owned by one backend process; no per-beat DB writes. */
+  durationMs?: number
+  inputSource?: 'demo'
+  sessionProtocolVersion?: string
+  sessionServerId?: string
   /** Server-written queue decisions and pinned scenario-selection metadata. */
   matchmaking?: {
     policyVersion: string

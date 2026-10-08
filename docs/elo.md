@@ -31,7 +31,7 @@ For forfeits, supply `reason="resigned"` or `"disconnected"` and `forfeiting_uid
 
 One Firestore transaction completes the active versus match, updates both participant results and instrument ratings, and creates two immutable history events. Repeating the same result returns its original events without updating again. Conflicting results, incorrect participants/instruments, inactive matches and missing ratings are rejected. Shared-rating transactions retry when concurrent matches race.
 
-Matches and both instrument ratings must already exist. The future session server will call this function after authoritative scoring; actual gameplay and its completion handler are outside this change.
+Matches and both instrument ratings must already exist. The [multiplayer session server](multiplayer.md) now calls this function on natural completion, resignation, or disconnect expiry. Its current gameplay input is explicitly synthetic demo taps.
 
 Authenticated GET routes expose only the caller's rating and history:
 
@@ -44,7 +44,17 @@ The home header shows the preferred instrument's live rating beside the username
 
 History lives at `users/{uid}/skillRatings/{instrument}/history/{matchId}`. Each event includes the rating inputs, model version and transaction timestamp for replay. Only its owner can read history; clients cannot write it. No extra composite index is needed for the per-instrument `appliedAt` ordering.
 
-The Firestore history rules must be deployed before using the history UI against the cloud project. No cloud deployment or production data mutation was performed during this implementation.
+The Firestore history rules must be deployed before using the history UI against the cloud project. Firestore read permissions on a rating document do not extend to its history subcollection. If live rules omit the nested owner-only history read, the page can show the current Elo while its history query fails.
+
+The cloud `clash-of-jams` rules were updated on October 8, 2026 to match the repository rules and restore owner-only history reads. The deployment targeted rules only; no match, rating, or history records were changed. After a terminal subscription error, Recent Matches offers **Try again** to create a new listener without reloading. The underlying Firestore error code and message are logged for diagnosis.
+
+Deploy future rule changes explicitly from the repository root:
+
+```bash
+npx -y firebase-tools@15.32.1 deploy --config firebase/firebase.json --project clash-of-jams --only firestore:rules
+```
+
+For history fixes, verify an owner's descending `appliedAt` query succeeds, other players and signed-out reads fail, and client history writes remain denied. A missing composite index is not the cause of this per-instrument query.
 
 ## Local demo
 
