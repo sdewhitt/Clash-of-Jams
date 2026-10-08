@@ -1,8 +1,9 @@
-import { doc, serverTimestamp, updateDoc, runTransaction, } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, setDoc, runTransaction, } from 'firebase/firestore';
 import { type Theme } from "@/context/ThemeContext";
 import { db } from '@/lib/firebase';
+import { scenarioThemesPath } from '../schema/collections';
 
-export async function processAvatar(file: File): Promise<string> {
+export async function processImage(file: File): Promise<string> {
     const allowedTypes = [ "image/jpeg", "image/png", "image/webp", "image/svg", ];
 
     if (!allowedTypes.includes(file.type)) {
@@ -148,6 +149,40 @@ export async function updateEloPublicity( uid: string, elo: string[] ) {
         publicElos: elo,
         updatedAt: serverTimestamp(),
     });
+}
+
+export async function updateScenarioThemeDefault( uid: string, theme: string ) {
+    const userRef = doc(db, "userSettings", uid);
+
+    await updateDoc(userRef, {
+        scenarioTheme: theme,
+        updatedAt: serverTimestamp(),
+    });
+}
+
+export async function updateScenarioThemeAccompany( uid: string, themeName: string, accompanyTheme: string) {
+    const userRef = doc(db, scenarioThemesPath(uid), themeName);
+
+    await updateDoc(userRef, {
+            themeName: themeName,
+            accompanyTheme: accompanyTheme,
+            updatedAt: serverTimestamp(),
+        }
+    );
+}
+
+export async function updateScenarioThemeAdvanced( uid: string, themeName: string, themeUrl: string, accompanyTheme: string) {
+    const userRef = doc(db, scenarioThemesPath(uid), themeName);
+
+    await setDoc( userRef, {
+            uid: uid,
+            themeName: themeName,
+            themeUrl: themeUrl,
+            accompanyTheme: accompanyTheme,
+            updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+    );
 }
 
 

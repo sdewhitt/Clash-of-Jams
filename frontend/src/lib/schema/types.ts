@@ -119,6 +119,7 @@ export interface UsernameReservation {
 /** userSettings/{uid} — themes, accessibility options, instrument preferences. */
 export interface UserSettings {
   uid: string
+  scenarioTheme: string
   theme: string
   reduceFlashing: boolean
   publicBio: boolean
@@ -361,6 +362,19 @@ export interface SkillRating {
   tier: RankTier
   gamesPlayed: number
   isProvisional: boolean
+  updatedAt: Timestamp
+}
+
+/**
+ * userSettings/{uid}/scenarioTheme/{themeName}
+ *
+ * Written during user creation to track custom themes for the different scenarios
+ */
+export interface ScenarioTheme {
+  uid: string
+  accompanyTheme: string
+  themeName: string
+  themeUrl: string
   updatedAt: Timestamp
 }
 
