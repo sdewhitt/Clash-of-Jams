@@ -50,7 +50,6 @@
   --color-contrast-start: #6461ff;
   --color-contrast-middle: #4845a0;
   --color-contrast-end: #8582ff;
-  
 }
 
 /*
@@ -199,11 +198,18 @@
 
 @layer base {
   html {
-    color-scheme: default;
+    color-scheme: light;
+  }
+
+  html[data-theme="dark"],
+  html[data-theme="neon"],
+  html[data-theme="tritanopia"] {
+    color-scheme: dark;
   }
 
   body {
-    @apply bg-linear-to-bl
+    @apply
+      bg-linear-to-bl
       from-base-start
       from-10%
       via-base-middle
@@ -219,6 +225,9 @@
   }
 
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-accent-middle;
+    @apply
+      outline-2
+      outline-offset-2
+      outline-accent-middle;
   }
 }

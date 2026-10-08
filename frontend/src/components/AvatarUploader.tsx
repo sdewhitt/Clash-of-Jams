@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { processAvatar } from "@/lib/profile/UserProfile";
+import { processImage } from "@/lib/profile/UserProfile";
 
 type AvatarUploadProps = {
     onAvatarUpdated: (url: string) => void;
@@ -21,7 +21,7 @@ export function AvatarUploader({ onAvatarUpdated, }: AvatarUploadProps) {
             setUploading(true);
             setError(null);
 
-            const newAvatarUrl = await processAvatar(file);
+            const newAvatarUrl = await processImage(file);
             onAvatarUpdated(newAvatarUrl);
 
         } catch (error) {

@@ -28,6 +28,7 @@ from app.routers import (
     multiplayer,
     ratings,
     runs,
+    scenario_difficulty,
     scenarios,
     skill_ratings,
 )
@@ -112,6 +113,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(scenarios.router, prefix=settings.api_prefix)
+    app.include_router(scenario_difficulty.router, prefix=settings.api_prefix)
     app.include_router(ratings.router, prefix=settings.api_prefix)
     app.include_router(leaderboards.router, prefix=settings.api_prefix)
     app.include_router(runs.router, prefix=settings.api_prefix)

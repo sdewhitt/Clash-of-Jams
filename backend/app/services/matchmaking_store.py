@@ -28,6 +28,15 @@ def _finite(value) -> bool:
     return type(value) in (int, float) and isfinite(value)
 
 
+def scenario_difficulty(data: dict) -> tuple[float | None, str]:
+    """Keep legacy estimates; new empirical estimates must match the playable version."""
+    crowd = data.get("crowdDifficulty")
+    current = data.get("crowdDifficultyVersionId", data.get("currentVersionId"))
+    if _finite(crowd) and 1 <= crowd <= 10 and current == data.get("currentVersionId"):
+        return crowd, "crowd"
+    return data.get("authorDifficulty"), "author"
+
+
 def _playable_part(version: dict, instrument: str) -> str | None:
     rules = version.get("scoringRules", {})
     weights = [rules.get(name) for name in ("pitchWeight", "rhythmWeight", "completenessWeight")]
@@ -144,9 +153,7 @@ class FirestoreMatchmakingStore:
                 continue  # Malformed published content cannot break the queue.
             if not part_id:
                 continue
-            crowd = data.get("crowdDifficulty")
-            source = "crowd" if _finite(crowd) and 1 <= crowd <= 10 else "author"
-            difficulty = crowd if source == "crowd" else data.get("authorDifficulty")
+            difficulty, source = scenario_difficulty(data)
             if not _finite(difficulty) or not 1 <= difficulty <= 10:
                 continue
             candidates.append(
@@ -239,9 +246,7 @@ class FirestoreMatchmakingStore:
             if not scenario.exists or not version.exists:
                 return False
             data = scenario.to_dict()
-            crowd = data.get("crowdDifficulty")
-            source = "crowd" if _finite(crowd) and 1 <= crowd <= 10 else "author"
-            difficulty = crowd if source == "crowd" else data.get("authorDifficulty")
+            difficulty, source = scenario_difficulty(data)
             if (
                 data.get("visibility") != "public"
                 or data.get("instrument") != players[0].instrument

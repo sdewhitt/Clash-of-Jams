@@ -77,6 +77,8 @@ export function ScenarioSearch() {
     const [sortAscending, setSortAscending] = useState(true)
 
     const [scenarios, setScenarios] = useState<ScenarioWithAuthor[]>([])
+    // So a failed fetch reads as an error rather than as "nothing matches".
+    const [scenariosFailed, setScenariosFailed] = useState(false)
     const [selectedId, setSelectedId] = useState<string | null>(null)
     // Kept across selections, so someone reading reviews can flip between scenarios without re-picking the tab.
     const [detailsTab, setDetailsTab] = useState<DetailsTab>("leaderboard")
@@ -100,7 +102,10 @@ export function ScenarioSearch() {
     useEffect(() => {
         apiFetch<ScenarioWithAuthor[]>("/scenarios/scenario_with_author")
             .then(setScenarios)
-            .catch(console.error)
+            .catch((err) => {
+                console.error(err)
+                setScenariosFailed(true)
+            })
     }, [])
 
     useEffect(() => {
@@ -397,7 +402,9 @@ export function ScenarioSearch() {
                                 })}
                             </ul>
                             {visibleScenarios.length === 0 && (
-                                <p className="py-8 text-center text-muted">No scenarios match these filters.</p>
+                                <p className="py-8 text-center text-muted">
+                                    {scenariosFailed ? "Couldn't load scenarios." : "No scenarios match these filters."}
+                                </p>
                             )}
                         </div>
                     </section>

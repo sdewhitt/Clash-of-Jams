@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/useAuth"
 import { useNavigate } from "react-router"
 import type { User } from 'firebase/auth'
-import type { SkillRating, UserProfile } from '@/lib/schema/types'
+import type { ScenarioTheme, SkillRating, UserProfile } from '@/lib/schema/types'
 import { BackButton } from "@/components/BackButton"
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { SettingsButton } from "@/components/SettingsButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { updateBioPublicity, updateEloPublicity, updateGenrePublicity, updateInstrumentPublicity, updatePreferredGenres, updatePreferredInstrument, updateUserAvatar, updateUserBio, updateUsername, updateUserTheme } from "@/lib/profile/UserProfile";
+import { processImage, updateBioPublicity, updateEloPublicity, updateGenrePublicity, updateInstrumentPublicity, updatePreferredGenres, updatePreferredInstrument, updateScenarioThemeAccompany, updateScenarioThemeAdvanced, updateScenarioThemeDefault, updateUserAvatar, updateUserBio, updateUsername, updateUserTheme } from "@/lib/profile/UserProfile";
 import { getAvatars, type Avatar } from "@/lib/profile/Avatar";
-import { getUserElos, getUserSettings } from "@/lib/profile/UserSettings";
+import { getScenarioThemes, getUserElos, getUserScenarioTheme, getUserSettings } from "@/lib/profile/UserSettings";
 import type { UserSettings } from "@/lib/schema/types";
 import { useTheme, type Theme } from "@/context/ThemeContext";
 import { UsernameEditor } from "@/components/UsernameEditor";
@@ -42,13 +42,22 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     const [draftTheme, setDraftTheme] = useState<Theme>();
     const [savedTheme, setSavedTheme] = useState<Theme>();
 
+    const [scenarioThemes, setScenarioThemes] = useState<ScenarioTheme[]>([]);
+    const [chosenScenarioTheme, setChosenScenarioTheme] = useState("");
+    const [selectScenarioTheme, setSelectedScenarioTheme] = useState<ScenarioTheme>();
+    const [chosenScenarioThemeUrl, setChosenScenarioThemeUrl] = useState("");
+    const [needAccompanyingTheme, setNeedAccompanyingTheme] = useState(false);
+    const [draftAccompanyTheme, setDraftAccompanyTheme] = useState<Theme>();
+    const [needThemeName, setNeedThemeName] = useState(false);
+    const [draftThemeName, setDraftThemeName] = useState("");
+
     const [draftBio, setDraftBio] = useState("");
     const [savedBio, setSavedBio] = useState("");
 
     const [instrument, setInstrument] = useState("");
     const [savedInstrument, setSavedInstrument] = useState("");
 
-    const [ eloRatings, setEloRatings] = useState<SkillRating[]>([]);
+    const [eloRatings, setEloRatings] = useState<SkillRating[]>([]);
     
     const availableGenres = [ "blues", "jazz", "electronic", "hip-hop", "pop", "r&b", "rock", "indie", "alternative", "folk", "metal", ];
     const [draftGenres, setDraftGenres] = useState<string[]>([]);
@@ -62,6 +71,40 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
 
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+
+    const [uploading, setUploading] = useState(false);
+
+    async function handleUpload( event: React.ChangeEvent<HTMLInputElement> ) {
+        const file = event.target.files?.[0];
+    
+        if (!file) { 
+            console.log('Debug: File Does Not Exist');
+            return; 
+        }    
+
+        try {
+            setUploading(true);
+
+            const newScenarioThemeUrl = await processImage(file);
+            setChosenScenarioThemeUrl(newScenarioThemeUrl);
+
+            setNeedAccompanyingTheme(true);
+            setNeedThemeName(true);
+
+        } catch (error) {
+            console.error(error);
+
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to upload avatar."
+            );
+
+        } finally {
+            setUploading(false);
+            event.target.value = "";
+        }
+    }
 
     function formatLabel(value: string) {
         return value
@@ -109,6 +152,9 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
 
             const elos = await getUserElos(user.uid);
             setEloRatings(elos);
+
+            const scenarioThemes = await getScenarioThemes(user.uid);
+            setScenarioThemes(scenarioThemes)
         } catch (error) {
             console.error("Failed to load user settings:", error);
         }
@@ -132,8 +178,61 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     }, []);
 
     useEffect(() => {
+        async function loadThemes() {
+            if (!user) {
+                return;
+            }
+            switch(chosenScenarioTheme) {
+                case "default":
+                    setChosenScenarioThemeUrl('/default_mode.png');
+                    return;
+                case "dark":
+                    setChosenScenarioThemeUrl('/dark_mode.png');
+                    return;
+                case "neon":
+                    setChosenScenarioThemeUrl('/neon_mode.png');
+                    return;
+                case "deuteranopia":
+                    setChosenScenarioThemeUrl('/deuteranopia_mode.png');
+                    return;
+                case "protanopia":
+                    setChosenScenarioThemeUrl('/protanopia_mode.png');
+                    return;
+                case "tritanopia":
+                    setChosenScenarioThemeUrl('/tritanopia_mode.png');
+                    return;
+                case "high-contrast":
+                    setChosenScenarioThemeUrl('/high-contrast_mode.png');
+                    return;
+                case "":
+                    setChosenScenarioTheme('default');
+                    setChosenScenarioThemeUrl('/default_mode.png')
+                    return;
+                default:
+                    const theme = await getUserScenarioTheme( user?.uid, chosenScenarioTheme );
+
+                    if (theme != null) {
+                        setSelectedScenarioTheme(theme);
+                        setChosenScenarioTheme(theme.themeName);
+                        setChosenScenarioThemeUrl(theme.themeUrl);
+                    }
+                    return;
+            }
+        }
+
+        loadThemes();
+    }, [chosenScenarioTheme]);
+
+    useEffect(() => {
+        if (!selectScenarioTheme) {return;}
+        setChosenScenarioThemeUrl(selectScenarioTheme.themeUrl);
+    }, [selectScenarioTheme]);
+
+    useEffect(() => {
         setSavedUsername(profile?.displayName ?? "");
         
+        setChosenScenarioTheme(userSettings?.scenarioTheme ?? "")
+
         setDraftBio(profile?.bio ?? "");
         setBioPublicity(userSettings?.publicBio ?? true);
         setSavedBio(profile?.bio ?? "");
@@ -159,6 +258,14 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         await updateUserTheme(uid, chosenTheme);
         loadUserSettings();
     };
+
+    const handleScenarioThemeChange = async (chosenTheme: string, chosenThemeUrl: string, accompany: boolean) => {
+        setChosenScenarioTheme(chosenTheme);
+        setChosenScenarioThemeUrl(chosenThemeUrl);
+        setNeedAccompanyingTheme(accompany);
+        setNeedThemeName(false);
+    };
+
 
     const handleGeneralUpdates = async (uid: string, oldUsername: string, newUsername: string, bio: string, instrument: string, genres: string[]) => {
         setError(null);
@@ -222,6 +329,39 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         setInstrumentPublicity(userSettings?.publicInstrument ?? true);
         setPublicElos(userSettings?.publicElos ?? []);
         setPublicGenres(userSettings?.publicGenres ?? []);
+    };
+
+    const updateScenarioThemeChanges = async () => {
+        setError(null);
+        setIsSaving(true);
+
+        if (!user) {return;}
+
+        try {
+            if (needAccompanyingTheme){
+                if (needThemeName) {
+                    updateScenarioThemeAdvanced(user?.uid, draftThemeName, chosenScenarioThemeUrl, draftAccompanyTheme ?? "default");
+                    setChosenScenarioTheme(draftThemeName);
+                }
+                else {
+                    updateScenarioThemeAccompany(user?.uid, chosenScenarioTheme, draftAccompanyTheme ?? "default");
+                    updateScenarioThemeDefault(user?.uid, chosenScenarioTheme);
+                }
+            }
+            else {
+                updateScenarioThemeDefault(user?.uid, chosenScenarioTheme);
+            }
+            
+            await loadUserSettings();
+        } catch (error) {
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to update user settings."
+            );
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const displayedAvatars = showAllAvatars ? avatars : avatars.slice(0, 4);
@@ -941,12 +1081,413 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                     )}
                 </div>
             );
-        case "scenarioTheme":
-            return (
-                <div>
-                    Hello
-                </div>
-            );
+            case "scenarioTheme":
+                return (
+                    <div className="
+                        flex flex-col
+                        m-4
+                        p-6
+                        bg-linear-to-b
+                        from-accent-start
+                        via-accent-middle
+                        to-accent-end
+                        outline-3
+                        outline-accent-middle
+                        rounded-lg
+                        overflow-y-auto
+                    ">
+                        <h1 className="text-2xl text-ink font-bold mb-5">
+                            Scenario Themes
+                        </h1>
+
+                        <div className="
+                            bg-linear-to-b
+                            from-contrast-start
+                            via-contrast-middle
+                            to-contrast-end
+                            outline-2
+                            outline-contrast-middle
+                            rounded-lg
+                            p-4
+                        ">
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="text-lg font-semibold text-ink">
+                                    Selected Theme
+                                </h2>
+
+                                <span className="
+                                    rounded-full
+                                    bg-accent-start/20
+                                    border
+                                    border-accent-start
+                                    px-3
+                                    py-1
+                                    text-sm
+                                    text-ink
+                                ">
+                                    {formatLabel(chosenScenarioTheme || "default")}
+                                </span>
+                            </div>
+
+                            <div className="
+                                overflow-hidden
+                                rounded-lg
+                            ">
+                                <img
+                                    src={chosenScenarioThemeUrl}
+                                    alt={`${chosenScenarioTheme} scenario theme preview`}
+                                    className="
+                                        w-full
+                                        max-h-72
+                                        object-contain
+                                    "
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-5">
+                            <div className="
+                                grid
+                                grid-cols-2
+                                md:grid-cols-3
+                                gap-3
+                            ">
+                                <button
+                                    type="button"
+                                    onClick={() => handleScenarioThemeChange( savedTheme ?? "default", `/${savedTheme ?? "default"}_mode.png`, false ) }
+                                    className={`
+                                        group
+                                        rounded-lg
+                                        border-2
+                                        p-2
+                                        text-left
+                                        transition
+                                        duration-200
+                                        ${
+                                            chosenScenarioTheme === (savedTheme ?? "default")
+                                                ? `
+                                                    border-contrast-start
+                                                    bg-contrast-start/60
+                                                `
+                                                : `
+                                                    border-line
+                                                    bg-contrast-start/40
+                                                    hover:border-contrast-start
+                                                    hover:bg-contrast-start/60
+                                                `
+                                        }
+                                        hover:-translate-y-0.5
+                                        active:scale-[0.98]
+                                    `}
+                                >
+                                    <div className="px-1 pt-2">
+                                        <img
+                                            src={`/${savedTheme}_mode.png`}
+                                            alt={`${savedTheme} preview`}
+                                            className="
+                                                w-full
+                                                h-24
+                                                object-cover
+                                                transition
+                                                duration-200
+                                                group-hover:brightness-110
+                                            "
+                                        />
+                                        <p className="font-medium text-ink">
+                                            Application Theme
+                                        </p>
+
+                                        <p className="text-xs text-ink/60">
+                                            Uses your current application theme
+                                        </p>
+                                    </div>
+                                </button>
+
+                                {scenarioThemes.map((theme) => {
+                                    const isSelected = chosenScenarioTheme === theme.themeName;
+
+                                    return (
+                                        <button
+                                            key={theme.themeName}
+                                            type="button"
+                                            onClick={() => handleScenarioThemeChange( theme.themeName, theme.themeUrl, true ) }
+                                            className={`
+                                                group
+                                                rounded-lg
+                                                border-2
+                                                p-2
+                                                text-left
+                                                transition
+                                                duration-200
+                                                ${
+                                                    isSelected
+                                                        ? `
+                                                            border-contrast-start
+                                                            bg-contrast-start/60
+                                                        `
+                                                        : `
+                                                            border-line
+                                                            bg-contrast-start/40
+                                                            hover:border-contrast-start
+                                                            hover:bg-contrast-start/60
+                                                        `
+                                                }
+                                                hover:-translate-y-0.5
+                                                active:scale-[0.98]
+                                            `}
+                                        >
+                                            <div className="
+                                                overflow-hidden
+                                                rounded-md
+                                                border
+                                                border-line
+                                                bg-base
+                                            ">
+                                                <img
+                                                    src={theme.themeUrl}
+                                                    alt={`${theme.themeName} preview`}
+                                                    className="
+                                                        w-full
+                                                        h-24
+                                                        object-cover
+                                                        transition
+                                                        duration-200
+                                                        group-hover:brightness-110
+                                                    "
+                                                />
+                                            </div>
+
+                                            <div className="px-1 pt-2">
+                                                <p className="font-medium text-ink truncate">{theme.themeName}</p>
+
+                                                <p className="text-xs text-ink/60">Custom scenario theme</p>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+
+                                <label
+                                    htmlFor="scenario-theme-upload"
+                                    className="
+                                        group
+                                        flex
+                                        min-h-40
+                                        cursor-pointer
+                                        flex-col
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        border-2
+                                        border-dashed
+                                        border-line
+                                        bg-contrast-start/30
+                                        p-4
+                                        text-center
+                                        transition
+                                        hover:border-contrast-start
+                                        hover:bg-contrast-start/60
+                                        hover:-translate-y-0.5
+                                    "
+                                >
+                                    <div className="
+                                        flex
+                                        h-10
+                                        w-10
+                                        items-center
+                                        justify-center
+                                        rounded-full
+                                        border-2
+                                        border-contrast-start
+                                        text-xl
+                                        text-contrast-start
+                                        transition
+                                        duration-200
+                                        group-hover:scale-110
+                                    ">
+                                        +
+                                    </div>
+
+                                    <p className="mt-2 font-medium text-ink">
+                                        Upload Theme
+                                    </p>
+
+                                    <p className="text-xs text-ink/60">
+                                        PNG, JPG, WebP, or SVG
+                                    </p>
+
+                                    <input
+                                        id="scenario-theme-upload"
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                        onChange={handleUpload}
+                                        disabled={uploading}
+                                        className="hidden"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        {(needAccompanyingTheme || needThemeName) && (
+                            <div className="
+                                mt-5
+                                rounded-lg
+                                border-2
+                                border-line
+                                bg-linear-to-b
+                                from-contrast-start/70
+                                via-contrast-middle/70
+                                to-contrast-end/70
+                                p-4
+                            ">
+                                <h2 className="text-lg font-semibold text-ink mb-3">
+                                    Custom Theme Options
+                                </h2>
+
+                                <div className="flex flex-col gap-4">
+                                    {needThemeName && (
+                                        <div className="flex flex-col gap-2">
+                                            <label
+                                                htmlFor="themeName"
+                                                className="
+                                                    text-sm
+                                                    font-medium
+                                                    text-accent-start
+                                                "
+                                            >
+                                                Theme Name
+                                            </label>
+
+                                            <input
+                                                id="themeName"
+                                                type="text"
+                                                value={draftThemeName}
+                                                onChange={(event) => setDraftThemeName(event.target.value)}
+                                                className="
+                                                    w-full
+                                                    rounded-lg
+                                                    border
+                                                    border-line
+                                                    bg-base
+                                                    px-4
+                                                    py-3
+                                                    text-ink
+                                                    outline-none
+                                                    transition
+                                                    focus:border-accent-start
+                                                    focus:ring-2
+                                                    focus:ring-accent-start/30
+                                                "
+                                                placeholder="Enter a theme name"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {needAccompanyingTheme && (
+                                        <div className="flex flex-col gap-2">
+                                            <label
+                                                htmlFor="accompanyTheme"
+                                                className="
+                                                    text-sm
+                                                    font-medium
+                                                    text-ink
+                                                "
+                                            >
+                                                Application Theme
+                                            </label>
+
+                                            <select
+                                                id="accompanyTheme"
+                                                name="accompany-theme"
+                                                value={draftAccompanyTheme ?? ""}
+                                                onChange={(e) => setDraftAccompanyTheme(e.target.value as Theme)}
+                                                required
+                                                className="
+                                                    w-full
+                                                    rounded-lg
+                                                    border
+                                                    border-line
+                                                    bg-linear-to-b
+                                                    from-accent-start/80
+                                                    via-accent-middle/80
+                                                    to-accent-end/80
+                                                    px-3
+                                                    py-3
+                                                    text-md
+                                                    text-ink
+                                                    outline-none
+                                                    transition
+                                                    focus:border-ink
+                                                    focus:ring-2
+                                                    focus:ring-ink/30
+                                                "
+                                            >
+                                                <option value="" disabled>Select a Theme</option>
+                                                <option value="default">Default</option>
+                                                <option value="dark">Dark</option>
+                                                <option value="neon">Neon</option>
+                                                <option value="protanopia">Protanopia</option>
+                                                <option value="deuteranopia">Deuteranopia</option>
+                                                <option value="tritanopia">Tritanopia</option>
+                                                <option value="high-contrast">High-Contrast</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {user && (
+                            <div className="
+                                flex
+                                justify-end
+                                gap-4
+                                mt-6
+                            ">
+                                <button
+                                    type="button"
+                                    className="
+                                        w-48
+                                        rounded-lg
+                                        bg-linear-to-b
+                                        from-contrast-start
+                                        via-contrast-middle
+                                        to-contrast-end
+                                        py-2
+                                        transition
+                                        hover:scale-105
+                                        active:scale-95
+                                    "
+                                    onClick={() => window.location.reload()}
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={isSaving}
+                                    className={`
+                                        w-48
+                                        rounded-lg
+                                        bg-linear-to-b
+                                        from-contrast-start
+                                        via-contrast-middle
+                                        to-contrast-end
+                                        py-2
+                                        transition
+                                        ${
+                                            isSaving
+                                                ? "cursor-not-allowed opacity-50"
+                                                : "hover:scale-105 active:scale-95"
+                                        }
+                                    `}
+                                    onClick={updateScenarioThemeChanges}
+                                >
+                                    {isSaving ? "Saving..." : "Save"}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                );
     }
 }
 
@@ -1030,7 +1571,7 @@ export function EditProfile() {
                 </div>
                 <div className={`
                     flex flex-col 
-                    w-full 
+                    w-full
                     bg-linear-to-br
                     from-contrast-start
                     via-contrast-middle

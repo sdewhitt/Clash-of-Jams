@@ -119,6 +119,7 @@ export interface UsernameReservation {
 /** userSettings/{uid} — themes, accessibility options, instrument preferences. */
 export interface UserSettings {
   uid: string
+  scenarioTheme: string
   theme: string
   reduceFlashing: boolean
   publicBio: boolean
@@ -153,6 +154,8 @@ export interface Scenario {
   authorDifficulty: number
   /** Derived from observed runs; null until enough runs exist. */
   crowdDifficulty: number | null
+  /** Server-only version marker; prevents old estimates grading a new arrangement. */
+  crowdDifficultyVersionId?: string | null
   avgRating: number | null
   ratingCount: number
   playCount: number
@@ -273,6 +276,11 @@ export interface Run {
   speedMultiplier: number
   scoringRules: ScoringRules
   finalScore: number
+  /** Optional trusted metadata added when the server validates a musical run. */
+  normalizedScore?: number
+  ratingAtPlay?: number
+  inputSource?: 'midi' | 'audio' | 'demo' | 'synthetic'
+  completionReason?: 'completed' | 'resigned' | 'disconnected'
   breakdown: ScoreBreakdown
   validation: RunValidation
   matchId: string | null
@@ -361,6 +369,19 @@ export interface SkillRating {
   tier: RankTier
   gamesPlayed: number
   isProvisional: boolean
+  updatedAt: Timestamp
+}
+
+/**
+ * userSettings/{uid}/scenarioTheme/{themeName}
+ *
+ * Written during user creation to track custom themes for the different scenarios
+ */
+export interface ScenarioTheme {
+  uid: string
+  accompanyTheme: string
+  themeName: string
+  themeUrl: string
   updatedAt: Timestamp
 }
 
