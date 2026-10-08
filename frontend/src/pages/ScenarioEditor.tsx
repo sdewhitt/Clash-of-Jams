@@ -98,6 +98,11 @@ export function ScenarioEditor() {
             <YourLibraryPanel
               onOpenScenario={(id) => show('new', id)}
               onCreateNew={() => show('new', null)}
+              // Drop a deleted scenario from the URL, or the editor tab would
+              // try to reopen something that is no longer there.
+              onScenarioDeleted={(id) => {
+                if (id === scenarioId) show('library', null)
+              }}
             />
           )}
         </div>

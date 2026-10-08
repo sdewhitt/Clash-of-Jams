@@ -44,18 +44,17 @@ vi.mock('firebase/firestore', () => {
     where: (field: string, _op: string, value: unknown) => ({ field, value }),
     orderBy: () => ({}),
     limit: () => ({}),
-    getDocs: async (built: { path: string; constraints: { field: string; value: unknown }[] }) => {
+    getDocs: async (built: { path: string; constraints?: { field: string; value: unknown }[] }) => {
       const matches = [...fake.docs.entries()]
         .filter(([path]) => path.startsWith(`${built.path}/`))
         .filter(([path]) => !path.slice(built.path.length + 1).includes('/'))
-        .map(([, data]) => data)
-        .filter((data) =>
-          built.constraints.every(
+        .filter(([, data]) =>
+          (built.constraints ?? []).every(
             (constraint) =>
               constraint.field === undefined || data[constraint.field] === constraint.value,
           ),
         )
-      return { docs: matches.map((data) => ({ data: () => data })) }
+      return { docs: matches.map(([path, data]) => ({ ref: { path }, data: () => data })) }
     },
     writeBatch: () => {
       const pending: (() => void)[] = []
@@ -66,13 +65,15 @@ vi.mock('firebase/firestore', () => {
           pending.push(() =>
             fake.docs.set(target.path, { ...fake.docs.get(target.path), ...data }),
           ),
+        delete: (target: { path: string }) => pending.push(() => fake.docs.delete(target.path)),
         commit: async () => pending.forEach((write) => write()),
       }
     },
   }
 })
 
-const { listMyScenarios, loadScenario, saveScenarioDraft } = await import('@/lib/scenarios/store')
+const { deleteScenario, listMyScenarios, loadScenario, saveScenarioDraft } =
+  await import('@/lib/scenarios/store')
 
 function draftWithNotes(): ScenarioDraft {
   const draft = emptyDraft()
@@ -224,6 +225,49 @@ describe('reopening', () => {
 
   it('reports a scenario that is no longer there', async () => {
     await expect(loadScenario('missing')).rejects.toThrow(/no longer exists/i)
+  })
+})
+
+describe('deleting', () => {
+  it('removes the scenario and every version of it', async () => {
+    const draft = draftWithNotes()
+    const first = await saveScenarioDraft({ uid: 'user-1', draft })
+    await saveScenarioDraft({ uid: 'user-1', draft, scenarioId: first.scenarioId })
+    const other = await saveScenarioDraft({ uid: 'user-1', draft })
+
+    await deleteScenario({ uid: 'user-1', scenarioId: first.scenarioId })
+
+    expect([...fake.docs.keys()].sort()).toEqual(
+      [
+        `scenarios/${other.scenarioId}`,
+        `scenarios/${other.scenarioId}/versions/${other.versionId}`,
+      ].sort(),
+    )
+    expect(await listMyScenarios('user-1')).toHaveLength(1)
+    await expect(loadScenario(first.scenarioId)).rejects.toThrow(/no longer exists/i)
+  })
+
+  it('is rejected while signed out', async () => {
+    const mine = await saveScenarioDraft({ uid: 'user-1', draft: draftWithNotes() })
+
+    await expect(deleteScenario({ uid: null, scenarioId: mine.scenarioId })).rejects.toThrow(
+      /sign in/i,
+    )
+    expect(storedScenario(mine.scenarioId)).toBeDefined()
+  })
+
+  it('refuses a scenario owned by someone else', async () => {
+    const mine = await saveScenarioDraft({ uid: 'user-1', draft: draftWithNotes() })
+
+    await expect(deleteScenario({ uid: 'user-2', scenarioId: mine.scenarioId })).rejects.toThrow(
+      /your own/i,
+    )
+    expect(storedScenario(mine.scenarioId)).toBeDefined()
+    expect(storedVersion(mine.scenarioId, mine.versionId)).toBeDefined()
+  })
+
+  it('treats a scenario that is already gone as done', async () => {
+    await expect(deleteScenario({ uid: 'user-1', scenarioId: 'missing' })).resolves.toBeUndefined()
   })
 })
 

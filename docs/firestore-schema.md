@@ -71,7 +71,7 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 | `usernames/{usernameLower}`                               | `UsernameReservation` | Reservation doc; the key is what makes usernames unique.                      |
 | `userSettings/{uid}`                                      | `UserSettings`        | Theme, accessibility, instrument preferences.                                 |
 | `scenarios/{scenarioId}`                                  | `Scenario`            | Ownership, metadata and aggregates.                                           |
-| `scenarios/{scenarioId}/versions/{versionId}`             | `ScenarioVersion`     | Immutable musical content.                                                    |
+| `scenarios/{scenarioId}/versions/{versionId}`             | `ScenarioVersion`     | Immutable musical content; removed only when its scenario is deleted.         |
 | `scenarios/{scenarioId}/difficultyEstimates/{versionId}` | Server aggregate | Version-scoped band scores, difficulty, coverage/confidence, part/speed and computation metadata; no raw players. |
 | `mediaAssets/{assetId}`                                   | `MediaAsset`          | Pointer into Cloud Storage plus its owner.                                    |
 | `runs/{runId}`                                            | `Run`                 | One completed attempt, with its embedded `ScoreBreakdown`.                    |

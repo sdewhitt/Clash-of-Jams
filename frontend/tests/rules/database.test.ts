@@ -22,6 +22,7 @@ import {
   updateDoc,
   where,
   writeBatch,
+  type Firestore,
 } from 'firebase/firestore'
 import { describe, expect, it } from 'vitest'
 
@@ -117,6 +118,66 @@ describe('round trip through each base collection', () => {
     ).data()
     expect(readScenario).toMatchObject({ title: 'C major scale', currentVersionId: 'anthem-v1' })
     expect(readVersion).toEqual({ ...version, createdAt: anyTimestamp })
+  })
+})
+
+describe('the data access layer paths the editor uses', () => {
+  it('saves a new version and repoints the scenario in one batch', async () => {
+    await seed(env(), [
+      [
+        path.scenario('s1'),
+        scenarioDoc('s1', ALICE, { currentVersionId: 'v1', currentVersionNumber: 1 }),
+      ],
+      [versionPath('s1', 'v1'), versionDoc('s1', 'v1')],
+    ])
+    const db = as(env(), ALICE)
+
+    const batch = writeBatch(db)
+    batch.set(doc(db, versionPath('s1', 'v2')), { ...versionDoc('s1', 'v2'), versionNumber: 2 })
+    batch.update(doc(db, path.scenario('s1')), {
+      title: 'C major scale, two octaves',
+      description: 'Now with the upper octave.',
+      instrument: 'piano',
+      visibility: 'public',
+      authorDifficulty: 4,
+      currentVersionId: 'v2',
+      currentVersionNumber: 2,
+      updatedAt: serverTimestamp(),
+    })
+    await assertSucceeds(batch.commit())
+
+    const scenario = (await getDoc(doc(db, path.scenario('s1')))).data()
+    expect(scenario).toMatchObject({ currentVersionId: 'v2', currentVersionNumber: 2 })
+    // The earlier version is still there, and still cannot be rewritten.
+    expect((await getDoc(doc(db, versionPath('s1', 'v1')))).get('versionNumber')).toBe(1)
+    await assertFails(updateDoc(doc(db, versionPath('s1', 'v1')), { durationMs: 1 }))
+  })
+
+  it("lists the caller's own scenarios, private ones included, newest first", async () => {
+    await seed(env(), [
+      [
+        path.scenario('older'),
+        scenarioDoc('older', ALICE, { updatedAt: Timestamp.fromMillis(1_000) }),
+      ],
+      [
+        path.scenario('newer'),
+        scenarioDoc('newer', ALICE, { updatedAt: Timestamp.fromMillis(2_000) }),
+      ],
+      [path.scenario('bobs'), scenarioDoc('bobs', BOB, { visibility: 'private' })],
+    ])
+
+    const library = (uid: string, asUid: string) =>
+      getDocs(
+        query(
+          collection(as(env(), asUid), COLLECTIONS.scenarios),
+          where('authorUid', '==', uid),
+          orderBy('updatedAt', 'desc'),
+        ),
+      )
+
+    const mine = await assertSucceeds(library(ALICE, ALICE))
+    expect(mine.docs.map((snapshot) => snapshot.id)).toEqual(['newer', 'older'])
+    await assertFails(library(BOB, ALICE))
   })
 })
 
@@ -413,6 +474,44 @@ describe('deletes', () => {
       query(collection(db, COLLECTIONS.scenarios), where('authorUid', '==', ALICE)),
     )
     expect(listed.empty).toBe(true)
+  })
+
+  it('of a scenario take its versions with them, for the author only', async () => {
+    await seed(env(), [
+      [path.scenario('s1'), scenarioDoc('s1', ALICE, { visibility: 'public' })],
+      [versionPath('s1', 'v1'), versionDoc('s1', 'v1')],
+      [versionPath('s1', 'v2'), { ...versionDoc('s1', 'v2'), versionNumber: 2 }],
+    ])
+
+    const bob = as(env(), BOB)
+    await assertFails(deleteDoc(doc(bob, versionPath('s1', 'v1'))))
+    await assertFails(deleteDoc(doc(bob, path.scenario('s1'))))
+
+    // The way the app deletes: list the versions, then one batch for it all.
+    const alice = as(env(), ALICE)
+    const versionsPath = `${COLLECTIONS.scenarios}/s1/versions`
+    const versions = await assertSucceeds(getDocs(collection(alice, versionsPath)))
+    expect(versions.size).toBe(2)
+    const batch = writeBatch(alice)
+    for (const version of versions.docs) batch.delete(version.ref)
+    batch.delete(doc(alice, path.scenario('s1')))
+    await assertSucceeds(batch.commit())
+
+    expect((await getDoc(doc(alice, path.scenario('s1')))).exists()).toBe(false)
+    await env().withSecurityRulesDisabled(async (context) => {
+      const left = await getDocs(
+        collection(context.firestore() as unknown as Firestore, versionsPath),
+      )
+      expect(left.empty).toBe(true)
+    })
+  })
+
+  it('still cannot rewrite a version, which stays immutable', async () => {
+    await seed(env(), [
+      [path.scenario('s1'), scenarioDoc('s1')],
+      [versionPath('s1', 'v1'), versionDoc('s1', 'v1')],
+    ])
+    await assertFails(updateDoc(doc(as(env(), ALICE), versionPath('s1', 'v1')), { durationMs: 1 }))
   })
 
   it('of user settings leave nothing stale behind', async () => {

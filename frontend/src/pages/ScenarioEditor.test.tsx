@@ -17,6 +17,7 @@ import { YourLibraryPanel } from '@/pages/scenario_editor/YourLibraryPanel'
 import { LocationProbe, renderAtRoute, renderWithAuth, SIGNED_OUT, signedIn } from '@/test/render'
 
 vi.mock('@/lib/scenarios/store', () => ({
+  deleteScenario: vi.fn(),
   listMyScenarios: vi.fn(),
   loadScenario: vi.fn(),
   saveScenarioDraft: vi.fn(),
@@ -270,5 +271,19 @@ describe('editor route guard', () => {
     renderWithAuth(<AppRoutes />, { auth: signedIn(), route: '/scenario_editor' })
 
     expect(screen.getByRole('heading', { name: 'Scenario Editor' })).toBeInTheDocument()
+  })
+
+  it('reopens cleanly after leaving for the homepage and coming back', async () => {
+    renderWithAuth(<AppRoutes />, { auth: signedIn(), route: '/scenario_editor?tab=library' })
+    await screen.findByText('Your library is empty')
+
+    await userEvent.click(screen.getByRole('button', { name: '⬅' }))
+    expect(screen.queryByRole('heading', { name: 'Scenario Editor' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Scenario Editor' }))
+
+    expect(screen.getByRole('heading', { name: 'Scenario Editor' })).toBeInTheDocument()
+    expect(tab('New Scenario')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByLabelText('Title')).toHaveValue('')
+    expect(screen.queryByText(/could not/i)).not.toBeInTheDocument()
   })
 })

@@ -256,7 +256,10 @@ service cloud.firestore {
           && isValidScenarioVersion(request.resource.data, scenarioId, versionId)
           && isSelf(request.resource.data.createdByUid)
           && stampedNow(request.resource.data.createdAt);
-        allow update, delete: if isAdmin();
+        allow update: if isAdmin();
+        // An author may only remove versions, never rewrite them: deleting a
+        // scenario takes its versions with it in the same batch.
+        allow delete: if isSelf(scenarioAuthor(scenarioId)) || isAdmin();
       }
     }
 

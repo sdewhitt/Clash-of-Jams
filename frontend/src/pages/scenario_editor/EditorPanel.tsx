@@ -65,22 +65,27 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
   )
   const [dirty, setDirty] = useState(false)
   const [playTesting, setPlayTesting] = useState(false)
-  // Ids this panel wrote itself, which therefore need no read back.
-  const savedHere = useRef<string | null>(null)
+  // The id this panel wrote itself, which therefore needs no read back.
+  const [savedHere, setSavedHere] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   // Resetting during render is React's own answer to "the prop changed, drop
   // the state derived from it"; an effect would paint the old scenario first.
+  // The exception is the URL catching up with a save made here: the draft in
+  // hand is already that scenario, so it stays put.
   if (scenarioId !== openId) {
     setOpenId(scenarioId)
-    setDraft(emptyDraft())
-    setDirty(false)
-    setPlayTesting(false)
-    setStatus(scenarioId ? { kind: 'loading' } : { kind: 'idle' })
+    if (scenarioId === null || scenarioId !== savedHere) {
+      setSavedHere(null)
+      setDraft(emptyDraft())
+      setDirty(false)
+      setPlayTesting(false)
+      setStatus(scenarioId ? { kind: 'loading' } : { kind: 'idle' })
+    }
   }
 
   useEffect(() => {
-    if (!scenarioId || savedHere.current === scenarioId) return
+    if (!scenarioId || savedHere === scenarioId) return
 
     // Guards against an older load resolving after a newer one.
     let cancelled = false
@@ -98,7 +103,7 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     return () => {
       cancelled = true
     }
-  }, [scenarioId])
+  }, [scenarioId, savedHere])
 
   function edit(next: ScenarioDraft) {
     setDraft(next)
@@ -110,10 +115,7 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     setStatus({ kind: 'saving' })
     try {
       const result = await saveScenarioDraft({ uid: user?.uid ?? null, draft, scenarioId })
-      // Adopt the id before the URL carries it back, so the draft in hand
-      // stays put instead of being reset and re-read.
-      savedHere.current = result.scenarioId
-      setOpenId(result.scenarioId)
+      setSavedHere(result.scenarioId)
       setDirty(false)
       setStatus({ kind: 'saved', versionNumber: result.versionNumber })
       onSaved(result.scenarioId)
