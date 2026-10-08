@@ -8,14 +8,19 @@ import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
 import type { LeaderboardResponse } from "@/lib/leaderboards"
 import { INSTRUMENTS, type Instrument } from "@/lib/schema/types"
+import { useNavigate } from "react-router"
 
 const controlClass =
     "rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black"
 
 /** Top players by ELO for one instrument, with the caller's own standing highlighted. */
 export function EloLeaderboard() {
-    const navigate = useNavigate()
     const { user, profile } = useAuth()
+    const navigate = useNavigate()
+
+    function navPortal(location: string) {
+        navigate(location)
+    }
 
     const [instrument, setInstrument] = useState<Instrument>("piano")
 
@@ -58,7 +63,7 @@ export function EloLeaderboard() {
                 `}
             >
                 <div className="flex ml-12">
-                    <BackButton onClick={() => navigate('/home')}></BackButton>
+                    <BackButton onClick={() => navPortal('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Leaderboards</h1>
                 </div>
 
