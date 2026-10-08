@@ -171,6 +171,12 @@ service cloud.firestore {
           && request.resource.data.isProvisional == true
           && stampedNow(request.resource.data.updatedAt);
         allow update, delete: if false;
+
+        // Immutable match history: only the owner reads; Admin SDK writes it.
+        match /history/{matchId} {
+          allow read: if isSelf(uid);
+          allow write: if false;
+        }
       }
     }
 
@@ -185,6 +191,12 @@ service cloud.firestore {
 
     match /userSettings/{uid} {
       allow read, write: if isSelf(uid);
+    }
+
+    // The preset avatars offered on the profile editor. Read-only to clients.
+    match /avatars/{avatarId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
     }
 
     match /scenarios/{scenarioId} {

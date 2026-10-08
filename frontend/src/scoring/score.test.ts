@@ -58,27 +58,18 @@ describe('scorePerformance', () => {
   })
 
   it('gives partial rhythm credit between one and two hit windows', () => {
-    // At 120 bpm the default quarter-of-a-beat window is 125 ms.
-    const { breakdown } = score([played(60, 187.5), played(64, 343.75), played(67, 1000)])
+    // The default hit window is 120 ms.
+    const { breakdown } = score([played(60, 180), played(64, 350), played(67, 1000)])
     expect(breakdown.noteResults.map((r) => r.verdict)).toEqual(['late', 'early', 'hit'])
-    // 187.5 ms late earns 0.5; 156.25 ms early earns 0.75.
+    // 180 ms late earns 0.5; 150 ms early earns 0.75.
     expect(breakdown.rhythmAccuracy).toBe(75)
     expect(breakdown.pitchAccuracy).toBe(100)
   })
 
-  it('scales the hit window with tempo', () => {
-    const oneNote: ExpectedNote[] = [
-      { index: 0, midiPitch: 60, startBeat: 1, durationBeats: 1, velocity: 100 },
-    ]
-    const at = (bpm: number, startMs: number) =>
-      scorePerformance({
-        expected: oneNote,
-        tempoMap: [{ atBeat: 0, bpm, timeSigNum: 4, timeSigDen: 4 }],
-        performed: [played(60, startMs)],
-      }).breakdown.noteResults[0].verdict
-    // The same 100 ms late error: inside a 250 ms window at 60 bpm, outside 62.5 ms at 240 bpm.
-    expect(at(60, 1000 + 100)).toBe('hit')
-    expect(at(240, 250 + 100)).toBe('late')
+  it('reads the hit window from the rules', () => {
+    const lateBy100 = [played(60, 100), played(64, 500), played(67, 1000)]
+    expect(score(lateBy100, { hitWindowMs: 150 }).breakdown.noteResults[0].verdict).toBe('hit')
+    expect(score(lateBy100, { hitWindowMs: 80 }).breakdown.noteResults[0].verdict).toBe('late')
   })
 
   it('reads pitch tolerance from the rules', () => {
@@ -90,10 +81,11 @@ describe('scorePerformance', () => {
   })
 
   it('scores fractional pitch against the cents tolerance', () => {
-    const { breakdown } = score([played(60.15, 0), played(64.3, 500), played(67, 1000)])
+    // The default tolerance is 50 cents.
+    const { breakdown } = score([played(60.15, 0), played(64.6, 500), played(67, 1000)])
     expect(breakdown.noteResults.map((r) => r.verdict)).toEqual(['hit', 'wrong_pitch', 'hit'])
     expect(breakdown.noteResults[0].centsDeviation).toBe(15)
-    expect(breakdown.noteResults[1].centsDeviation).toBe(30)
+    expect(breakdown.noteResults[1].centsDeviation).toBe(60)
   })
 
   it('counts extra notes without penalizing completeness', () => {
@@ -128,9 +120,9 @@ describe('scorePerformance', () => {
   })
 
   it('fills unset rules from the defaults', () => {
-    // 0.02 beats is 10 ms at 120 bpm, so a 15 ms error is late; tolerance and weights stay default.
+    // A 10 ms window makes a 15 ms error late; tolerance and weights stay default.
     const { finalScore, breakdown } = score([played(60, 15), played(64, 500), played(67, 1000)], {
-      hitWindowBeats: 0.02,
+      hitWindowMs: 10,
     })
     expect(breakdown.noteResults[0].verdict).toBe('late')
     expect(breakdown.rhythmAccuracy).toBe(83.33)

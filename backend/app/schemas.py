@@ -14,7 +14,7 @@ anything.
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -95,7 +95,7 @@ class Scenario(ApiModel):
     title: str
     description: str
     instrument: Instrument
-    genres: list[Genre]
+    genres: list[Genre] = []  # documents written before the field existed have none
     visibility: Visibility
     tags: list[str]
     author_difficulty: int
@@ -107,6 +107,19 @@ class Scenario(ApiModel):
     current_version_id: str | None
     current_version_number: int
     updated_at: datetime
+
+    @field_validator("genres", mode="before")
+    @classmethod
+    def _drop_unknown_genres(cls, value: object) -> object:
+        """Ignore genres this service doesn't know, rather than rejecting the document.
+
+        Stored documents aren't guaranteed to match the enum (the rules only check
+        that genres is a list), and one stray value shouldn't fail a whole listing.
+        ScenarioCreate stays strict, so the API itself never writes one.
+        """
+        if isinstance(value, list):
+            return [g for g in value if g in Genre]
+        return value
 
 
 class ScenarioWithAuthor(ApiModel):
@@ -147,9 +160,9 @@ class SkillRating(ApiModel):
 
     uid: str
     instrument: Instrument
-    elo: float = 400  # matches STARTING_ELO in collections.ts and initial_elo in algs/elo.py
+    elo: FiniteFloat = 400  # matches STARTING_ELO in collections.ts and algs/elo.py
     tier: RankTier = RankTier.BRONZE
-    games_played: int = 0
+    games_played: int = Field(default=0, ge=0)
     is_provisional: bool = True  # until PROVISIONAL_MATCHES (10) games are played
     updated_at: datetime
 

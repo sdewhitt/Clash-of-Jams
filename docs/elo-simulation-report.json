@@ -1,0 +1,129 @@
+{
+  "seed": 42,
+  "players": 500,
+  "matches": 20000,
+  "modelVersion": "elo-v1",
+  "workload": "Synthetic latent skills 100-2800; 20% new at 400; 80% noisy established ratings; 2% draws",
+  "limitations": [
+    "Synthetic evaluation does not establish accuracy for real musicians.",
+    "No uncertainty model or provisional K-factor is implemented."
+  ],
+  "policies": {
+    "elo-v1": {
+      "rankCorrelation": 0.949452,
+      "brierScore": 0.131727,
+      "calibrationError": 0.080201,
+      "meanAbsoluteRatingChange": 5.999289,
+      "convergence": [
+        {
+          "matches": 2000,
+          "rankCorrelation": 0.73969,
+          "recentBrierScore": 0.167594
+        },
+        {
+          "matches": 4000,
+          "rankCorrelation": 0.789073,
+          "recentBrierScore": 0.146228
+        },
+        {
+          "matches": 6000,
+          "rankCorrelation": 0.826611,
+          "recentBrierScore": 0.15303
+        },
+        {
+          "matches": 8000,
+          "rankCorrelation": 0.853338,
+          "recentBrierScore": 0.120191
+        },
+        {
+          "matches": 10000,
+          "rankCorrelation": 0.882133,
+          "recentBrierScore": 0.128133
+        },
+        {
+          "matches": 12000,
+          "rankCorrelation": 0.903042,
+          "recentBrierScore": 0.124643
+        },
+        {
+          "matches": 14000,
+          "rankCorrelation": 0.91942,
+          "recentBrierScore": 0.12037
+        },
+        {
+          "matches": 16000,
+          "rankCorrelation": 0.930116,
+          "recentBrierScore": 0.107267
+        },
+        {
+          "matches": 18000,
+          "rankCorrelation": 0.941714,
+          "recentBrierScore": 0.09913
+        },
+        {
+          "matches": 20000,
+          "rankCorrelation": 0.949452,
+          "recentBrierScore": 0.089926
+        }
+      ]
+    },
+    "fixed-k32": {
+      "rankCorrelation": 0.954812,
+      "brierScore": 0.129732,
+      "calibrationError": 0.07851,
+      "meanAbsoluteRatingChange": 6.399207,
+      "convergence": [
+        {
+          "matches": 2000,
+          "rankCorrelation": 0.741577,
+          "recentBrierScore": 0.167061
+        },
+        {
+          "matches": 4000,
+          "rankCorrelation": 0.792257,
+          "recentBrierScore": 0.144964
+        },
+        {
+          "matches": 6000,
+          "rankCorrelation": 0.831391,
+          "recentBrierScore": 0.151354
+        },
+        {
+          "matches": 8000,
+          "rankCorrelation": 0.858636,
+          "recentBrierScore": 0.118805
+        },
+        {
+          "matches": 10000,
+          "rankCorrelation": 0.888169,
+          "recentBrierScore": 0.12548
+        },
+        {
+          "matches": 12000,
+          "rankCorrelation": 0.907829,
+          "recentBrierScore": 0.12223
+        },
+        {
+          "matches": 14000,
+          "rankCorrelation": 0.92472,
+          "recentBrierScore": 0.118075
+        },
+        {
+          "matches": 16000,
+          "rankCorrelation": 0.935525,
+          "recentBrierScore": 0.105043
+        },
+        {
+          "matches": 18000,
+          "rankCorrelation": 0.94717,
+          "recentBrierScore": 0.095553
+        },
+        {
+          "matches": 20000,
+          "rankCorrelation": 0.954812,
+          "recentBrierScore": 0.088767
+        }
+      ]
+    }
+  }
+}

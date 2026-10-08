@@ -35,16 +35,6 @@ export function beatToMs(beat: number, tempoMap: TempoMapEntry[]): number {
   return ms
 }
 
-/** The tempo in effect at a beat. tempoMap must be sorted and start at beat 0. */
-export function bpmAt(beat: number, tempoMap: TempoMapEntry[]): number {
-  let bpm = tempoMap[0].bpm
-  for (const entry of tempoMap) {
-    if (entry.atBeat > beat) break
-    bpm = entry.bpm
-  }
-  return bpm
-}
-
 const round2 = (x: number) => Math.round(x * 100) / 100
 
 export function scorePerformance(args: {
@@ -65,7 +55,7 @@ export function scorePerformance(args: {
     .map((note) => ({
       note,
       startMs: beatToMs(note.startBeat, args.tempoMap) / speed,
-      hitWindowMs: (rules.hitWindowBeats * 60000) / (bpmAt(note.startBeat, args.tempoMap) * speed),
+      hitWindowMs: rules.hitWindowMs / speed,
     }))
     .sort(
       (a, b) =>

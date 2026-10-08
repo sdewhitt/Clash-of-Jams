@@ -1,7 +1,8 @@
-import { useNavigate } from "react-router"
-import { NavButton } from "@/components/NavButton";
-import { ProfileButton } from "@/components/ProfileButton"
-import { useAuth } from "@/lib/auth/useAuth"
+import { useNavigate } from 'react-router'
+import { NavButton } from '@/components/NavButton'
+import { ProfileButton } from '@/components/ProfileButton'
+import { LiveElo } from '@/components/LiveElo'
+import { useAuth } from '@/lib/auth/useAuth'
 
 export function Home() {
   const navigate = useNavigate()
@@ -13,19 +14,20 @@ export function Home() {
 
   return (
     <main className="h-screen flex flex-col overflow-hidden">
-      <header className="flex items-center justify-between bg-linear-to-r from-accent-base-start from-10% via-accent-base-middle via-70% to-accent-base-end to-90% border-b-4 border-accent-start pt-6 pb-6">
-        <h1 className="ml-12 text-4xl font-bold">Clash of Jams</h1>
-        <div className="mr-6">
+      <header className="flex flex-wrap items-center justify-between gap-4 bg-linear-to-r from-accent-base-start from-10% via-accent-base-middle via-70% to-accent-base-end to-90% border-b-4 border-accent-start px-4 py-4 sm:px-12 sm:py-6">
+        <h1 className="whitespace-nowrap text-3xl font-bold sm:text-4xl">Clash of Jams</h1>
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+          <LiveElo />
           <ProfileButton
-            username={profile?.displayName ?? user?.email ?? "…"}
-            userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+            className="w-36 shrink-0 sm:w-50"
+            username={profile?.displayName ?? user?.email ?? '…'}
+            userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
           />
         </div>
       </header>
 
       <div className="px-6 flex-1 min-h-0 flex items-center">
         <div className="w-full grid grid-cols-[1fr_2fr] gap-12 max-h-full">
-          
           <nav className="flex flex-col gap-6 justify-center">
             <NavButton onClick={() => navPortal('/scenario_search')}>Solo Play</NavButton>
 
@@ -47,7 +49,6 @@ export function Home() {
               className="w-full h-full object-cover"
             />
           </section>
-
         </div>
       </div>
     </main>
