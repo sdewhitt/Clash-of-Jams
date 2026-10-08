@@ -14,7 +14,7 @@ anything.
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -160,9 +160,9 @@ class SkillRating(ApiModel):
 
     uid: str
     instrument: Instrument
-    elo: float = 400  # matches STARTING_ELO in collections.ts and initial_elo in algs/elo.py
+    elo: FiniteFloat = 400  # matches STARTING_ELO in collections.ts and algs/elo.py
     tier: RankTier = RankTier.BRONZE
-    games_played: int = 0
+    games_played: int = Field(default=0, ge=0)
     is_provisional: bool = True  # until PROVISIONAL_MATCHES (10) games are played
     updated_at: datetime
 

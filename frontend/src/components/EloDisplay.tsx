@@ -7,6 +7,7 @@ type EloDisplayProps = {
 };
 
 export function EloDisplay({ instrument, tier, elo }: EloDisplayProps) {
+    const formatted = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(elo);
     const tierMap = {
         bronze: "bg-radial-[circle_at_top_left] from-amber-300 via-amber-700 to-amber-900 text-white",
         silver: "bg-radial-[circle_at_top_left] from-slate-100 via-slate-400 to-slate-500 text-black",
@@ -30,11 +31,11 @@ export function EloDisplay({ instrument, tier, elo }: EloDisplayProps) {
                     className={`group flex ${tierMap[tier]} px-4 py-2 rounded-lg`}
                 >
                     <span className="group-hover:hidden select-none">
-                        Piano-{elo}
+                        Piano-{formatted}
                     </span>
 
                     <span className="hidden group-hover:block select-none">
-                        {tierCaps[tier]}-{elo}
+                        {tierCaps[tier]}-{formatted}
                     </span>
                 </div>
             );
@@ -44,11 +45,11 @@ export function EloDisplay({ instrument, tier, elo }: EloDisplayProps) {
                     className={`group flex ${tierMap[tier]} px-4 py-2 rounded-lg`}
                 >
                     <span className="group-hover:hidden select-none">
-                        Guitar-{elo}
+                        Guitar-{formatted}
                     </span>
 
                     <span className="hidden group-hover:block select-none">
-                        {tierCaps[tier]}-{elo}
+                        {tierCaps[tier]}-{formatted}
                     </span>
                 </div>
             );
@@ -58,11 +59,11 @@ export function EloDisplay({ instrument, tier, elo }: EloDisplayProps) {
                     className={`group flex ${tierMap[tier]} px-4 py-2 rounded-lg`}
                 >
                     <span className="group-hover:hidden select-none">
-                        Vocals-{elo}
+                        Vocals-{formatted}
                     </span>
 
                     <span className="hidden group-hover:block select-none">
-                        {tierCaps[tier]}-{elo}
+                        {tierCaps[tier]}-{formatted}
                     </span>
                 </div>
             );
@@ -72,11 +73,11 @@ export function EloDisplay({ instrument, tier, elo }: EloDisplayProps) {
                     className={`group flex ${tierMap[tier]} px-4 py-2 rounded-lg`}
                 >
                     <span className="group-hover:hidden select-none">
-                        Woodwind-{elo}
+                        Woodwind-{formatted}
                     </span>
 
                     <span className="hidden group-hover:block select-none">
-                        {tierCaps[tier]}-{elo}
+                        {tierCaps[tier]}-{formatted}
                     </span>
                 </div>
             );
@@ -86,11 +87,11 @@ export function EloDisplay({ instrument, tier, elo }: EloDisplayProps) {
                     className={`group flex ${tierMap[tier]} px-4 py-2 rounded-lg`}
                 >
                     <span className="group-hover:hidden select-none">
-                        Midi-{elo}
+                        Midi-{formatted}
                     </span>
 
                     <span className="hidden group-hover:block select-none">
-                        {tierCaps[tier]}-{elo}
+                        {tierCaps[tier]}-{formatted}
                     </span>
                 </div>
             );

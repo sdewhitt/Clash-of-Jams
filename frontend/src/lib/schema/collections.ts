@@ -72,6 +72,9 @@ export const matchParticipantsPath = (matchId: string) =>
 
 export const skillRatingsPath = (uid: string) => `${COLLECTIONS.users}/${uid}/skillRatings`
 
+export const ratingHistoryPath = (uid: string, instrument: Instrument) =>
+  skillRatingsPath(uid) + '/' + instrument + '/history'
+
 export const communityMembersPath = (communityId: string) =>
   `${COLLECTIONS.communities}/${communityId}/members`
 

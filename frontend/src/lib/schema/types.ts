@@ -283,6 +283,8 @@ export interface GameMatch {
   createdAt: Timestamp
   startedAt: Timestamp | null
   endedAt: Timestamp | null
+  completionReason?: RatingEvent['reason']
+  ratingModelVersion?: string
 }
 
 /** matches/{matchId}/participants/{uid} — assigned part, team, readiness. */
@@ -296,6 +298,9 @@ export interface MatchParticipant {
   finalScore: number | null
   runId: string | null
   eloDelta: number | null
+  /** Added by server finalization; absent on older/lobby documents. */
+  eloBefore?: number
+  eloAfter?: number
   joinedAt: Timestamp
 }
 
@@ -313,6 +318,31 @@ export interface SkillRating {
   gamesPlayed: number
   isProvisional: boolean
   updatedAt: Timestamp
+}
+
+/** Immutable, server-written instrument rating history, keyed by matchId. */
+export interface RatingEvent {
+  matchId: string
+  uid: string
+  opponentUid: string
+  instrument: Instrument
+  outcome: MatchOutcome
+  reason: 'completed' | 'resigned' | 'disconnected'
+  score: number
+  opponentScore: number
+  eloBefore: number
+  opponentEloBefore: number
+  eloAfter: number
+  eloDelta: number
+  expectedScore: number
+  actualScore: number
+  kFactor: number
+  gamesPlayedBefore: number
+  gamesPlayedAfter: number
+  isProvisional: boolean
+  tierAfter: RankTier
+  modelVersion: string
+  appliedAt: Timestamp
 }
 
 /* -------------------------------------------------------- social database */
