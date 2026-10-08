@@ -29,6 +29,7 @@ import {
   withOpeningTempo,
 } from '@/pages/scenario_editor/draft'
 import type { ScenarioDraft } from '@/pages/scenario_editor/draft'
+import { PlayTest } from '@/pages/scenario_editor/PlayTest'
 
 const FIELD_CLASS =
   'w-full rounded-lg border-2 border-base-middle bg-base-end px-3 py-2 text-ink ' +
@@ -63,6 +64,7 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     scenarioId ? { kind: 'loading' } : { kind: 'idle' },
   )
   const [dirty, setDirty] = useState(false)
+  const [playTesting, setPlayTesting] = useState(false)
   // Ids this panel wrote itself, which therefore need no read back.
   const savedHere = useRef<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -73,6 +75,7 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     setOpenId(scenarioId)
     setDraft(emptyDraft())
     setDirty(false)
+    setPlayTesting(false)
     setStatus(scenarioId ? { kind: 'loading' } : { kind: 'idle' })
   }
 
@@ -200,6 +203,19 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
             if (file) void handleImport(file)
           }}
         />
+
+        <button
+          type="button"
+          onClick={() => setPlayTesting(true)}
+          disabled={notes === 0}
+          title={notes === 0 ? 'Add some notes to play test this scenario.' : undefined}
+          className="rounded-lg border-2 border-base-middle px-6 py-3 font-bold text-ink
+            transition-colors hover:border-accent-start hover:bg-accent-base-middle
+            disabled:cursor-not-allowed disabled:text-faint disabled:hover:border-base-middle
+            disabled:hover:bg-transparent"
+        >
+          Play Test
+        </button>
 
         {scenarioId && (
           <button
@@ -358,6 +374,10 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
         {tempo.timeSigNum}/{tempo.timeSigDen} &middot;{' '}
         {(chartDurationMs(draft.chart) / 1000).toFixed(1)}s
       </p>
+
+      {playTesting && (
+        <PlayTest draft={draft} uid={user?.uid ?? null} onClose={() => setPlayTesting(false)} />
+      )}
     </div>
   )
 }
