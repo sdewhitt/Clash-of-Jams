@@ -56,18 +56,25 @@ export const test = base.extend<Fixtures, { database: RulesTestEnvironment }>({
       const observe = (target: typeof page) =>
         target.on('pageerror', (error) => {
           const message = error.message
-          // WebKit reports canceled emulator WebChannel requests as page errors.
+          // WebKit reports canceled emulator Listen/Write WebChannels as page errors
+          // during reload/navigation, even after the write succeeds and persists.
           // Keep this narrow and visible; actual app errors and UI assertions still fail.
-          const canceledEmulatorListen =
+          const canceledEmulatorChannel =
             browserName === 'webkit' &&
-            message.startsWith(
-              '/' + TEST_ENV.firestoreHost + '/google.firestore.v1.Firestore/Listen/channel?',
+            ['Listen', 'Write'].some((channel) =>
+              message.startsWith(
+                '/' +
+                  TEST_ENV.firestoreHost +
+                  '/google.firestore.v1.Firestore/' +
+                  channel +
+                  '/channel?',
+              ),
             ) &&
             message.includes(
               'database=projects%2F' + TEST_ENV.projectId + '%2Fdatabases%2F(default)',
             ) &&
             message.endsWith('due to access control checks.')
-          if (canceledEmulatorListen) transportWarnings.push(message)
+          if (canceledEmulatorChannel) transportWarnings.push(message)
           else errors.push(message)
         })
       context.pages().forEach(observe)

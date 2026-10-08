@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     # Role given to that dev user, so admin-only routes can be tried locally.
     auth_dev_role: str = "user"
 
+    # Provisional scale mapping; it can be calibrated without changing queue code.
+    matchmaking_scenario_window: float = 250
+    matchmaking_difficulty_base_elo: float = 400
+    matchmaking_difficulty_elo_step: float = 200
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -5,13 +5,13 @@ import { db } from '@/lib/firebase'
 import { ratingHistoryPath } from '@/lib/schema/collections'
 import type { Instrument, RatingEvent } from '@/lib/schema/types'
 
-export function useRatingHistory(uid: string | undefined, instrument: Instrument) {
+export function useRatingHistory(uid: string | undefined, instrument: Instrument, enabled = true) {
   const [entry, setEntry] = useState<{
     key: string
     events: RatingEvent[]
     error: string | null
   } | null>(null)
-  const key = uid ? uid + '/' + instrument : null
+  const key = uid && enabled ? uid + '/' + instrument : null
 
   useEffect(() => {
     if (!uid || !key) return

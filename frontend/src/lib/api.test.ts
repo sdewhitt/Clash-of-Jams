@@ -45,4 +45,25 @@ describe('apiFetch', () => {
     await expect(call).rejects.toMatchObject({ status: 401, message: 'Missing bearer token' })
     expect(sentHeaders().has('Authorization')).toBe(false)
   })
+
+  it('uses the frontend proxy instead of the browser computer’s localhost backend', async () => {
+    await apiFetch('/matchmaking/queue')
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/matchmaking/queue')
+  })
+
+  it('turns browser network failures into an actionable error', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Load failed'))
+    await expect(apiFetch('/matchmaking/queue')).rejects.toMatchObject({
+      status: 0,
+      message: 'Could not reach the server. Please try again.',
+    })
+  })
+
+  it('explains an unavailable proxy backend without losing API error details', async () => {
+    fetchMock.mockResolvedValue(new Response('', { status: 503 }))
+    await expect(apiFetch('/matchmaking/queue')).rejects.toMatchObject({
+      status: 503,
+      message: 'The server is unavailable. Please try again.',
+    })
+  })
 })

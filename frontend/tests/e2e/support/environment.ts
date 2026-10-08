@@ -14,5 +14,6 @@ export const browserFirebaseEnv = {
   VITE_FIREBASE_APP_ID: 'demo-ui-tests',
   VITE_FIREBASE_AUTH_EMULATOR_URL: 'http://' + TEST_ENV.authHost,
   VITE_FIRESTORE_EMULATOR_HOST: TEST_ENV.firestoreHost,
-  VITE_API_BASE_URL: TEST_ENV.apiURL,
+  VITE_API_BASE_URL: '',
+  API_PROXY_TARGET: TEST_ENV.apiURL,
 } as const

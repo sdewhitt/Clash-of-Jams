@@ -5,6 +5,11 @@ Elo match finalization uses Firestore transactions. See
 [Elo implementation and demo](../docs/elo.md) for the rating policy, trusted
 server integration and local emulator walkthrough.
 
+Matchmaking creates a shared persistent lobby from an automatically joined
+rating-based queue. Run one API worker/replica. See
+[Matchmaking implementation and demo](../docs/matchmaking.md) for the policy,
+500-player fixture, tests and multiplayer handoff.
+
 ## Running it
 
 ```bash
@@ -51,6 +56,9 @@ probes do not track the API version.
 | GET    | `/api/v1/scenarios/{id}`                     | 404 if not the caller's |
 | GET    | `/api/v1/skill-ratings/{instrument}`         | Caller’s instrument Elo |
 | GET    | `/api/v1/skill-ratings/{instrument}/history` | Caller’s rating events  |
+| POST   | `/api/v1/matchmaking/queue`                 | Join caller's queue     |
+| GET    | `/api/v1/matchmaking/queue`                 | Queue or assigned lobby |
+| DELETE | `/api/v1/matchmaking/queue`                 | Ticket-scoped leave     |
 
 ## Auth
 

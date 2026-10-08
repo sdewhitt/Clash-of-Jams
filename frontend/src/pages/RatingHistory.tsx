@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { BackButton } from '@/components/BackButton'
@@ -7,6 +6,7 @@ import { ProfileButton } from '@/components/ProfileButton'
 import { RatingResult } from '@/components/RatingResult'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useRatingHistory } from '@/lib/ratings/useRatingHistory'
+import { useInstrumentPreference } from '@/lib/ratings/useInstrumentPreference'
 import { useSkillRatings } from '@/lib/ratings/useSkillRatings'
 import { INSTRUMENTS, type Instrument } from '@/lib/schema/types'
 
@@ -14,17 +14,20 @@ export function RatingHistory() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const { ratings, preferredInstrument, loading, error } = useSkillRatings(user?.uid)
-  const [selected, setSelected] = useState<Instrument | null>(null)
-  const instrument = selected ?? preferredInstrument
-  const history = useRatingHistory(user?.uid, instrument)
+  const { instrument, saving, saveError, selectInstrument } = useInstrumentPreference(
+    user?.uid,
+    preferredInstrument,
+  )
   const rating = ratings.find((item) => item.instrument === instrument)
+  // A confirmed zero match count is already an empty history; don't fetch it.
+  const history = useRatingHistory(user?.uid, instrument, !loading && rating?.gamesPlayed !== 0)
 
   return (
     <main className="min-h-screen text-ink">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b-4 border-accent-start bg-linear-to-r from-accent-base-start via-accent-base-middle to-accent-base-end px-6 py-6">
         <div className="flex items-center gap-4">
           <BackButton onClick={() => navigate('/home')} />
-          <h1 className="text-3xl font-bold">Your Elo</h1>
+          <h1 className="text-3xl font-bold">Recent Matches</h1>
         </div>
         <ProfileButton
           username={profile?.displayName ?? user?.email ?? '…'}
@@ -42,9 +45,12 @@ export function RatingHistory() {
             </h2>
             <select
               value={instrument}
-              onChange={(event) => setSelected(event.target.value as Instrument)}
+              disabled={saving || loading}
+              onChange={(event) => {
+                void selectInstrument(event.target.value as Instrument)
+              }}
               aria-label="Instrument"
-              className="rounded-lg border-2 border-accent-start bg-accent-base-middle px-3 py-2 capitalize"
+              className="cursor-pointer rounded-lg border-2 border-accent-start bg-accent-base-middle px-3 py-2 capitalize disabled:cursor-not-allowed"
             >
               {INSTRUMENTS.map((name) => (
                 <option key={name} value={name}>
@@ -70,19 +76,20 @@ export function RatingHistory() {
           ) : (
             <p className="mt-4 text-muted">No rating for this instrument yet.</p>
           )}
-          <p className="mt-4 text-sm text-muted">
-            Wins, losses and draws change your Elo based on opponent strength. Provisional means
-            fewer than 10 rated matches; it does not change the K-factor.
-          </p>
+          {saveError && (
+            <p role="alert" className="mt-3">
+              {saveError}
+            </p>
+          )}
         </section>
         <h2 className="text-xl font-bold">Recent matches</h2>
-        {history.loading ? (
+        {loading || history.loading ? (
           <p>Loading history…</p>
         ) : history.error ? (
           <p role="alert">{history.error}</p>
         ) : history.events.length === 0 ? (
           <p className="rounded-xl border-2 border-accent-start p-5 text-muted">
-            No rated matches yet. Your match results will appear here.
+            No previous matches. Your match results will appear here.
           </p>
         ) : (
           history.events.map((event) => <RatingResult key={event.matchId} event={event} />)

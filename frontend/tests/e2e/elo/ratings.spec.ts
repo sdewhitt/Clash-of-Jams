@@ -16,8 +16,8 @@ test('both players receive live Elo and duplicate completion applies once', asyn
   try {
     const otherPage = await otherContext.newPage()
     await signIn(otherPage, opponent)
-    const badge = page.getByRole('link', { name: 'View piano Elo and rating history' })
-    const otherBadge = otherPage.getByRole('link', { name: 'View piano Elo and rating history' })
+    const badge = page.getByRole('button', { name: 'View piano Elo details' })
+    const otherBadge = otherPage.getByRole('button', { name: 'View piano Elo details' })
     await expect(badge).toContainText('Piano-400')
     await expect(otherBadge).toContainText('Piano-400')
     const result = await prepareResult(data, player, opponent)
@@ -26,6 +26,9 @@ test('both players receive live Elo and duplicate completion applies once', asyn
     await expect(otherBadge).toContainText('Piano-384')
     expect(await result.apply()).toEqual(first)
     await badge.click()
+    await expect(page.getByRole('region', { name: 'Elo details' })).toContainText('1 rated matches')
+    await badge.click()
+    await page.getByRole('button', { name: 'Recent Matches', exact: true }).click()
     await expect(page.getByRole('article')).toHaveCount(1)
     await testInfo.attach('persisted-rating-history', {
       body: await page.screenshot({ fullPage: true }),
@@ -50,8 +53,8 @@ const outcomes = [
 
 for (const outcome of outcomes) {
   test('live history explains ' + outcome.result, async ({ page, data, player, opponent }) => {
-    await signIn(page, player, '/ratings')
-    await expect(page.getByText('No rated matches yet.', { exact: false })).toBeVisible()
+    await signIn(page, player, '/recent_matches')
+    await expect(page.getByText('No previous matches.', { exact: false })).toBeVisible()
     await (await prepareResult(data, player, opponent, outcome.result)).apply()
     const card = page.getByRole('article')
     await expect(card).toHaveCount(1)
@@ -79,19 +82,49 @@ test('instrument selection isolates history and preferred-instrument changes rea
   opponent,
 }) => {
   await (await prepareResult(data, player, opponent)).apply()
-  await signIn(page, player, '/ratings')
+  await signIn(page, player, '/recent_matches')
   await expect(page.getByRole('article')).toHaveCount(1)
   await page.getByRole('combobox', { name: 'Instrument' }).selectOption('guitar')
   await expect(page.getByRole('region', { name: 'Instrument rating' })).toContainText('Guitar-400')
   await expect(page.getByRole('article')).toHaveCount(0)
-  await expect(page.getByText('No rated matches yet.', { exact: false })).toBeVisible()
+  await expect(page.getByText('No previous matches.', { exact: false })).toBeVisible()
   await page.getByRole('combobox', { name: 'Instrument' }).selectOption('piano')
   await expect(page.getByRole('article')).toHaveCount(1)
   await page.goto('/home')
   await data.update('userSettings/' + player.uid, { preferredInstrument: 'guitar' })
-  await expect(
-    page.getByRole('link', { name: 'View guitar Elo and rating history' }),
-  ).toContainText('Guitar-400')
+  await expect(page.getByRole('button', { name: 'View guitar Elo details' })).toContainText(
+    'Guitar-400',
+  )
+})
+
+test('Home Elo dropdown saves its instrument across reloads and opens separate recent matches', async ({
+  page,
+  data,
+  player,
+}, testInfo) => {
+  await signIn(page, player)
+  await page.getByRole('button', { name: 'View piano Elo details' }).click()
+  const details = page.getByRole('region', { name: 'Elo details' })
+  await expect(details).toContainText('Beating a stronger opponent earns more points.')
+  await details.getByRole('combobox', { name: 'Instrument' }).selectOption('guitar')
+  await expect(page.getByRole('button', { name: 'View guitar Elo details' })).toContainText(
+    'Guitar-400',
+  )
+  await expect(details.getByRole('combobox')).toBeEnabled()
+  expect((await data.read('userSettings/' + player.uid))?.preferredInstrument).toBe('guitar')
+  await page.reload()
+  await page.getByRole('button', { name: 'View guitar Elo details' }).click()
+  await expect(details.getByRole('combobox')).toHaveValue('guitar')
+  const box = await details.boundingBox()
+  expect(box!.x).toBeGreaterThanOrEqual(0)
+  expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width)
+  await testInfo.attach('elo-dropdown', { body: await page.screenshot(), contentType: 'image/png' })
+  await page.keyboard.press('Escape')
+  await expect(details).not.toBeVisible()
+  await page.getByRole('button', { name: 'Recent Matches', exact: true }).click()
+  await expect(page).toHaveURL(/\/recent_matches$/)
+  await expect(page.getByRole('heading', { name: 'Recent Matches', exact: true })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Instrument' })).toHaveValue('guitar')
 })
 
 test('switching accounts never reveals the previous player history', async ({
@@ -102,13 +135,13 @@ test('switching accounts never reveals the previous player history', async ({
 }) => {
   await (await prepareResult(data, player, opponent)).apply()
   const newcomer = await data.createPlayer('New Player')
-  await signIn(page, player, '/ratings')
+  await signIn(page, player, '/recent_matches')
   await expect(page.getByRole('heading', { name: 'Win', exact: true })).toBeVisible()
   await signOut(page)
-  await signIn(page, newcomer, '/ratings')
+  await signIn(page, newcomer, '/recent_matches')
   await expect(page.getByRole('article')).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Instrument rating' })).toContainText('Piano-400')
-  await expect(page.getByText('No rated matches yet.', { exact: false })).toBeVisible()
+  await expect(page.getByText('No previous matches.', { exact: false })).toBeVisible()
 })
 
 test('a missing rating is shown explicitly instead of inventing a score', async ({
@@ -118,10 +151,10 @@ test('a missing rating is shown explicitly instead of inventing a score', async 
 }) => {
   await data.remove(skillRatingsPath(player.uid) + '/piano')
   await signIn(page, player)
-  await expect(page.getByRole('link', { name: 'View piano Elo and rating history' })).toContainText(
+  await expect(page.getByRole('button', { name: 'View piano Elo details' })).toContainText(
     'No rating yet',
   )
-  await page.getByRole('link', { name: 'View piano Elo and rating history' }).click()
+  await page.getByRole('button', { name: 'View piano Elo details' }).click()
   await expect(page.getByText('No rating for this instrument yet.', { exact: true })).toBeVisible()
 })
 
@@ -134,7 +167,7 @@ test('history is newest-first, capped at 20, and provisional status matures', as
   for (let i = 0; i < 21; i++) {
     await (await prepareResult(data, player, opponent, 'draw')).apply()
   }
-  await signIn(page, player, '/ratings')
+  await signIn(page, player, '/recent_matches')
   const cards = page.getByRole('article')
   await expect(cards).toHaveCount(20)
   await expect(cards.first()).toContainText('21 rated matches · Established')
@@ -166,7 +199,7 @@ test('a temporary network interruption catches up on reconnect', async ({
   opponent,
 }) => {
   await signIn(page, player)
-  const badge = page.getByRole('link', { name: 'View piano Elo and rating history' })
+  const badge = page.getByRole('button', { name: 'View piano Elo details' })
   await expect(badge).toContainText('Piano-400')
   const result = await prepareResult(data, player, opponent)
   await context.setOffline(true)

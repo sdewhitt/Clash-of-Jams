@@ -40,7 +40,7 @@ Authenticated GET routes expose only the caller's rating and history:
 
 ## UI and persistence
 
-The home header shows the preferred instrument's live rating beside the username and links to `/ratings`. The profile's ratings also update live. The protected rating page supports all instruments and shows the latest 20 results with before/after Elo, delta, normalized scores, expected result, K factor and provisional status. `RatingResult` can be reused on the upcoming multiplayer end screen.
+The home header shows the preferred instrument's live rating beside the username. Clicking it opens an instrument selector and a brief Elo explanation; instrument changes save to the existing account preference and survive reloads. Recent Matches has its own protected page at `/recent_matches`, reached from the button below Online Play. The old `/ratings` route redirects there. The profile's ratings also update live. Recent Matches supports all instruments and shows the latest 20 results with before/after Elo, delta, normalized scores, expected result, K factor and provisional status. `RatingResult` can be reused on the upcoming multiplayer end screen.
 
 History lives at `users/{uid}/skillRatings/{instrument}/history/{matchId}`. Each event includes the rating inputs, model version and transaction timestamp for replay. Only its owner can read history; clients cannot write it. No extra composite index is needed for the per-instrument `appliedAt` ordering.
 
