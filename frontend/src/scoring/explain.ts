@@ -2,7 +2,7 @@ import { pitchName } from '@/lib/chart/notes'
 import { DEFAULT_SCORING_RULES } from '@/lib/schema/collections'
 import type { ExpectedNote, NoteResult, ScoringRules } from '@/lib/schema/types'
 
-import type { ScoreResult } from './score'
+import { MAX_SCORE, type ScoreResult } from './score'
 
 export interface CategoryExplanation {
   label: 'Pitch' | 'Rhythm' | 'Completeness'
@@ -48,17 +48,17 @@ function describeProblem(
 
 function summarize(finalScore: number, categories: CategoryExplanation[]): string {
   let rating = 'Keep practicing!'
-  if (finalScore >= 90) rating = 'Excellent!'
-  else if (finalScore >= 75) rating = 'Good job!'
-  else if (finalScore >= 50) rating = 'Getting there!'
+  if (finalScore >= 0.9 * MAX_SCORE) rating = 'Excellent!'
+  else if (finalScore >= 0.75 * MAX_SCORE) rating = 'Good job!'
+  else if (finalScore >= 0.5 * MAX_SCORE) rating = 'Getting there!'
 
-  if (finalScore === 100) return `${rating} A perfect performance.`
+  if (finalScore === MAX_SCORE) return `${rating} A perfect performance.`
 
   let weakest = categories[0]
   for (const category of categories) {
     if (category.score < weakest.score) weakest = category
   }
-  return `${rating} Your score is ${finalScore} out of 100. Focus on ${weakest.label.toLowerCase()} to improve the most.`
+  return `${rating} Your score is ${finalScore.toLocaleString()} out of ${MAX_SCORE.toLocaleString()}. Focus on ${weakest.label.toLowerCase()} to improve the most.`
 }
 
 /** Turns a score into plain sentences for the results screen. */

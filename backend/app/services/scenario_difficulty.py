@@ -176,7 +176,7 @@ class FirestoreDifficultyStore:
                 continue
             score = run.get("normalizedScore")
             if score is None and _number(run.get("finalScore")):
-                score = run["finalScore"] / 100  # Current musical scorer is explicitly 0–100.
+                score = run["finalScore"] / 100_000  # Current musical scorer is explicitly 0–100,000.
             played_at = run.get("playedAt")
             if not isinstance(played_at, datetime):
                 excluded["invalidTimestamp"] += 1

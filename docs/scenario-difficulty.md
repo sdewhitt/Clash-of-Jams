@@ -73,15 +73,15 @@ accepts only the current immutable version, the first nonempty part for the
 scenario's instrument (the same part selection convention as matchmaking),
 original speed `1`, and identical scoring rules. It also requires:
 
-| Field              | Required server-validated value                                      |
-| ------------------ | -------------------------------------------------------------------- |
-| `validation`       | `accepted`                                                           |
-| `inputSource`      | `midi` or `audio`                                                    |
-| `completionReason` | `completed`                                                          |
-| `ratingAtPlay`     | Finite instrument Elo captured when play starts                      |
-| `normalizedScore`  | Finite score in `[0,1]`; preferred representation                    |
-| `finalScore`       | Fallback only for the current musical scorer's known `[0,100]` scale |
-| `playedAt`         | Firestore timestamp                                                  |
+| Field              | Required server-validated value                                         |
+| ------------------ | ----------------------------------------------------------------------- |
+| `validation`       | `accepted`                                                              |
+| `inputSource`      | `midi` or `audio`                                                       |
+| `completionReason` | `completed`                                                             |
+| `ratingAtPlay`     | Finite instrument Elo captured when play starts                         |
+| `normalizedScore`  | Finite score in `[0,1]`; preferred representation                       |
+| `finalScore`       | Fallback only for the current musical scorer's known `[0,100000]` scale |
+| `playedAt`         | Firestore timestamp                                                     |
 
 Unknown source/rating/completion, tap-demo input, pending/rejected runs, forfeits,
 other versions/parts, modified speed, and incompatible rules do not count.

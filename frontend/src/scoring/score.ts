@@ -18,7 +18,7 @@ export interface PerformedNote {
 }
 
 export interface ScoreResult {
-  /** 0-100, two decimal places. */
+  /** Integer from 0 to MAX_SCORE. */
   finalScore: number
   breakdown: ScoreBreakdown
 }
@@ -34,6 +34,8 @@ export function beatToMs(beat: number, tempoMap: TempoMapEntry[]): number {
   }
   return ms
 }
+
+export const MAX_SCORE = 100_000
 
 const round2 = (x: number) => Math.round(x * 100) / 100
 
@@ -138,7 +140,7 @@ export function scorePerformance(args: {
     weightSum
 
   return {
-    finalScore: round2(finalScore),
+    finalScore: Math.round((finalScore / 100) * MAX_SCORE),
     breakdown: {
       pitchAccuracy: round2(pitch),
       rhythmAccuracy: round2(rhythm),
