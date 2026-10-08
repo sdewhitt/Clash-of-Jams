@@ -22,7 +22,10 @@
     "db:init": "node scripts/init-firestore.ts",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
-    "test:rules": "npx -y firebase-tools emulators:exec --config ../firebase/firebase.json --project demo-clash-of-jams --only firestore \"vitest run --project rules\""
+    "test:rules": "npx -y firebase-tools@15.32.1 emulators:exec --config ../firebase/firebase.json --project demo-clash-of-jams --only firestore \"vitest run --project rules\"",
+    "test:e2e": "npx -y firebase-tools@15.32.1 emulators:exec --config ../firebase/firebase.e2e.json --project demo-clash-of-jams-ui --only auth,firestore \"playwright test\"",
+    "test:e2e:browser": "playwright test",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "fflate": "^0.8.3",
@@ -33,6 +36,7 @@
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
+    "@playwright/test": "1.64.0",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

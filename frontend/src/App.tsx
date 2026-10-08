@@ -18,6 +18,7 @@ import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
 import { PlayScenario } from '@/pages/PlayScenario'
 import { EloLeaderboard } from '@/pages/EloLeaderboard'
+import { RatingHistory } from '@/pages/RatingHistory'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
@@ -35,6 +36,7 @@ const PROTECTED_ROUTES = [
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
   { path: '/play/:scenarioId', element: <PlayScenario /> },
   { path: '/leaderboards', element: <EloLeaderboard /> },
+  { path: '/ratings', element: <RatingHistory /> },
 ]
 
 /** The route table, separate from the router so tests can mount it in a MemoryRouter. */

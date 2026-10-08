@@ -3,15 +3,16 @@ import { useNavigate } from "react-router"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { getUserElos, getUserSettings } from "@/lib/profile/UserSettings";
-import type { SkillRating, UserSettings } from '@/lib/schema/types';
+import { getUserSettings } from "@/lib/profile/UserSettings";
+import { useSkillRatings } from "@/lib/ratings/useSkillRatings";
+import type { UserSettings } from '@/lib/schema/types';
 import { EloDisplay } from "@/components/EloDisplay";
 
 export function UserProfile() {
     const { user, profile, loading } = useAuth();
     const [userSettings, setUserSettings] = useState<UserSettings>();
     const [ preferredInstrument, setPreferredInstrument ] = useState("");
-    const [ eloRatings, setEloRatings] = useState<SkillRating[]>([]);
+    const { ratings: eloRatings } = useSkillRatings(user?.uid);
     const navigate = useNavigate();
 
     function formatLabel(value: string) {
@@ -28,8 +29,6 @@ export function UserProfile() {
             const settings = await getUserSettings(user.uid);
             setUserSettings(settings)
 
-            const elos = await getUserElos(user.uid);
-            setEloRatings(elos);
         } catch (error) {
             console.error("Failed to load user settings:", error);
         }
