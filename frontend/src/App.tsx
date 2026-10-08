@@ -17,6 +17,7 @@ import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
 import { MultiplayerSession } from '@/pages/MultiplayerSession'
+import { AudioLab } from '@/pages/AudioLab'
 import { PlayScenario } from '@/pages/PlayScenario'
 import { EloLeaderboard } from '@/pages/EloLeaderboard'
 import { RatingHistory } from '@/pages/RatingHistory'
@@ -36,6 +37,7 @@ const PROTECTED_ROUTES = [
   { path: '/scenario_search', element: <ScenarioSearch /> },
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
   { path: '/multiplayer/:matchId', element: <MultiplayerSession /> },
+  { path: '/audio_lab', element: <AudioLab /> },
   { path: '/play/:scenarioId', element: <PlayScenario /> },
   { path: '/leaderboards', element: <EloLeaderboard /> },
   { path: '/recent_matches', element: <RatingHistory /> },

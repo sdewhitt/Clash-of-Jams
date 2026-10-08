@@ -4,16 +4,31 @@ import { useNavigate, useParams, useSearchParams } from "react-router"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
+import { ScenarioPlayer, type FinishedRun } from "@/components/ScenarioPlayer"
+import { ScoreReport } from "@/components/ScoreReport"
 import { StarPicker } from "@/components/StarRating"
 import { ApiError, apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
-import type { ScenarioReview } from "@/lib/schema/types"
+import { getUserSettings } from "@/lib/profile/UserSettings"
+import { loadScenario } from "@/lib/scenarios/store"
+import { DEFAULT_SCORING_RULES } from "@/lib/schema/collections"
+import type { ExpectedNote, Instrument, ScenarioReview, ScoringRules, TempoMapEntry } from "@/lib/schema/types"
 
 // Matches ReviewUpsert.comment's max_length in backend/app/schemas.py.
 const MAX_COMMENT_LENGTH = 200
 
 // Only the fields the form uses; the API sends timestamps as ISO strings, not Firestore Timestamps.
 type ExistingReview = Pick<ScenarioReview, "rating" | "comment">
+
+/** What the player needs from the scenario, its current version, and the user's settings. */
+type PlayableScenario = {
+    title: string
+    expected: ExpectedNote[]
+    tempoMap: TempoMapEntry[]
+    rules: ScoringRules
+    instrument: Instrument
+    latencyMs: number
+}
 
 const buttonClass = `
     rounded-xl
@@ -29,9 +44,8 @@ const buttonClass = `
 `
 
 /**
- * Stand-in for scenario gameplay until it exists. Walks through what happens
- * around a run: play (a Finish button for now), see where you landed on the
- * leaderboard, then rate the scenario.
+ * Plays a scenario, then shows the score, where you landed on the leaderboard,
+ * and lets you rate the scenario.
  */
 export function PlayScenario() {
     const { scenarioId } = useParams()
@@ -48,6 +62,41 @@ export function PlayScenario() {
     const [submitting, setSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [playable, setPlayable] = useState<PlayableScenario | null>(null)
+    const [loadError, setLoadError] = useState<string | null>(null)
+    const [run, setRun] = useState<FinishedRun | null>(null)
+
+    useEffect(() => {
+        if (!scenarioId || !user) return
+        async function load(id: string, uid: string) {
+            try {
+                const { scenario, version } = await loadScenario(id)
+                const notes = version?.chart.parts.find((part) => part.notes.length > 0)?.notes ?? []
+                if (!version || notes.length === 0) {
+                    setLoadError("This scenario has no notes to play yet.")
+                    return
+                }
+                // Settings are optional: play with defaults if they can't be read.
+                const settings = await getUserSettings(uid).catch(() => null)
+                setPlayable({
+                    title: scenario.title,
+                    expected: notes,
+                    tempoMap: version.chart.tempoMap,
+                    rules: { ...DEFAULT_SCORING_RULES, ...version.scoringRules },
+                    instrument: scenario.instrument,
+                    latencyMs: settings?.inputLatencyOffsetMs ?? 0,
+                })
+            } catch (err) {
+                setLoadError(err instanceof Error ? err.message : "Could not load this scenario.")
+            }
+        }
+        void load(scenarioId, user.uid)
+    }, [scenarioId, user])
+
+    function finishRun(finished: FinishedRun) {
+        setRun(finished)
+        setPhase("results")
+    }
 
     // Pre-fill the form if the user has rated this scenario before.
     useEffect(() => {
@@ -107,20 +156,39 @@ export function PlayScenario() {
             </header>
 
             {phase === "playing" ? (
-                <div className="flex flex-1 flex-col items-center justify-center gap-6">
-                    <p className="text-3xl font-bold text-ink">Play scenario</p>
-                    {/* Stands in for the end of a real run. */}
-                    <button
-                        type="button"
-                        onClick={() => setPhase("results")}
-                        className={`${buttonClass} bg-accent-start text-ink hover:brightness-110`}
-                    >
-                        Finish
-                    </button>
+                <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6">
+                    <p className="text-3xl font-bold text-ink">{playable?.title ?? "Play scenario"}</p>
+                    {playable && (
+                        <ScenarioPlayer
+                            expected={playable.expected}
+                            tempoMap={playable.tempoMap}
+                            rules={playable.rules}
+                            defaultInstrument={playable.instrument}
+                            latencyMs={playable.latencyMs}
+                            onFinish={finishRun}
+                        />
+                    )}
+                    {!playable && !loadError && <p className="text-muted">Loading scenario…</p>}
+                    {loadError && (
+                        <>
+                            <p className="text-muted">{loadError}</p>
+                            <button
+                                type="button"
+                                onClick={() => setPhase("results")}
+                                className={`${buttonClass} bg-accent-start text-ink hover:brightness-110`}
+                            >
+                                Skip to results
+                            </button>
+                        </>
+                    )}
                 </div>
             ) : (
-                <div className="flex flex-1 min-h-0 flex-col items-center gap-4 px-6 py-6">
+                <div className="flex flex-1 min-h-0 flex-col items-center gap-4 overflow-y-auto px-6 py-6">
                     <h2 className="text-3xl font-bold text-ink">Results</h2>
+
+                    {run && (
+                        <ScoreReport finalScore={run.result.finalScore} explanation={run.explanation} />
+                    )}
 
                     {/* TODO: highlight the run just played once runs can be created in the app;
                         until then the highlighted row is the player's best run. */}
@@ -147,7 +215,10 @@ export function PlayScenario() {
                     <div className="flex w-full max-w-xl gap-4">
                         <button
                             type="button"
-                            onClick={() => setPhase("playing")}
+                            onClick={() => {
+                                setRun(null)
+                                setPhase("playing")
+                            }}
                             className={`${buttonClass} flex-1 bg-white text-black hover:brightness-95`}
                         >
                             Play again
