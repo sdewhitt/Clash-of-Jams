@@ -75,9 +75,13 @@ service cloud.firestore {
     }
 
     function isValidScenario(d, scenarioId) {
-      return hasExactly(d, ['id', 'authorUid', 'title', 'description', 'instrument', 'genres',
+      return d.keys().hasAll(['id', 'authorUid', 'title', 'description', 'instrument', 'genres',
             'visibility', 'tags', 'authorDifficulty', 'crowdDifficulty', 'avgRating', 'ratingCount', 'playCount',
             'currentVersionId', 'currentVersionNumber', 'createdAt', 'updatedAt'])
+        && d.keys().hasOnly(['id', 'authorUid', 'title', 'description', 'instrument', 'genres',
+            'visibility', 'tags', 'authorDifficulty', 'crowdDifficulty', 'avgRating', 'ratingCount', 'playCount',
+            'currentVersionId', 'currentVersionNumber', 'createdAt', 'updatedAt', 'crowdDifficultyVersionId'])
+        && isStringOrNull(d.get('crowdDifficultyVersionId', null))
         && d.id == scenarioId
         && d.authorUid is string
         && d.title is string && d.title.size() >= 1 && d.title.size() <= 120
@@ -215,6 +219,7 @@ service cloud.firestore {
       allow create: if isSelf(request.resource.data.authorUid)
         && isValidScenario(request.resource.data, scenarioId)
         && request.resource.data.crowdDifficulty == null
+        && request.resource.data.get('crowdDifficultyVersionId', null) == null
         && request.resource.data.avgRating == null
         && request.resource.data.ratingCount == 0
         && request.resource.data.playCount == 0
@@ -225,12 +230,22 @@ service cloud.firestore {
         && (isAdmin()
           || (isSelf(resource.data.authorUid)
               && unchanged('crowdDifficulty')
+              && request.resource.data.get('crowdDifficultyVersionId', null)
+                 == resource.data.get('crowdDifficultyVersionId', null)
               && unchanged('avgRating')
               && unchanged('ratingCount')
               && unchanged('playCount')));
       allow delete: if isSelf(resource.data.authorUid) || isAdmin();
 
       // Versions are immutable once written — edits create a new version.
+      // Aggregate difficulty is written by the API/Admin SDK, never by clients.
+      match /difficultyEstimates/{versionId} {
+        allow read: if signedIn()
+          && (get(/databases/$(database)/documents/scenarios/$(scenarioId)).data.visibility != 'private'
+              || isSelf(scenarioAuthor(scenarioId)) || isAdmin());
+        allow write: if false;
+      }
+
       match /versions/{versionId} {
         allow read: if get(/databases/$(database)/documents/scenarios/$(scenarioId)).data.visibility != 'private'
           || isSelf(scenarioAuthor(scenarioId))

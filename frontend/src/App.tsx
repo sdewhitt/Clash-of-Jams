@@ -15,6 +15,7 @@ import { Settings } from '@/pages/Settings'
 import { Tuner } from '@/pages/Tuner'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
+import { ScenarioDifficulty } from '@/pages/ScenarioDifficulty'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
 import { MultiplayerSession } from '@/pages/MultiplayerSession'
 import { AudioLab } from '@/pages/AudioLab'
@@ -35,6 +36,7 @@ const PROTECTED_ROUTES = [
   { path: '/tuner', element: <Tuner /> },
   { path: '/scenario_editor', element: <ScenarioEditor /> },
   { path: '/scenario_search', element: <ScenarioSearch /> },
+  { path: '/scenario_difficulty', element: <ScenarioDifficulty /> },
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
   { path: '/multiplayer/:matchId', element: <MultiplayerSession /> },
   { path: '/audio_lab', element: <AudioLab /> },

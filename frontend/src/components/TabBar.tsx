@@ -40,11 +40,16 @@ export function TabBar<Id extends string>({
     if (step === 0) return
 
     event.preventDefault()
-    const index = tabs.findIndex((tab) => tab.id === selected)
+    const buttons = Array.from(
+      stripRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [],
+    )
+    // Focus moves immediately; React/router state may still be committing on a rapid second key.
+    const focusedIndex = buttons.findIndex((button) => button === event.target)
+    const index = focusedIndex >= 0 ? focusedIndex : tabs.findIndex((tab) => tab.id === selected)
     const next = tabs[(index + step + tabs.length) % tabs.length]
     onSelect(next.id)
     // The tablist pattern expects focus to follow the selection.
-    stripRef.current?.querySelector<HTMLButtonElement>(`#${tabId(idPrefix, next.id)}`)?.focus()
+    buttons.find((button) => button.id === tabId(idPrefix, next.id))?.focus()
   }
 
   return (
@@ -67,7 +72,7 @@ export function TabBar<Id extends string>({
             aria-controls={panelId(idPrefix, tab.id)}
             tabIndex={isSelected ? 0 : -1}
             onClick={() => onSelect(tab.id)}
-            className={`-mb-0.5 rounded-t-lg border-b-4 px-5 py-3 font-bold transition-colors ${
+            className={`-mb-0.5 min-w-0 max-w-full cursor-pointer rounded-t-lg border-b-4 px-5 py-3 wrap-break-word font-bold transition-colors ${
               isSelected
                 ? 'border-accent-end bg-linear-to-b from-accent-start from-50 via-accent-middle to-accent-end to-70 text-ink'
                 : 'border-transparent text-muted hover:bg-accent-base-middle hover:text-ink'

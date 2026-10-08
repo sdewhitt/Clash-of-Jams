@@ -14,6 +14,9 @@ import { transcribe } from './transcribe'
 
 const byId = (id: string) => TEST_RECORDINGS.find((r) => r.id === id) as TestRecording
 
+// Rendering and transcribing 100 notes can exceed the default 5 seconds on CI.
+const transcriptionTimeout = 30_000
+
 function evaluate(rec: TestRecording) {
   const detected = transcribe(renderRecording(rec), RECORDING_SAMPLE_RATE)
   return { detected, ...evaluateRecording(rec, detected) }
@@ -29,6 +32,7 @@ describe('test recordings', () => {
       expect(score?.breakdown.extraNotes).toBe(0)
       expect(score?.finalScore).toBeGreaterThanOrEqual(95)
     },
+    transcriptionTimeout,
   )
 
   it('keeps the slow scale in order', () => {
@@ -46,21 +50,29 @@ describe('test recordings', () => {
     })
   })
 
-  it('identifies at least 95 of the 100 monophonic notes within 1 semitone', () => {
-    const rec = byId('monophonic-100')
-    expect(rec.notes).toHaveLength(100)
-    expect(evaluate(rec).withinSemitone).toBeGreaterThanOrEqual(95)
-  })
+  it(
+    'identifies at least 95 of the 100 monophonic notes within 1 semitone',
+    () => {
+      const rec = byId('monophonic-100')
+      expect(rec.notes).toHaveLength(100)
+      expect(evaluate(rec).withinSemitone).toBeGreaterThanOrEqual(95)
+    },
+    transcriptionTimeout,
+  )
 
-  it('follows the dynamics of the answer key', () => {
-    const rec = byId('monophonic-100')
-    const { performed } = evaluate(rec)
-    const loud = rec.notes.filter((n) => n.velocity >= 100).map((n) => n.index)
-    const soft = rec.notes.filter((n) => n.velocity <= 60).map((n) => n.index)
-    const mean = (indices: number[]) =>
-      indices.reduce((sum, i) => sum + performed[i].velocity, 0) / indices.length
-    expect(mean(loud)).toBeGreaterThan(mean(soft) + 15)
-  })
+  it(
+    'follows the dynamics of the answer key',
+    () => {
+      const rec = byId('monophonic-100')
+      const { performed } = evaluate(rec)
+      const loud = rec.notes.filter((n) => n.velocity >= 100).map((n) => n.index)
+      const soft = rec.notes.filter((n) => n.velocity <= 60).map((n) => n.index)
+      const mean = (indices: number[]) =>
+        indices.reduce((sum, i) => sum + performed[i].velocity, 0) / indices.length
+      expect(mean(loud)).toBeGreaterThan(mean(soft) + 15)
+    },
+    transcriptionTimeout,
+  )
 
   it('scores a recording against its answer key read back from a MIDI file', () => {
     const rec = byId('slow-scale')
