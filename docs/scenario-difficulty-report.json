@@ -1,0 +1,56 @@
+{
+  "source": "synthetic",
+  "modelVersion": "score-bands-v1",
+  "examples": [
+    {
+      "title": "Gentle warm-up",
+      "grade": 2.61,
+      "label": "Easy",
+      "confidence": "high",
+      "distinctPlayers": 108,
+      "countedAttempts": 108,
+      "representedBands": 3,
+      "cappedAttempts": 0
+    },
+    {
+      "title": "Steady groove",
+      "grade": 4.57,
+      "label": "Medium",
+      "confidence": "high",
+      "distinctPlayers": 108,
+      "countedAttempts": 108,
+      "representedBands": 3,
+      "cappedAttempts": 0
+    },
+    {
+      "title": "Fast passage",
+      "grade": 7.25,
+      "label": "Hard",
+      "confidence": "high",
+      "distinctPlayers": 108,
+      "countedAttempts": 108,
+      "representedBands": 3,
+      "cappedAttempts": 0
+    },
+    {
+      "title": "New composition",
+      "grade": 4.49,
+      "label": "Provisional",
+      "confidence": "low",
+      "distinctPlayers": 3,
+      "countedAttempts": 3,
+      "representedBands": 3,
+      "cappedAttempts": 0
+    },
+    {
+      "title": "Repeated attempts",
+      "grade": 1.4,
+      "label": "Provisional",
+      "confidence": "low",
+      "distinctPlayers": 1,
+      "countedAttempts": 3,
+      "representedBands": 1,
+      "cappedAttempts": 97
+    }
+  ]
+}

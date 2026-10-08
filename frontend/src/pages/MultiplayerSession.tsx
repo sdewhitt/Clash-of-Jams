@@ -1,5 +1,5 @@
 import { Timestamp } from 'firebase/firestore'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
 import { LiveElo } from '@/components/LiveElo'
@@ -20,6 +20,8 @@ export function MultiplayerSession() {
   const { snapshot, receivedAt, connection, error, send, retry } = useSession(matchId, user?.uid)
   const [now, setNow] = useState(() => performance.now())
   const [leaving, setLeaving] = useState(false)
+  // Keep local departure intent through the HTTP response and WebSocket abandonment update.
+  const leaveRequested = useRef(false)
   const [leaveError, setLeaveError] = useState<string | null>(null)
   const [confirmResign, setConfirmResign] = useState(false)
   const [messageCooldown, setMessageCooldown] = useState(false)
@@ -44,7 +46,11 @@ export function MultiplayerSession() {
   const result = snapshot?.ratingEvents.find((event) => event.uid === user?.uid)
 
   useEffect(() => {
-    if (snapshot?.state === 'abandoned' && snapshot.completionReason === 'lobby_left' && !leaving) {
+    if (
+      snapshot?.state === 'abandoned' &&
+      snapshot.completionReason === 'lobby_left' &&
+      !leaveRequested.current
+    ) {
       navigate('/multiplayer_connect', { replace: true })
     }
   }, [snapshot?.state, snapshot?.completionReason, leaving, navigate])
@@ -79,6 +85,7 @@ export function MultiplayerSession() {
   })
 
   async function leaveLobby() {
+    leaveRequested.current = true
     setLeaving(true)
     setLeaveError(null)
     try {
@@ -86,8 +93,8 @@ export function MultiplayerSession() {
       if (status.match?.id === matchId && status.queueId) await cancelQueue(status.queueId)
       navigate('/home')
     } catch (failure) {
+      leaveRequested.current = false
       setLeaveError(failure instanceof Error ? failure.message : 'Could not leave the lobby.')
-    } finally {
       setLeaving(false)
     }
   }
