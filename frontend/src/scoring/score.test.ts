@@ -129,6 +129,20 @@ describe('scorePerformance', () => {
     expect(finalScore).toBe(93.33)
   })
 
+  it('follows the scenario weights', () => {
+    // Pitch 33.33, rhythm 66.67, completeness 66.67.
+    const performed = [played(60, 20), played(65, 500)]
+    expect(
+      score(performed, { pitchWeight: 1, rhythmWeight: 0, completenessWeight: 0 }).finalScore,
+    ).toBe(33.33)
+    expect(
+      score(performed, { pitchWeight: 0, rhythmWeight: 1, completenessWeight: 0 }).finalScore,
+    ).toBe(66.67)
+    expect(
+      score(performed, { pitchWeight: 1, rhythmWeight: 1, completenessWeight: 2 }).finalScore,
+    ).toBe(58.33)
+  })
+
   it('rejects a scenario with no notes', () => {
     expect(() => scorePerformance({ expected: [], tempoMap, performed: exact })).toThrow()
   })

@@ -1,9 +1,18 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
+import { useNavigate } from 'react-router'
 
 import { midiToNoteName, type AudioFrame } from '@/audio/analysis'
 import { listAudioInputs, openAudioInput, type AudioInput } from '@/audio/input'
+import { DEFAULT_PROFILE, getInstrumentProfile, PIANO_PROFILE } from '@/audio/instruments'
 import { answerKeyFromMidi, answerKeyToMidi, performanceToMidi, type AnswerKey } from '@/audio/midi'
+import {
+  listMidiInputs,
+  openMidiInput,
+  requestMidiAccess,
+  type MidiInputConnection,
+} from '@/audio/midi-input'
 import { toPerformedNotes } from '@/audio/performance'
+import { PIANO_CHORD, PIANO_RECORDINGS } from '@/audio/piano-recordings'
 import {
   encodeWav,
   evaluateRecording,
@@ -13,18 +22,29 @@ import {
   renderRecording,
   TEST_RECORDINGS,
   type RecordingEvaluation,
+  type TestRecording,
 } from '@/audio/recordings'
 import type { DetectedNote } from '@/audio/segmenter'
 import { toMono, transcribe } from '@/audio/transcribe'
-import type { ExpectedNote, TempoMapEntry } from '@/lib/schema/types'
+import { BackButton } from '@/components/BackButton'
+import { ProfileButton } from '@/components/ProfileButton'
+import { useAuth } from '@/lib/auth/useAuth'
+import {
+  INSTRUMENTS,
+  type ExpectedNote,
+  type Instrument,
+  type TempoMapEntry,
+} from '@/lib/schema/types'
 import { beatToMs, scorePerformance, type PerformedNote, type ScoreResult } from '@/scoring/score'
 
 const primary =
-  'rounded-lg bg-accent px-4 py-2 font-semibold text-ink transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40'
+  'rounded-xl border-3 border-accent-start bg-accent-start px-4 py-2 font-bold text-ink hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50'
 const secondary =
-  'rounded-lg border border-line px-3 py-1.5 text-sm text-muted transition-colors hover:border-accent-soft hover:text-ink disabled:cursor-not-allowed disabled:opacity-40'
-const panel = 'flex flex-col gap-4 rounded-xl border border-line bg-surface p-6'
-const field = 'rounded-lg border border-line bg-base px-3 py-2 text-ink'
+  'rounded-lg border-2 border-accent-start bg-white px-3 py-1.5 text-sm font-semibold text-black hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50'
+const panel =
+  'flex flex-col gap-4 rounded-xl border-3 border-accent-start bg-linear-to-br from-accent-base-start from-50 via-accent-base-middle to-accent-base-end to-70 p-6'
+const field = 'rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black'
+const inset = 'rounded-lg border-2 border-accent-start bg-accent-base-start'
 
 function download(bytes: Uint8Array, filename: string, type: string) {
   const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type }))
@@ -40,21 +60,49 @@ const cents = (midi: number) => Math.round((midi - Math.round(midi)) * 100)
 const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`)
 
 export function AudioLab() {
+  const { user, profile } = useAuth()
+  const navigate = useNavigate()
   const [input, setInput] = useState<AudioInput | null>(null)
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-5xl flex-col gap-8 px-8 py-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold">Audio Lab</h1>
+    <main className="flex min-h-screen flex-col">
+      <header
+        className={`
+          flex
+          items-center
+          justify-between
+          bg-linear-to-r
+          from-accent-base-start from-10%
+          via-accent-base-middle via-70%
+          to-accent-base-end to-90%
+          border-b-4 border-accent-start
+          py-6
+        `}
+      >
+        <div className="ml-12 flex">
+          <BackButton onClick={() => navigate('/home')}></BackButton>
+          <h1 className="ml-4 text-4xl font-bold text-ink">Audio Lab</h1>
+        </div>
+
+        <div className="mr-6">
+          <ProfileButton
+            username={profile?.displayName ?? user?.email ?? '…'}
+            userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
+          />
+        </div>
+      </header>
+
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-8 py-8">
         <p className="text-muted">
           The audio input pipeline end to end: live microphone capture, note detection on the audio
-          clock, a scored take through the Scoring Engine, and evaluation against test recordings
-          with known answers.
+          clock, MIDI controller input, a scored take through the Scoring Engine, and evaluation
+          against test recordings with known answers.
         </p>
-      </header>
-      <LiveInput input={input} onInput={setInput} />
-      <ScoredTake input={input} />
-      <TestRecordings />
+        <LiveInput input={input} onInput={setInput} />
+        <MidiController />
+        <ScoredTake input={input} />
+        <TestRecordings />
+      </div>
     </main>
   )
 }
@@ -66,6 +114,7 @@ function LiveInput({
   input: AudioInput | null
   onInput: (input: AudioInput | null) => void
 }) {
+  const [instrument, setInstrument] = useState<Instrument>('piano')
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [deviceId, setDeviceId] = useState('')
   const [starting, setStarting] = useState(false)
@@ -90,8 +139,11 @@ function LiveInput({
     setStarting(true)
     setError(null)
     try {
+      const instrumentProfile = getInstrumentProfile(instrument)
       const opened = await openAudioInput({
         deviceId: deviceId || undefined,
+        analyzer: instrumentProfile.analyzer,
+        segmenter: instrumentProfile.segmenter,
         onFrame: (f) => {
           latestFrame.current = f
         },
@@ -119,6 +171,19 @@ function LiveInput({
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <select
+            className={`capitalize ${field}`}
+            aria-label="Instrument"
+            value={instrument}
+            disabled={!!input}
+            onChange={(e) => setInstrument(e.target.value as Instrument)}
+          >
+            {INSTRUMENTS.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
           {devices.length > 0 && (
             <select
               className={field}
@@ -150,15 +215,15 @@ function LiveInput({
 
       {input && (
         <div className="grid gap-4 md:grid-cols-[1fr_2fr]">
-          <div className="flex flex-col items-center justify-center gap-2 rounded-lg bg-base p-6">
+          <div className={`flex flex-col items-center justify-center gap-2 p-6 ${inset}`}>
             <div className="text-6xl font-bold tabular-nums">
               {pitched ? midiToNoteName(frame.midi as number) : '—'}
             </div>
             <div className="text-muted tabular-nums">
               {pitched ? `${signed(cents(frame.midi as number))} cents` : 'no clear pitch'}
             </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded bg-line">
-              <div className="h-full bg-accent" style={{ width: `${levelPercent}%` }} />
+            <div className="mt-2 h-2 w-full overflow-hidden rounded bg-white">
+              <div className="h-full bg-accent-start" style={{ width: `${levelPercent}%` }} />
             </div>
             <div className="text-xs text-faint tabular-nums">
               {frame ? `${frame.db.toFixed(1)} dBFS · clarity ${frame.clarity.toFixed(2)}` : ''}
@@ -192,9 +257,9 @@ function LiveInput({
 function NoteTable({ notes, emptyText }: { notes: DetectedNote[]; emptyText: string }) {
   if (notes.length === 0) return <p className="text-sm text-faint">{emptyText}</p>
   return (
-    <div className="max-h-72 overflow-y-auto rounded-lg border border-line">
+    <div className={`max-h-72 overflow-y-auto ${inset}`}>
       <table className="w-full text-sm tabular-nums">
-        <thead className="sticky top-0 bg-surface text-left text-faint">
+        <thead className="sticky top-0 bg-accent-base-start text-left text-muted">
           <tr>
             <th className="px-3 py-1.5">Note</th>
             <th className="px-3 py-1.5">Cents</th>
@@ -206,7 +271,10 @@ function NoteTable({ notes, emptyText }: { notes: DetectedNote[]; emptyText: str
         </thead>
         <tbody>
           {notes.map((note) => (
-            <tr key={`${note.startTime}-${note.midiPitch}`} className="border-t border-line">
+            <tr
+              key={`${note.startTime}-${note.midiPitch}`}
+              className="border-t border-accent-start"
+            >
               <td className="px-3 py-1.5 font-semibold">{midiToNoteName(note.midiPitch)}</td>
               <td className="px-3 py-1.5">{signed(cents(note.midiPitch))}</td>
               <td className="px-3 py-1.5">{note.startTime.toFixed(3)}</td>
@@ -218,6 +286,173 @@ function NoteTable({ notes, emptyText }: { notes: DetectedNote[]; emptyText: str
         </tbody>
       </table>
     </div>
+  )
+}
+
+function MidiController() {
+  const [access, setAccess] = useState<MIDIAccess | null>(null)
+  const [devices, setDevices] = useState<MIDIInput[]>([])
+  const [deviceId, setDeviceId] = useState('')
+  const [connection, setConnection] = useState<MidiInputConnection | null>(null)
+  const [connected, setConnected] = useState(false)
+  const [held, setHeld] = useState<number[]>([])
+  const [notes, setNotes] = useState<PerformedNote[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!access) return
+    const granted = access
+    function refresh() {
+      const found = listMidiInputs(granted)
+      setDevices(found)
+      setDeviceId((current) => current || found[0]?.id || '')
+    }
+    refresh()
+    granted.addEventListener('statechange', refresh)
+    return () => granted.removeEventListener('statechange', refresh)
+  }, [access])
+
+  useEffect(() => {
+    return () => connection?.stop()
+  }, [connection])
+
+  async function requestAccess() {
+    setError(null)
+    try {
+      setAccess(await requestMidiAccess())
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
+  function listen() {
+    if (!access || !deviceId) return
+    const opened = openMidiInput({
+      access,
+      deviceId,
+      onNoteOn: (pitch) => setHeld((previous) => [...previous, pitch]),
+      onNote: (note) => {
+        setHeld((previous) => previous.filter((pitch) => pitch !== note.midiPitch))
+        setNotes((previous) => [note, ...previous].slice(0, 40))
+      },
+      onConnectionChange: (isConnected) => {
+        setConnected(isConnected)
+        if (!isConnected) setHeld([])
+      },
+    })
+    opened.start(performance.now())
+    setConnected(opened.isConnected())
+    setConnection(opened)
+  }
+
+  function stop() {
+    connection?.stop()
+    setConnection(null)
+    setConnected(false)
+    setHeld([])
+  }
+
+  return (
+    <section className={panel}>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold">2. MIDI controller</h2>
+          <p className="text-sm text-muted">
+            Plug in a MIDI keyboard. Note On and Note Off messages become notes, timed in
+            milliseconds from when you start listening.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {access && (
+            <select
+              className={field}
+              aria-label="MIDI controller"
+              value={deviceId}
+              disabled={!!connection || devices.length === 0}
+              onChange={(e) => setDeviceId(e.target.value)}
+            >
+              {devices.length === 0 && <option value="">No controllers found</option>}
+              {devices.map((device) => (
+                <option key={device.id} value={device.id}>
+                  {device.name ?? device.id}
+                </option>
+              ))}
+            </select>
+          )}
+          {!access && (
+            <button className={primary} onClick={requestAccess}>
+              Find MIDI controllers
+            </button>
+          )}
+          {access && !connection && (
+            <button className={primary} disabled={!deviceId} onClick={listen}>
+              Start listening
+            </button>
+          )}
+          {connection && (
+            <button className={primary} onClick={stop}>
+              Stop
+            </button>
+          )}
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
+      {connection && (
+        <div className="grid gap-4 md:grid-cols-[1fr_2fr]">
+          <div className={`flex flex-col items-center justify-center gap-2 p-6 ${inset}`}>
+            <div className="text-4xl font-bold">
+              {held.length > 0 ? held.map((pitch) => midiToNoteName(pitch)).join(' ') : '—'}
+            </div>
+            <div
+              className={connected ? 'text-sm text-muted' : 'text-sm font-semibold text-red-400'}
+            >
+              {connected ? 'Connected' : 'Unplugged. Plug it back in to continue.'}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Played notes</h3>
+              <button className={secondary} onClick={() => setNotes([])}>
+                Clear
+              </button>
+            </div>
+            {notes.length === 0 ? (
+              <p className="text-sm text-faint">Press a key. Each note appears when you let go.</p>
+            ) : (
+              <div className={`max-h-72 overflow-y-auto ${inset}`}>
+                <table className="w-full text-sm tabular-nums">
+                  <thead className="sticky top-0 bg-accent-base-start text-left text-muted">
+                    <tr>
+                      <th className="px-3 py-1.5">Note</th>
+                      <th className="px-3 py-1.5">Onset (ms)</th>
+                      <th className="px-3 py-1.5">Duration (ms)</th>
+                      <th className="px-3 py-1.5">Velocity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notes.map((note) => (
+                      <tr
+                        key={`${note.startMs}-${note.midiPitch}`}
+                        className="border-t border-accent-start"
+                      >
+                        <td className="px-3 py-1.5 font-semibold">
+                          {midiToNoteName(note.midiPitch)}
+                        </td>
+                        <td className="px-3 py-1.5">{Math.round(note.startMs)}</td>
+                        <td className="px-3 py-1.5">{Math.round(note.durationMs)}</td>
+                        <td className="px-3 py-1.5">{note.velocity}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -299,7 +534,7 @@ function ScoredTake({ input }: { input: AudioInput | null }) {
   return (
     <section className={panel}>
       <div>
-        <h2 className="text-xl font-bold">2. Scored take</h2>
+        <h2 className="text-xl font-bold">3. Scored take</h2>
         <p className="text-sm text-muted">
           Play a C major scale in quarter notes after a four-click count-in. Notes are timed on the
           scenario clock, corrected for input latency, and scored by the Scoring Engine. Headphones
@@ -343,16 +578,16 @@ function ScoredTake({ input }: { input: AudioInput | null }) {
           )?.verdict
           const tone =
             current === i
-              ? 'border-accent bg-accent text-ink'
+              ? 'border-accent-start bg-accent-start text-ink'
               : verdict === 'hit'
-                ? 'border-emerald-500 text-emerald-300'
+                ? 'border-emerald-500 bg-white text-emerald-700'
                 : verdict
-                  ? 'border-red-500 text-red-300'
-                  : 'border-line text-muted'
+                  ? 'border-red-500 bg-white text-red-600'
+                  : 'border-accent-start bg-white text-black'
           return (
             <div
               key={note.index}
-              className={`flex h-14 w-14 flex-col items-center justify-center rounded-lg border text-sm font-semibold ${tone}`}
+              className={`flex h-14 w-14 flex-col items-center justify-center rounded-lg border-2 text-sm font-semibold ${tone}`}
             >
               {midiToNoteName(note.midiPitch)}
               {verdict && <span className="text-[10px] font-normal">{verdict}</span>}
@@ -391,7 +626,7 @@ function ScoredTake({ input }: { input: AudioInput | null }) {
             </thead>
             <tbody>
               {result.score.breakdown.noteResults.map((r) => (
-                <tr key={r.expectedNoteIndex} className="border-t border-line">
+                <tr key={r.expectedNoteIndex} className="border-t border-accent-start">
                   <td className="py-1">
                     {midiToNoteName(EXERCISE[r.expectedNoteIndex].midiPitch)}
                   </td>
@@ -415,6 +650,15 @@ function Stat({ label, value }: { label: string; value: number }) {
       <span className="text-lg font-semibold tabular-nums">{value}</span>
     </div>
   )
+}
+
+const ALL_RECORDINGS: TestRecording[] = [...TEST_RECORDINGS, ...PIANO_RECORDINGS, PIANO_CHORD]
+
+/** Piano recordings are transcribed with the piano settings, everything else with the defaults. */
+function profileFor(rec: TestRecording) {
+  const profile =
+    PIANO_RECORDINGS.includes(rec) || rec === PIANO_CHORD ? PIANO_PROFILE : DEFAULT_PROFILE
+  return { analyzer: profile.analyzer, segmenter: profile.segmenter }
 }
 
 interface Evaluation extends RecordingEvaluation {
@@ -446,9 +690,9 @@ function TestRecordings() {
     // Yield so the busy state paints before transcription blocks the main thread.
     setTimeout(() => {
       const next: Record<string, Evaluation> = {}
-      for (const rec of TEST_RECORDINGS.filter((r) => ids.includes(r.id))) {
+      for (const rec of ALL_RECORDINGS.filter((r) => ids.includes(r.id))) {
         const started = performance.now()
-        const detected = transcribe(renderRecording(rec), RECORDING_SAMPLE_RATE)
+        const detected = transcribe(renderRecording(rec), RECORDING_SAMPLE_RATE, profileFor(rec))
         next[rec.id] = {
           ...evaluateRecording(rec, detected),
           detected: detected.length,
@@ -464,7 +708,7 @@ function TestRecordings() {
     <section className={panel}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold">3. Test recordings</h2>
+          <h2 className="text-xl font-bold">4. Test recordings</h2>
           <p className="text-sm text-muted">
             Synthetic takes with known pitches and rhythms, transcribed and scored against their
             answer keys. Match means onset within 50 ms and pitch within 1 semitone.
@@ -473,13 +717,13 @@ function TestRecordings() {
         <button
           className={primary}
           disabled={busy}
-          onClick={() => evaluate(TEST_RECORDINGS.map((r) => r.id))}
+          onClick={() => evaluate(ALL_RECORDINGS.map((r) => r.id))}
         >
           {busy ? 'Transcribing…' : 'Evaluate all'}
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-line">
+      <div className={`overflow-x-auto ${inset}`}>
         <table className="w-full text-sm tabular-nums">
           <thead className="text-left text-faint">
             <tr>
@@ -492,14 +736,14 @@ function TestRecordings() {
             </tr>
           </thead>
           <tbody>
-            {TEST_RECORDINGS.map((rec) => {
+            {ALL_RECORDINGS.map((rec) => {
               const r = results[rec.id]
               const matched = rec.notes.length
                 ? r &&
                   `${r.withinSemitone} (${Math.round((r.withinSemitone / rec.notes.length) * 100)}%)`
                 : r && (r.detected === 0 ? 'none, as expected' : 'false positives')
               return (
-                <tr key={rec.id} className="border-t border-line align-top">
+                <tr key={rec.id} className="border-t border-accent-start align-top">
                   <td className="px-3 py-2">
                     <div className="font-semibold">{rec.title}</div>
                     <div className="text-xs text-faint">{rec.description}</div>
@@ -562,7 +806,7 @@ function TestRecordings() {
 }
 
 const fileInput =
-  'text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-ink'
+  'text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-accent-start file:px-3 file:py-1.5 file:font-semibold file:text-ink'
 
 const baseName = (filename: string) => filename.replace(/\.[^.]+$/, '')
 
@@ -629,7 +873,7 @@ function TranscribeFile({ audioContext }: { audioContext: () => AudioContext }) 
   }
 
   return (
-    <div className="flex flex-col gap-4 border-t border-line pt-4">
+    <div className="flex flex-col gap-4 border-t-2 border-accent-start pt-4">
       <div>
         <h3 className="font-semibold">Transcribe a recording file</h3>
         <p className="text-sm text-muted">
