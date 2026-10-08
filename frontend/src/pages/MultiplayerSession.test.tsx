@@ -1,14 +1,21 @@
-import { fireEvent, screen } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
 
 import { useSession } from '@/lib/multiplayer/useSession'
+import { cancelQueue, getQueueStatus } from '@/lib/matchmaking/api'
 import { sessionSnapshot } from '@/test/multiplayer'
 import { renderAtRoute, signedIn } from '@/test/render'
 import { MultiplayerSession } from './MultiplayerSession'
 
 vi.mock('@/lib/multiplayer/useSession', () => ({ useSession: vi.fn() }))
 vi.mock('@/components/LiveElo', () => ({ LiveElo: () => <span>400 Elo</span> }))
+vi.mock('@/lib/matchmaking/api', () => ({ getQueueStatus: vi.fn(), cancelQueue: vi.fn() }))
+const navigate = vi.fn()
+vi.mock('react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router')>()),
+  useNavigate: () => navigate,
+}))
 const send = vi.fn()
 const retry = vi.fn()
 beforeEach(() => {
@@ -29,6 +36,48 @@ function renderSession() {
     auth: signedIn(),
   })
 }
+
+it('returns the leaving player home when abandonment arrives before cancellation completes', async () => {
+  vi.mocked(getQueueStatus).mockResolvedValue({
+    queueId: 'queue-1',
+    match: { id: 'match-1' },
+  } as Awaited<ReturnType<typeof getQueueStatus>>)
+  let finishCancel!: () => void
+  vi.mocked(cancelQueue).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finishCancel = () => resolve({ state: 'idle' } as Awaited<ReturnType<typeof cancelQueue>>)
+      }),
+  )
+  renderSession()
+  await userEvent.click(screen.getByRole('button', { name: 'Leave lobby' }))
+  await waitFor(() => expect(cancelQueue).toHaveBeenCalledWith('queue-1'))
+  vi.mocked(useSession).mockReturnValue({
+    snapshot: sessionSnapshot({ state: 'abandoned', completionReason: 'lobby_left' }),
+    receivedAt: performance.now(),
+    connection: 'connected',
+    error: null,
+    send,
+    retry,
+  })
+  // The session's clock triggers a render with the WebSocket abandonment snapshot.
+  await screen.findByRole('region', { name: 'Match ended' })
+  await act(async () => finishCancel())
+  expect(navigate.mock.calls).toEqual([['/home']])
+})
+
+it('returns the remaining player to matchmaking when the opponent leaves the lobby', async () => {
+  vi.mocked(useSession).mockReturnValue({
+    snapshot: sessionSnapshot({ state: 'abandoned', completionReason: 'lobby_left' }),
+    receivedAt: performance.now(),
+    connection: 'connected',
+    error: null,
+    send,
+    retry,
+  })
+  renderSession()
+  expect(navigate).toHaveBeenCalledWith('/multiplayer_connect', { replace: true })
+})
 
 it('shows the shared scenario, opponent, ready control and keyboard preset messages', async () => {
   renderSession()
