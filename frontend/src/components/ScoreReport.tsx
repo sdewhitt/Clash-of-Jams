@@ -39,7 +39,7 @@ export function ScoreReport({ finalScore, explanation }: ScoreReportProps) {
         {explanation.categories.map((category) => (
           <div
             key={category.label}
-            className="rounded-lg border-2 border-accent-start bg-white/10 p-3"
+            className="rounded-lg border-2 border-accent-start bg-base-end/60 p-3"
           >
             <div className="text-xs uppercase tracking-wide text-muted">
               {category.label} · {category.weightPercent}%

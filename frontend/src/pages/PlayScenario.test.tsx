@@ -123,6 +123,17 @@ describe('before a run', () => {
     expect(loadScenario).toHaveBeenCalledWith('s1', null)
   })
 
+  it("plays in the scenario theme from the player's settings", async () => {
+    vi.mocked(getUserSettings).mockResolvedValue({
+      inputLatencyOffsetMs: 40,
+      scenarioTheme: 'neon',
+    } as UserSettings)
+    renderPlay()
+
+    await screen.findByText('Chromatic warmup')
+    await vi.waitFor(() => expect(screen.getByRole('main')).toHaveAttribute('data-theme', 'neon'))
+  })
+
   it('says so when the scenario has nothing to play', async () => {
     vi.mocked(loadScenario).mockResolvedValue({ scenario, version: null })
     renderPlay()

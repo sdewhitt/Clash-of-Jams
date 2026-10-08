@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth/useAuth'
 import { cancelQueue, getQueueStatus } from '@/lib/matchmaking/api'
 import { PRESET_MESSAGES } from '@/lib/multiplayer/types'
 import { useSession } from '@/lib/multiplayer/useSession'
+import { useScenarioTheme } from '@/lib/play/scenarioTheme'
 
 const button =
   'cursor-pointer rounded-xl border-2 border-accent-start px-5 py-3 font-bold focus-visible:outline-3 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50'
@@ -19,6 +20,7 @@ export function MultiplayerSession() {
   const navigate = useNavigate()
   const { snapshot, receivedAt, connection, error, send, retry } = useSession(matchId, user?.uid)
   const [now, setNow] = useState(() => performance.now())
+  const scenarioTheme = useScenarioTheme(user?.uid)
   const [leaving, setLeaving] = useState(false)
   // Keep local departure intent through the HTTP response and WebSocket abandonment update.
   const leaveRequested = useRef(false)
@@ -100,7 +102,10 @@ export function MultiplayerSession() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col text-ink">
+    <main
+      {...scenarioTheme}
+      className={`min-h-screen flex flex-col text-ink ${scenarioTheme.className}`}
+    >
       <header className="relative flex flex-wrap items-center justify-between gap-4 border-b-4 border-accent-start bg-linear-to-r from-accent-base-start via-accent-base-middle to-accent-base-end px-4 py-5 sm:px-12">
         <h1 className="text-3xl font-bold">Multiplayer</h1>
         <div className="flex items-center gap-3">

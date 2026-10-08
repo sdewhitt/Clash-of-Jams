@@ -9,6 +9,7 @@ import { ScoreReport } from "@/components/ScoreReport"
 import { StarPicker } from "@/components/StarRating"
 import { ApiError, apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
+import { useScenarioTheme } from "@/lib/play/scenarioTheme"
 import { buildTimeline, resolveScoringRules } from "@/lib/play/timeline"
 import { getUserSettings } from "@/lib/profile/UserSettings"
 import { submitRun, type SubmittedRun } from "@/lib/runs/store"
@@ -152,6 +153,8 @@ export function PlayScenario() {
             .catch(console.error)
     }, [scenarioId])
 
+    const scenarioTheme = useScenarioTheme(user?.uid)
+
     async function submitRating() {
         setSubmitting(true)
         setError(null)
@@ -169,7 +172,10 @@ export function PlayScenario() {
     }
 
     return (
-        <main className="h-screen flex flex-col">
+        <main
+            {...scenarioTheme}
+            className={`h-screen flex flex-col ${scenarioTheme.className}`}
+        >
             <header
                 className={`
                     flex
@@ -283,7 +289,7 @@ export function PlayScenario() {
                                 setRun(null)
                                 setPhase("playing")
                             }}
-                            className={`${buttonClass} flex-1 bg-white text-black hover:brightness-95`}
+                            className={`${buttonClass} flex-1 bg-base-end text-ink hover:brightness-110`}
                         >
                             Play again
                         </button>
@@ -341,14 +347,14 @@ export function PlayScenario() {
                                         rows={4}
                                         placeholder="Write a review (optional)"
                                         aria-label="Review"
-                                        className="w-full resize-none rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black"
+                                        className="w-full resize-none rounded-lg border-2 border-accent-start bg-base-end px-3 py-2 text-ink"
                                     />
                                     <p className="text-right text-xs text-muted">
                                         {comment.length}/{MAX_COMMENT_LENGTH}
                                     </p>
                                 </div>
 
-                                {error && <p className="text-sm text-red-400">{error}</p>}
+                                {error && <p className="text-sm font-bold text-accent-end">{error}</p>}
 
                                 <button
                                     type="button"
@@ -364,7 +370,7 @@ export function PlayScenario() {
                         <button
                             type="button"
                             onClick={() => navigate("/home")}
-                            className={`${buttonClass} w-full bg-white text-black hover:brightness-95`}
+                            className={`${buttonClass} w-full bg-base-end text-ink hover:brightness-110`}
                         >
                             Go back to home
                         </button>

@@ -69,8 +69,8 @@ const buttonClass = `
   disabled:opacity-50
 `
 const primaryButton = `${buttonClass} bg-accent-start text-ink hover:brightness-110`
-const secondaryButton = `${buttonClass} bg-white text-black hover:brightness-95`
-const controlClass = 'w-full rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black'
+const secondaryButton = `${buttonClass} bg-base-end text-ink hover:brightness-110`
+const controlClass = 'w-full rounded-lg border-2 border-accent-start bg-base-end px-3 py-2 text-ink'
 const labelClass = 'flex flex-col gap-1 text-sm font-semibold text-ink'
 
 function playClick(context: AudioContext, time: number, accent: boolean) {
@@ -333,7 +333,7 @@ export function ScenarioPlayer({
         )}
 
         <div
-          className="h-3 w-full overflow-hidden rounded-full border-2 border-accent-start bg-white"
+          className="h-3 w-full overflow-hidden rounded-full border-2 border-accent-start bg-base-end"
           role="progressbar"
           aria-label="Scenario progress"
           aria-valuenow={Math.round(progress)}
@@ -342,7 +342,7 @@ export function ScenarioPlayer({
         </div>
 
         {!midiConnected && (
-          <p className="font-semibold text-red-400">
+          <p className="font-semibold text-accent-end">
             Your MIDI controller was unplugged. Plug it back in to keep playing.
           </p>
         )}
@@ -410,13 +410,13 @@ export function ScenarioPlayer({
       )}
 
       {unplayable.length > 0 && (
-        <p className="text-sm text-yellow-400">
+        <p className="text-sm text-contrast-end">
           {unplayable.length} note{unplayable.length === 1 ? '' : 's'} in this scenario{' '}
           {unplayable.length === 1 ? 'is' : 'are'} outside the {instrument}&apos;s range.
         </p>
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm font-bold text-accent-end">{error}</p>}
 
       <p className="text-sm text-muted">
         {expected.length} notes at {tempoMap[0].bpm} bpm. You&apos;ll hear {COUNT_IN_BEATS} clicks
