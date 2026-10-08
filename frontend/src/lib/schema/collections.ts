@@ -25,6 +25,7 @@ import type {
   Run,
   Scenario,
   ScenarioReview,
+  ScenarioTheme,
   ScenarioVersion,
   ScoringRules,
   SkillRating,
@@ -71,6 +72,8 @@ export const matchParticipantsPath = (matchId: string) =>
   `${COLLECTIONS.matches}/${matchId}/participants`
 
 export const skillRatingsPath = (uid: string) => `${COLLECTIONS.users}/${uid}/skillRatings`
+
+export const scenarioThemesPath = (uid: string) => `${COLLECTIONS.userSettings}/${uid}/scenarioThemes`
 
 export const communityMembersPath = (communityId: string) =>
   `${COLLECTIONS.communities}/${communityId}/members`
@@ -167,6 +170,7 @@ export function newUserSettings(args: {
 }): WithFieldValue<UserSettings> {
   return {
     uid: args.uid,
+    scenarioTheme: "default",
     theme: 'default',
     reduceFlashing: false,
     publicBio: true,
@@ -349,6 +353,20 @@ export function newSkillRating(args: {
     tier: 'bronze',
     gamesPlayed: 0,
     isProvisional: true,
+    updatedAt: serverTimestamp(),
+  }
+}
+
+export function newScenarioTheme(args: {
+  uid: string
+  themeName: string
+  themeUrl: string
+}): WithFieldValue<ScenarioTheme> {
+  return {
+    uid: args.uid,
+    accompanyTheme: "default",
+    themeName: args.themeName,
+    themeUrl: args.themeUrl,
     updatedAt: serverTimestamp(),
   }
 }

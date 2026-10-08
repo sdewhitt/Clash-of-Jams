@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/useAuth"
 import { useNavigate } from "react-router"
 import type { User } from 'firebase/auth'
-import type { SkillRating, UserProfile } from '@/lib/schema/types'
+import type { ScenarioTheme, SkillRating, UserProfile } from '@/lib/schema/types'
 import { BackButton } from "@/components/BackButton"
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { SettingsButton } from "@/components/SettingsButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { updateBioPublicity, updateEloPublicity, updateGenrePublicity, updateInstrumentPublicity, updatePreferredGenres, updatePreferredInstrument, updateUserAvatar, updateUserBio, updateUsername, updateUserTheme } from "@/lib/profile/UserProfile";
+import { processImage, updateBioPublicity, updateEloPublicity, updateGenrePublicity, updateInstrumentPublicity, updatePreferredGenres, updatePreferredInstrument, updateScenarioThemeAccompany, updateScenarioThemeAdvanced, updateScenarioThemeDefault, updateUserAvatar, updateUserBio, updateUsername, updateUserTheme } from "@/lib/profile/UserProfile";
 import { getAvatars, type Avatar } from "@/lib/profile/Avatar";
-import { getUserElos, getUserSettings } from "@/lib/profile/UserSettings";
+import { getScenarioThemes, getUserElos, getUserScenarioTheme, getUserSettings } from "@/lib/profile/UserSettings";
 import type { UserSettings } from "@/lib/schema/types";
 import { useTheme, type Theme } from "@/context/ThemeContext";
 import { UsernameEditor } from "@/components/UsernameEditor";
@@ -42,13 +42,22 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     const [draftTheme, setDraftTheme] = useState<Theme>();
     const [savedTheme, setSavedTheme] = useState<Theme>();
 
+    const [scenarioThemes, setScenarioThemes] = useState<ScenarioTheme[]>([]);
+    const [chosenScenarioTheme, setChosenScenarioTheme] = useState("");
+    const [selectScenarioTheme, setSelectedScenarioTheme] = useState<ScenarioTheme>();
+    const [chosenScenarioThemeUrl, setChosenScenarioThemeUrl] = useState("");
+    const [needAccompanyingTheme, setNeedAccompanyingTheme] = useState(false);
+    const [draftAccompanyTheme, setDraftAccompanyTheme] = useState<Theme>();
+    const [needThemeName, setNeedThemeName] = useState(false);
+    const [draftThemeName, setDraftThemeName] = useState("");
+
     const [draftBio, setDraftBio] = useState("");
     const [savedBio, setSavedBio] = useState("");
 
     const [instrument, setInstrument] = useState("");
     const [savedInstrument, setSavedInstrument] = useState("");
 
-    const [ eloRatings, setEloRatings] = useState<SkillRating[]>([]);
+    const [eloRatings, setEloRatings] = useState<SkillRating[]>([]);
     
     const availableGenres = [ "blues", "jazz", "electronic", "hip-hop", "pop", "r&b", "rock", "indie", "alternative", "folk", "metal", ];
     const [draftGenres, setDraftGenres] = useState<string[]>([]);
@@ -62,6 +71,40 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
 
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+
+    const [uploading, setUploading] = useState(false);
+
+    async function handleUpload( event: React.ChangeEvent<HTMLInputElement> ) {
+        const file = event.target.files?.[0];
+    
+        if (!file) { 
+            console.log('Debug: File Does Not Exist');
+            return; 
+        }    
+
+        try {
+            setUploading(true);
+
+            const newScenarioThemeUrl = await processImage(file);
+            setChosenScenarioThemeUrl(newScenarioThemeUrl);
+
+            setNeedAccompanyingTheme(true);
+            setNeedThemeName(true);
+
+        } catch (error) {
+            console.error(error);
+
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to upload avatar."
+            );
+
+        } finally {
+            setUploading(false);
+            event.target.value = "";
+        }
+    }
 
     function formatLabel(value: string) {
         return value
@@ -109,6 +152,9 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
 
             const elos = await getUserElos(user.uid);
             setEloRatings(elos);
+
+            const scenarioThemes = await getScenarioThemes(user.uid);
+            setScenarioThemes(scenarioThemes)
         } catch (error) {
             console.error("Failed to load user settings:", error);
         }
@@ -132,8 +178,62 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     }, []);
 
     useEffect(() => {
+        async function loadThemes() {
+            if (!user) {
+                return;
+            }
+            console.log(chosenScenarioTheme);
+            switch(chosenScenarioTheme) {
+                case "default":
+                    setChosenScenarioThemeUrl('/default_mode.png');
+                    return;
+                case "dark":
+                    setChosenScenarioThemeUrl('/dark_mode.png');
+                    return;
+                case "neon":
+                    setChosenScenarioThemeUrl('/neon_mode.png');
+                    return;
+                case "deuteranopia":
+                    setChosenScenarioThemeUrl('/deuteranopia_mode.png');
+                    return;
+                case "protanopia":
+                    setChosenScenarioThemeUrl('/protanopia_mode.png');
+                    return;
+                case "tritanopia":
+                    setChosenScenarioThemeUrl('/tritanopia_mode.png');
+                    return;
+                case "high-contrast":
+                    setChosenScenarioThemeUrl('/high-contrast_mode.png');
+                    return;
+                case "":
+                    setChosenScenarioTheme('default');
+                    setChosenScenarioThemeUrl('/default_mode.png')
+                    return;
+                default:
+                    const theme = await getUserScenarioTheme( user?.uid, chosenScenarioTheme );
+
+                    if (theme != null) {
+                        setSelectedScenarioTheme(theme);
+                        setChosenScenarioTheme(theme.themeName);
+                        setChosenScenarioThemeUrl(theme.themeUrl);
+                    }
+                    return;
+            }
+        }
+
+        loadThemes();
+    }, [chosenScenarioTheme]);
+
+    useEffect(() => {
+        if (!selectScenarioTheme) {return;}
+        setChosenScenarioThemeUrl(selectScenarioTheme.themeUrl);
+    }, [selectScenarioTheme]);
+
+    useEffect(() => {
         setSavedUsername(profile?.displayName ?? "");
         
+        setChosenScenarioTheme(userSettings?.scenarioTheme ?? "")
+
         setDraftBio(profile?.bio ?? "");
         setBioPublicity(userSettings?.publicBio ?? true);
         setSavedBio(profile?.bio ?? "");
@@ -159,6 +259,14 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         await updateUserTheme(uid, chosenTheme);
         loadUserSettings();
     };
+
+    const handleScenarioThemeChange = async (chosenTheme: string, chosenThemeUrl: string, accompany: boolean) => {
+        setChosenScenarioTheme(chosenTheme);
+        setChosenScenarioThemeUrl(chosenThemeUrl);
+        setNeedAccompanyingTheme(accompany);
+        setNeedThemeName(false);
+    };
+
 
     const handleGeneralUpdates = async (uid: string, oldUsername: string, newUsername: string, bio: string, instrument: string, genres: string[]) => {
         setError(null);
@@ -222,6 +330,38 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         setInstrumentPublicity(userSettings?.publicInstrument ?? true);
         setPublicElos(userSettings?.publicElos ?? []);
         setPublicGenres(userSettings?.publicGenres ?? []);
+    };
+
+    const updateScenarioThemeChanges = async () => {
+        setError(null);
+        setIsSaving(true);
+
+        if (!user) {return;}
+
+        try {
+            if (needAccompanyingTheme){
+                if (needThemeName) {
+                    updateScenarioThemeAdvanced(user?.uid, draftThemeName, chosenScenarioThemeUrl, draftAccompanyTheme ?? "default");
+                    setChosenScenarioTheme(draftThemeName);
+                }
+                else {
+                    updateScenarioThemeAccompany(user?.uid, chosenScenarioTheme, draftAccompanyTheme ?? "default");
+                }
+            }
+            else {
+                updateScenarioThemeDefault(user?.uid, chosenScenarioTheme);
+            }
+            
+            await loadUserSettings();
+        } catch (error) {
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to update user settings."
+            );
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const displayedAvatars = showAllAvatars ? avatars : avatars.slice(0, 4);
@@ -943,8 +1083,216 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
             );
         case "scenarioTheme":
             return (
-                <div>
-                    Hello
+                <div className="flex flex-col m-4 p-4 bg-linear-to-b from-accent-start via-accent-middle to-accent-end outline-3 outline-accent-middle rounded-lg overflow-y-scroll overscroll-contain-y">
+                    <h1 className="text-2xl text-ink font-bold ml-8 mb-2 text-start">
+                        Theme
+                    </h1>
+
+                    <div className="bg-linear-to-b from-contrast-start via-contrast-middle to-contrast-end outline-3 outline-contrast-middle rounded-lg p-4">
+                        <img
+                            src={chosenScenarioThemeUrl}
+                            alt={`${chosenScenarioTheme} Mode`}
+                            className="w-4/5 mx-auto"
+                        />
+                        <div className="flex flex-row w-4/5 mx-auto overscroll-x-contain gap-4 mx-2 pt-2">
+                            <button
+                                onClick={() => handleScenarioThemeChange(savedTheme ?? "default", `/${savedTheme ?? "default"}_mode.png`, false)}
+                                className={`
+                                    rounded-full
+                                    px-4 py-2
+                                    select-none
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    text-ink
+                                    transition
+                                    duration-200
+                                    border-2
+                                    hover:scale-105
+                                    active:scale-95
+                                `}
+                            >
+                                Use Application Theme
+                            </button>
+                            {scenarioThemes.map((theme) => {
+                                return (
+                                    <button
+                                        key={theme.themeName}
+                                        type="button"
+                                        onClick={() => handleScenarioThemeChange(theme.themeName, theme.themeUrl, true)}
+                                        className={`
+                                            rounded-full
+                                            px-4 py-2
+                                            select-none
+                                            bg-linear-to-b
+                                            from-accent-start
+                                            via-accent-middle
+                                            to-accent-end
+                                            text-ink
+                                            transition
+                                            duration-200
+                                            border-2
+                                            hover:scale-105
+                                            active:scale-95
+                                        `}
+                                    >
+                                        {theme.themeName}
+                                    </button>
+                                );
+                            })}
+                            <label
+                                htmlFor="scenario-theme-upload"
+                                className="
+                                    inline-flex
+                                    items-center
+                                    justify-center
+                                    rounded-full
+                                    px-4 py-2
+                                    select-none
+                                    cursor-pointer
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    text-ink
+                                    transition
+                                    duration-200
+                                    border-2
+                                    hover:scale-105
+                                    active:scale-95
+                                "
+                            >
+                                Upload Theme
+
+                                <input
+                                    id="scenario-theme-upload"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                    onChange={handleUpload}
+                                    disabled={uploading}
+                                    className="hidden"
+                                />
+                            </label>
+                        </div>
+                        {needAccompanyingTheme &&
+                            <div className="flex flex-col gap-2 pt-2">
+                                <label
+                                    htmlFor="accompanyTheme"
+                                    className="text-md font-medium text-accent-start select-none"
+                                >
+                                    Scenario Theme To Accompany:
+                                </label>
+                                <select
+                                    id="accompanyTheme"
+                                    name="accompany-theme"
+                                    value={draftAccompanyTheme}
+                                    onChange={(e) => setDraftAccompanyTheme(e.target.value as Theme)}
+                                    required
+                                    className={`
+                                        border
+                                        bg-linear-to-b
+                                        from-accent-start
+                                        via-accent-middle
+                                        to-accent-end
+                                        text-md text-ink
+                                        shadow-sm 
+                                        focus: border-line
+                                        focus:outline-none 
+                                        focus:ring-2 
+                                        focus:ring-accent-start
+                                        rounded-lg 
+                                        px-3 py-2 
+                                    `}
+                                >
+                                    <option value="" disabled>Select a Theme</option>
+                                    <option className="text-md text-black" value="default">Default</option>
+                                    <option className="text-md text-black" value="dark">Dark</option>
+                                    <option className="text-md text-black" value="neon">Neon</option>
+                                    <option className="text-md text-black" value="protanopia">Protanopia</option>
+                                    <option className="text-md text-black" value="deuteranopia">Deuteranopia</option>
+                                    <option className="text-md text-black" value="tritanopia">Tritanopia</option>
+                                    <option className="text-md text-black" value="high-contrast">High-Contrast</option>
+                                </select>
+                            </div>
+                        }
+                        {needThemeName &&
+                            <div className="flex flex-col gap-2 pt-2">
+                                <label
+                                    htmlFor="themeName"
+                                    className="text-md font-medium text-accent-start select-none"
+                                >
+                                    Theme Name:
+                                </label>
+
+                                <input
+                                    id="themeName"
+                                    type="text"
+                                    value={draftThemeName}
+                                    onChange={(event) =>
+                                        setDraftThemeName(event.target.value)
+                                    }
+                                    className="
+                                        w-full
+                                        rounded-lg
+                                        border
+                                        border-line
+                                        bg-linear-to-b
+                                        from-accent-start
+                                        via-accent-middle
+                                        to-accent-end
+                                        px-4
+                                        py-3
+                                        text-ink
+                                        outline-none
+                                        focus:border-accent-start
+                                    "
+                                    placeholder="Enter a theme name"
+                                />
+                            </div>
+                        }
+                    </div>
+                    {user && (
+                        <div className="flex justify-end gap-4 mt-6">
+                            <button
+                                type="button"
+                                className="
+                                    w-48
+                                    rounded-lg
+                                    bg-linear-to-b
+                                    from-contrast-start
+                                    via-contrast-middle
+                                    to-contrast-end
+                                    hover:scale-105
+                                    active:scale-95
+                                    py-2
+                                "
+                                onClick={() => window.location.reload()}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                className="
+                                    w-48
+                                    rounded-lg
+                                    bg-linear-to-b
+                                    from-contrast-start
+                                    via-contrast-middle
+                                    to-contrast-end
+                                    hover:scale-105
+                                    active:scale-95
+                                    py-2
+                                "
+                                onClick={() =>
+                                    updateScenarioThemeChanges()
+                                }
+                            >
+                                Save
+                            </button>
+                        </div>
+                    )}
                 </div>
             );
     }
@@ -1030,7 +1378,7 @@ export function EditProfile() {
                 </div>
                 <div className={`
                     flex flex-col 
-                    w-full 
+                    w-full
                     bg-linear-to-br
                     from-contrast-start
                     via-contrast-middle

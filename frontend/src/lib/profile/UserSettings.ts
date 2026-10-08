@@ -1,7 +1,7 @@
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
-import type { Instrument, SkillRating, UserSettings } from '@/lib/schema/types'
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import type { Instrument, ScenarioTheme, SkillRating, UserSettings } from '@/lib/schema/types'
 import { db } from "@/lib/firebase";
-import { COLLECTIONS, skillRatingsPath } from "../schema/collections";
+import { COLLECTIONS, scenarioThemesPath, skillRatingsPath } from "../schema/collections";
 
 export async function getUserSettings(uid: string): Promise<UserSettings> {
     // Read by id, not by query: the rules grant userSettings/{uid} to its owner by
@@ -31,4 +31,21 @@ export async function getUserElos( uid: string ): Promise<SkillRating[]> {
   const snapshot = await getDocs(ratingsRef);
 
   return snapshot.docs.map( (doc) => doc.data() as SkillRating );
+}
+
+export async function getScenarioThemes( uid: string ): Promise<ScenarioTheme[]> {
+  const themesRef = collection( db, scenarioThemesPath(uid) );
+  const snapshot = await getDocs(themesRef);
+
+  return snapshot.docs.map( (doc) => doc.data() as ScenarioTheme );
+}
+
+export async function getUserScenarioTheme( uid: string, themeName: string ): Promise<ScenarioTheme | null> {
+    const snapshot = await getDocs( query( collection(db, scenarioThemesPath(uid)), where("themeName", "==", themeName) ) );
+
+    if (snapshot.empty) {
+        return null;
+    }
+
+    return snapshot.docs[0].data() as ScenarioTheme;
 }

@@ -185,6 +185,10 @@ service cloud.firestore {
 
     match /userSettings/{uid} {
       allow read, write: if isSelf(uid);
+
+      match /scenarioThemes/{themeName} {
+        allow read, create, update, delete: if isSelf(uid);
+      }
     }
 
     // The preset avatars offered on the profile editor. Read-only to clients.
