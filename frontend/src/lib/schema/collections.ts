@@ -75,6 +75,9 @@ export const skillRatingsPath = (uid: string) => `${COLLECTIONS.users}/${uid}/sk
 
 export const scenarioThemesPath = (uid: string) => `${COLLECTIONS.userSettings}/${uid}/scenarioThemes`
 
+export const ratingHistoryPath = (uid: string, instrument: Instrument) =>
+  skillRatingsPath(uid) + '/' + instrument + '/history'
+
 export const communityMembersPath = (communityId: string) =>
   `${COLLECTIONS.communities}/${communityId}/members`
 

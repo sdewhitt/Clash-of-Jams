@@ -1,0 +1,2478 @@
+{
+  "seed": 20261008,
+  "policy": {
+    "version": "matchmaking-v1",
+    "initial_window": 100,
+    "provisional_window": 75,
+    "expansion_seconds": 10,
+    "expansion_step": 50,
+    "maximum_window": 400,
+    "rematch_wait_seconds": 30,
+    "scenario_window": 250,
+    "difficulty_base_elo": 400,
+    "difficulty_elo_step": 200
+  },
+  "snapshotSeconds": [5, 60],
+  "measurement": "Pure policy simulation with synthetic arrivals; excludes HTTP, Firestore, leases and network latency.",
+  "difficultyMapping": "Provisional configuration: 400 + (difficulty - 1) * 200, not empirical calibration.",
+  "cases": {
+    "dense-500": {
+      "queue-policy": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 185.335,
+          "slowestPass": 185.312
+        }
+      },
+      "fifo": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 165.519,
+          "slowestPass": 165.506
+        }
+      },
+      "fixed-window": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 165.012,
+          "slowestPass": 164.864
+        }
+      }
+    },
+    "unequal-skills-500": {
+      "queue-policy": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 247,
+            "matchedPlayers": 494,
+            "waitingPlayers": 6,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": 5.077,
+            "p95RatingGap": 20,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 6,
+                  "unmatchedPercent": 1.2
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 121,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.83
+                },
+                "diamond": {
+                  "arrived": 207,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.97
+                },
+                "gold": {
+                  "arrived": 56,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.79
+                },
+                "platinum": {
+                  "arrived": 53,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.89
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.59
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 6,
+                  "unmatchedPercent": 1.2
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 249,
+            "matchedPlayers": 498,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": 0.12,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": 6.221,
+            "p95RatingGap": 23,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 121,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.83
+                },
+                "diamond": {
+                  "arrived": 207,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.48
+                },
+                "gold": {
+                  "arrived": 56,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 53,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 25.36,
+          "slowestPass": 25.225
+        }
+      },
+      "fifo": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 248,
+            "matchedPlayers": 496,
+            "waitingPlayers": 4,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": 46.698,
+            "p95RatingGap": 91,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 4,
+                  "unmatchedPercent": 0.8
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 121,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.83
+                },
+                "diamond": {
+                  "arrived": 207,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.97
+                },
+                "gold": {
+                  "arrived": 56,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 53,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.59
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 4,
+                  "unmatchedPercent": 0.8
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 249,
+            "matchedPlayers": 498,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": 0.201,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": 47.815,
+            "p95RatingGap": 91,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 121,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.83
+                },
+                "diamond": {
+                  "arrived": 207,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "gold": {
+                  "arrived": 56,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 53,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.59
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 42.057,
+          "slowestPass": 41.779
+        }
+      },
+      "fixed-window": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 247,
+            "matchedPlayers": 494,
+            "waitingPlayers": 6,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": 5.077,
+            "p95RatingGap": 20,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 6,
+                  "unmatchedPercent": 1.2
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 121,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.83
+                },
+                "diamond": {
+                  "arrived": 207,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.97
+                },
+                "gold": {
+                  "arrived": 56,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.79
+                },
+                "platinum": {
+                  "arrived": 53,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.89
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.59
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 6,
+                  "unmatchedPercent": 1.2
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 247,
+            "matchedPlayers": 494,
+            "waitingPlayers": 6,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": 5.077,
+            "p95RatingGap": 20,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 6,
+                  "unmatchedPercent": 1.2
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 121,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.83
+                },
+                "diamond": {
+                  "arrived": 207,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.97
+                },
+                "gold": {
+                  "arrived": 56,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.79
+                },
+                "platinum": {
+                  "arrived": 53,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.89
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.59
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 6,
+                  "unmatchedPercent": 1.2
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 42.714,
+          "slowestPass": 41.854
+        }
+      }
+    },
+    "provisional-mix-500": {
+      "queue-policy": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 246,
+            "matchedPlayers": 492,
+            "waitingPlayers": 8,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": 4.939,
+            "p95RatingGap": 19,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 250,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.8
+                },
+                "provisional": {
+                  "arrived": 250,
+                  "waiting": 6,
+                  "unmatchedPercent": 2.4
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 117,
+                  "waiting": 3,
+                  "unmatchedPercent": 2.56
+                },
+                "diamond": {
+                  "arrived": 190,
+                  "waiting": 3,
+                  "unmatchedPercent": 1.58
+                },
+                "gold": {
+                  "arrived": 59,
+                  "waiting": 2,
+                  "unmatchedPercent": 3.39
+                },
+                "platinum": {
+                  "arrived": 71,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 8,
+                  "unmatchedPercent": 1.6
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 249,
+            "matchedPlayers": 498,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": 0.281,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": 6.976,
+            "p95RatingGap": 20,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 250,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "provisional": {
+                  "arrived": 250,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.8
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 117,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.85
+                },
+                "diamond": {
+                  "arrived": 190,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.53
+                },
+                "gold": {
+                  "arrived": 59,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 71,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 22.294,
+          "slowestPass": 22.055
+        }
+      },
+      "fifo": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 248,
+            "matchedPlayers": 496,
+            "waitingPlayers": 4,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": 38.601,
+            "p95RatingGap": 82,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 250,
+                  "waiting": 3,
+                  "unmatchedPercent": 1.2
+                },
+                "provisional": {
+                  "arrived": 250,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.4
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 117,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "diamond": {
+                  "arrived": 190,
+                  "waiting": 3,
+                  "unmatchedPercent": 1.58
+                },
+                "gold": {
+                  "arrived": 59,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 71,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.59
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 4,
+                  "unmatchedPercent": 0.8
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 249,
+            "matchedPlayers": 498,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": 0.08,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": 39.004,
+            "p95RatingGap": 82,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 250,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.8
+                },
+                "provisional": {
+                  "arrived": 250,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 117,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "diamond": {
+                  "arrived": 190,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.53
+                },
+                "gold": {
+                  "arrived": 59,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 71,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.59
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 38.602,
+          "slowestPass": 38.449
+        }
+      },
+      "fixed-window": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 246,
+            "matchedPlayers": 492,
+            "waitingPlayers": 8,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": 4.939,
+            "p95RatingGap": 19,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 250,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.8
+                },
+                "provisional": {
+                  "arrived": 250,
+                  "waiting": 6,
+                  "unmatchedPercent": 2.4
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 117,
+                  "waiting": 3,
+                  "unmatchedPercent": 2.56
+                },
+                "diamond": {
+                  "arrived": 190,
+                  "waiting": 3,
+                  "unmatchedPercent": 1.58
+                },
+                "gold": {
+                  "arrived": 59,
+                  "waiting": 2,
+                  "unmatchedPercent": 3.39
+                },
+                "platinum": {
+                  "arrived": 71,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 8,
+                  "unmatchedPercent": 1.6
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 246,
+            "matchedPlayers": 492,
+            "waitingPlayers": 8,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": 4.939,
+            "p95RatingGap": 19,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 250,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.8
+                },
+                "provisional": {
+                  "arrived": 250,
+                  "waiting": 6,
+                  "unmatchedPercent": 2.4
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 117,
+                  "waiting": 3,
+                  "unmatchedPercent": 2.56
+                },
+                "diamond": {
+                  "arrived": 190,
+                  "waiting": 3,
+                  "unmatchedPercent": 1.58
+                },
+                "gold": {
+                  "arrived": 59,
+                  "waiting": 2,
+                  "unmatchedPercent": 3.39
+                },
+                "platinum": {
+                  "arrived": 71,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 63,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 8,
+                  "unmatchedPercent": 1.6
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 40.717,
+          "slowestPass": 39.234
+        }
+      }
+    },
+    "recent-opponents-500": {
+      "queue-policy": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 140.984,
+          "slowestPass": 140.967
+        }
+      },
+      "fifo": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 250,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 250,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 158.064,
+          "slowestPass": 158.053
+        }
+      },
+      "fixed-window": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 250,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 250,
+            "matchedPlayers": 500,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 250,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 160.0,
+          "slowestPass": 159.864
+        }
+      }
+    },
+    "arrivals-500": {
+      "queue-policy": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 200,
+            "matches": 97,
+            "matchedPlayers": 194,
+            "waitingPlayers": 6,
+            "meanWaitSeconds": 0.082,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 1,
+            "meanRatingGap": 16.144,
+            "p95RatingGap": 55,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 200,
+                  "waiting": 6,
+                  "unmatchedPercent": 3.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 42,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.38
+                },
+                "diamond": {
+                  "arrived": 92,
+                  "waiting": 4,
+                  "unmatchedPercent": 4.35
+                },
+                "gold": {
+                  "arrived": 23,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 26,
+                  "waiting": 1,
+                  "unmatchedPercent": 3.85
+                },
+                "silver": {
+                  "arrived": 17,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 200,
+                  "waiting": 6,
+                  "unmatchedPercent": 3.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 249,
+            "matchedPlayers": 498,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": 0.378,
+            "p95WaitSeconds": 4,
+            "oldestWaitingSeconds": 44,
+            "meanRatingGap": 17.02,
+            "p95RatingGap": 57,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 113,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.88
+                },
+                "diamond": {
+                  "arrived": 219,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "gold": {
+                  "arrived": 49,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 63,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 56,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.79
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 7.206,
+          "slowestPass": 1.489
+        }
+      },
+      "fifo": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 200,
+            "matches": 97,
+            "matchedPlayers": 194,
+            "waitingPlayers": 6,
+            "meanWaitSeconds": 0.124,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 1,
+            "meanRatingGap": 48.959,
+            "p95RatingGap": 98,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 200,
+                  "waiting": 6,
+                  "unmatchedPercent": 3.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 42,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.38
+                },
+                "diamond": {
+                  "arrived": 92,
+                  "waiting": 3,
+                  "unmatchedPercent": 3.26
+                },
+                "gold": {
+                  "arrived": 23,
+                  "waiting": 1,
+                  "unmatchedPercent": 4.35
+                },
+                "platinum": {
+                  "arrived": 26,
+                  "waiting": 1,
+                  "unmatchedPercent": 3.85
+                },
+                "silver": {
+                  "arrived": 17,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 200,
+                  "waiting": 6,
+                  "unmatchedPercent": 3.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 249,
+            "matchedPlayers": 498,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": 0.321,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 44,
+            "meanRatingGap": 50.807,
+            "p95RatingGap": 94,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 113,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.88
+                },
+                "diamond": {
+                  "arrived": 219,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.46
+                },
+                "gold": {
+                  "arrived": 49,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 63,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 56,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 2,
+                  "unmatchedPercent": 0.4
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 9.624,
+          "slowestPass": 1.965
+        }
+      },
+      "fixed-window": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 200,
+            "matches": 97,
+            "matchedPlayers": 194,
+            "waitingPlayers": 6,
+            "meanWaitSeconds": 0.082,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 1,
+            "meanRatingGap": 16.144,
+            "p95RatingGap": 55,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 200,
+                  "waiting": 6,
+                  "unmatchedPercent": 3.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 42,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.38
+                },
+                "diamond": {
+                  "arrived": 92,
+                  "waiting": 4,
+                  "unmatchedPercent": 4.35
+                },
+                "gold": {
+                  "arrived": 23,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 26,
+                  "waiting": 1,
+                  "unmatchedPercent": 3.85
+                },
+                "silver": {
+                  "arrived": 17,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 200,
+                  "waiting": 6,
+                  "unmatchedPercent": 3.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 500,
+            "matches": 247,
+            "matchedPlayers": 494,
+            "waitingPlayers": 6,
+            "meanWaitSeconds": 0.178,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 44,
+            "meanRatingGap": 15.522,
+            "p95RatingGap": 55,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 500,
+                  "waiting": 6,
+                  "unmatchedPercent": 1.2
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 113,
+                  "waiting": 1,
+                  "unmatchedPercent": 0.88
+                },
+                "diamond": {
+                  "arrived": 219,
+                  "waiting": 4,
+                  "unmatchedPercent": 1.83
+                },
+                "gold": {
+                  "arrived": 49,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 63,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 56,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.79
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 500,
+                  "waiting": 6,
+                  "unmatchedPercent": 1.2
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 10.309,
+          "slowestPass": 2.038
+        }
+      }
+    },
+    "sparse-odd-127": {
+      "queue-policy": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 127,
+            "matches": 60,
+            "matchedPlayers": 120,
+            "waitingPlayers": 7,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 63,
+                  "waiting": 3,
+                  "unmatchedPercent": 4.76
+                },
+                "provisional": {
+                  "arrived": 64,
+                  "waiting": 4,
+                  "unmatchedPercent": 6.25
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 39,
+                  "waiting": 3,
+                  "unmatchedPercent": 7.69
+                },
+                "diamond": {
+                  "arrived": 49,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.04
+                },
+                "gold": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                },
+                "platinum": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                },
+                "silver": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                }
+              },
+              "instrument": {
+                "guitar": {
+                  "arrived": 43,
+                  "waiting": 3,
+                  "unmatchedPercent": 6.98
+                },
+                "piano": {
+                  "arrived": 84,
+                  "waiting": 4,
+                  "unmatchedPercent": 4.76
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 127,
+            "matches": 62,
+            "matchedPlayers": 124,
+            "waitingPlayers": 3,
+            "meanWaitSeconds": 0.968,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": 5.806,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 63,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.59
+                },
+                "provisional": {
+                  "arrived": 64,
+                  "waiting": 2,
+                  "unmatchedPercent": 3.12
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 39,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.56
+                },
+                "diamond": {
+                  "arrived": 49,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.04
+                },
+                "gold": {
+                  "arrived": 13,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 13,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                }
+              },
+              "instrument": {
+                "guitar": {
+                  "arrived": 43,
+                  "waiting": 3,
+                  "unmatchedPercent": 6.98
+                },
+                "piano": {
+                  "arrived": 84,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 1.489,
+          "slowestPass": 1.29
+        }
+      },
+      "fifo": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 127,
+            "matches": 60,
+            "matchedPlayers": 120,
+            "waitingPlayers": 7,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 63,
+                  "waiting": 3,
+                  "unmatchedPercent": 4.76
+                },
+                "provisional": {
+                  "arrived": 64,
+                  "waiting": 4,
+                  "unmatchedPercent": 6.25
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 39,
+                  "waiting": 3,
+                  "unmatchedPercent": 7.69
+                },
+                "diamond": {
+                  "arrived": 49,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.04
+                },
+                "gold": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                },
+                "platinum": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                },
+                "silver": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                }
+              },
+              "instrument": {
+                "guitar": {
+                  "arrived": 43,
+                  "waiting": 3,
+                  "unmatchedPercent": 6.98
+                },
+                "piano": {
+                  "arrived": 84,
+                  "waiting": 4,
+                  "unmatchedPercent": 4.76
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 127,
+            "matches": 62,
+            "matchedPlayers": 124,
+            "waitingPlayers": 3,
+            "meanWaitSeconds": 0.968,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": 5.806,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 63,
+                  "waiting": 1,
+                  "unmatchedPercent": 1.59
+                },
+                "provisional": {
+                  "arrived": 64,
+                  "waiting": 2,
+                  "unmatchedPercent": 3.12
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 39,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.56
+                },
+                "diamond": {
+                  "arrived": 49,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.04
+                },
+                "gold": {
+                  "arrived": 13,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "platinum": {
+                  "arrived": 13,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                },
+                "silver": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                }
+              },
+              "instrument": {
+                "guitar": {
+                  "arrived": 43,
+                  "waiting": 3,
+                  "unmatchedPercent": 6.98
+                },
+                "piano": {
+                  "arrived": 84,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 1.908,
+          "slowestPass": 1.566
+        }
+      },
+      "fixed-window": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 127,
+            "matches": 60,
+            "matchedPlayers": 120,
+            "waitingPlayers": 7,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 63,
+                  "waiting": 3,
+                  "unmatchedPercent": 4.76
+                },
+                "provisional": {
+                  "arrived": 64,
+                  "waiting": 4,
+                  "unmatchedPercent": 6.25
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 39,
+                  "waiting": 3,
+                  "unmatchedPercent": 7.69
+                },
+                "diamond": {
+                  "arrived": 49,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.04
+                },
+                "gold": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                },
+                "platinum": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                },
+                "silver": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                }
+              },
+              "instrument": {
+                "guitar": {
+                  "arrived": 43,
+                  "waiting": 3,
+                  "unmatchedPercent": 6.98
+                },
+                "piano": {
+                  "arrived": 84,
+                  "waiting": 4,
+                  "unmatchedPercent": 4.76
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 127,
+            "matches": 60,
+            "matchedPlayers": 120,
+            "waitingPlayers": 7,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 63,
+                  "waiting": 3,
+                  "unmatchedPercent": 4.76
+                },
+                "provisional": {
+                  "arrived": 64,
+                  "waiting": 4,
+                  "unmatchedPercent": 6.25
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 39,
+                  "waiting": 3,
+                  "unmatchedPercent": 7.69
+                },
+                "diamond": {
+                  "arrived": 49,
+                  "waiting": 1,
+                  "unmatchedPercent": 2.04
+                },
+                "gold": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                },
+                "platinum": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                },
+                "silver": {
+                  "arrived": 13,
+                  "waiting": 1,
+                  "unmatchedPercent": 7.69
+                }
+              },
+              "instrument": {
+                "guitar": {
+                  "arrived": 43,
+                  "waiting": 3,
+                  "unmatchedPercent": 6.98
+                },
+                "piano": {
+                  "arrived": 84,
+                  "waiting": 4,
+                  "unmatchedPercent": 4.76
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 2.184,
+          "slowestPass": 1.57
+        }
+      }
+    },
+    "rematch-only-2": {
+      "queue-policy": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 2,
+            "matches": 0,
+            "matchedPlayers": 0,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": null,
+            "p95WaitSeconds": null,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": null,
+            "p95RatingGap": null,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 2,
+            "matches": 1,
+            "matchedPlayers": 2,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 30,
+            "p95WaitSeconds": 30,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 1,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 0.182,
+          "slowestPass": 0.012
+        }
+      },
+      "fifo": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 2,
+            "matches": 1,
+            "matchedPlayers": 2,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 1,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 2,
+            "matches": 1,
+            "matchedPlayers": 2,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 1,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 0.013,
+          "slowestPass": 0.005
+        }
+      },
+      "fixed-window": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 2,
+            "matches": 1,
+            "matchedPlayers": 2,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 1,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 2,
+            "matches": 1,
+            "matchedPlayers": 2,
+            "waitingPlayers": 0,
+            "meanWaitSeconds": 0,
+            "p95WaitSeconds": 0,
+            "oldestWaitingSeconds": 0,
+            "meanRatingGap": 0,
+            "p95RatingGap": 0,
+            "rematches": 1,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              },
+              "instrument": {
+                "piano": {
+                  "arrived": 2,
+                  "waiting": 0,
+                  "unmatchedPercent": 0.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 0.124,
+          "slowestPass": 0.007
+        }
+      }
+    },
+    "missing-scenario-2": {
+      "queue-policy": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 2,
+            "matches": 0,
+            "matchedPlayers": 0,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": null,
+            "p95WaitSeconds": null,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": null,
+            "p95RatingGap": null,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "instrument": {
+                "vocals": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 2,
+            "matches": 0,
+            "matchedPlayers": 0,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": null,
+            "p95WaitSeconds": null,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": null,
+            "p95RatingGap": null,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "instrument": {
+                "vocals": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 0.113,
+          "slowestPass": 0.004
+        }
+      },
+      "fifo": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 2,
+            "matches": 0,
+            "matchedPlayers": 0,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": null,
+            "p95WaitSeconds": null,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": null,
+            "p95RatingGap": null,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "instrument": {
+                "vocals": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 2,
+            "matches": 0,
+            "matchedPlayers": 0,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": null,
+            "p95WaitSeconds": null,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": null,
+            "p95RatingGap": null,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "instrument": {
+                "vocals": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 0.118,
+          "slowestPass": 0.003
+        }
+      },
+      "fixed-window": {
+        "snapshots": {
+          "5": {
+            "arrivedPlayers": 2,
+            "matches": 0,
+            "matchedPlayers": 0,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": null,
+            "p95WaitSeconds": null,
+            "oldestWaitingSeconds": 5,
+            "meanRatingGap": null,
+            "p95RatingGap": null,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "instrument": {
+                "vocals": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              }
+            }
+          },
+          "60": {
+            "arrivedPlayers": 2,
+            "matches": 0,
+            "matchedPlayers": 0,
+            "waitingPlayers": 2,
+            "meanWaitSeconds": null,
+            "p95WaitSeconds": null,
+            "oldestWaitingSeconds": 60,
+            "meanRatingGap": null,
+            "p95RatingGap": null,
+            "rematches": 0,
+            "groups": {
+              "provisional": {
+                "established": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "tier": {
+                "bronze": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              },
+              "instrument": {
+                "vocals": {
+                  "arrived": 2,
+                  "waiting": 2,
+                  "unmatchedPercent": 100.0
+                }
+              }
+            }
+          }
+        },
+        "algorithmComputeMs": {
+          "total": 0.236,
+          "slowestPass": 0.005
+        }
+      }
+    }
+  }
+}

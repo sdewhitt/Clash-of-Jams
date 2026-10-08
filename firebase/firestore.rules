@@ -171,6 +171,12 @@ service cloud.firestore {
           && request.resource.data.isProvisional == true
           && stampedNow(request.resource.data.updatedAt);
         allow update, delete: if false;
+
+        // Immutable match history: only the owner reads; Admin SDK writes it.
+        match /history/{matchId} {
+          allow read: if isSelf(uid);
+          allow write: if false;
+        }
       }
     }
 

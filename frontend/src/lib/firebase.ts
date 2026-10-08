@@ -6,8 +6,8 @@
  * Both read the same VITE_FIREBASE_* names.
  */
 import { getApp, getApps, initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { connectAuthEmulator, getAuth } from 'firebase/auth'
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -41,3 +41,20 @@ if (missing.length > 0) {
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 export const db = getFirestore(app)
 export const auth = getAuth(app)
+
+// Opt-in local integration tests and demos use the real SDK against emulators.
+// Keep the connection guard across Vite hot reloads.
+const emulatorAuth = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_URL
+const emulatorStore = import.meta.env.VITE_FIRESTORE_EMULATOR_HOST
+if (emulatorAuth || emulatorStore) {
+  if (!emulatorAuth || !emulatorStore || !firebaseConfig.projectId?.startsWith('demo-')) {
+    throw new Error('Emulator mode requires both emulators and a demo- project ID.')
+  }
+  const emulatorConnections = globalThis as typeof globalThis & { __cojEmulatorsConnected?: boolean }
+  if (!emulatorConnections.__cojEmulatorsConnected) {
+    const [host, port] = emulatorStore.split(':')
+    connectAuthEmulator(auth, emulatorAuth)
+    connectFirestoreEmulator(db, host, Number(port))
+    emulatorConnections.__cojEmulatorsConnected = true
+  }
+}

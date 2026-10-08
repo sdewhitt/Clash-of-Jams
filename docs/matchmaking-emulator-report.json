@@ -1,0 +1,24 @@
+{
+  "fixturePlayers": 500,
+  "concurrentJoinThreads": 20,
+  "measurement": "Concurrent service joins followed by one full matching pass with real Firestore transactions; excludes HTTP/Auth/browser/gameplay and fixture setup.",
+  "fiveSecondSnapshot": {
+    "observedAtSeconds": 5.044,
+    "matchedPlayers": 500,
+    "unassignedPlayers": 0,
+    "matches": 250
+  },
+  "finalSnapshot": {
+    "observedAtSeconds": 5.071,
+    "matchedPlayers": 500,
+    "unassignedPlayers": 0,
+    "matches": 250
+  },
+  "joinSeconds": 0.825,
+  "completionSeconds": 1.596,
+  "meanRatingGap": 0.0,
+  "meanWaitSeconds": 0.3936892165818717,
+  "rematches": 0,
+  "uniqueAssignments": true,
+  "cleanup": "Only this run's temporary users, settings, ratings, scenario, matches and reservations."
+}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router"
 
 import { BackButton } from "@/components/BackButton"
 import { LeaderboardRow, LeaderboardStat, MyStanding } from "@/components/Leaderboard"
@@ -7,15 +8,14 @@ import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
 import type { LeaderboardResponse } from "@/lib/leaderboards"
 import { INSTRUMENTS, type Instrument } from "@/lib/schema/types"
-import { useNavigate } from "react-router"
 
 const controlClass =
     "rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black"
 
 /** Top players by ELO for one instrument, with the caller's own standing highlighted. */
 export function EloLeaderboard() {
-    const { user, profile } = useAuth();
-    const navigate = useNavigate();
+    const { user, profile } = useAuth()
+    const navigate = useNavigate()
 
     function navPortal(location: string) {
         navigate(location)

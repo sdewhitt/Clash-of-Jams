@@ -23,7 +23,7 @@ requires = ["setuptools>=80"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["app*"]
+include = ["app*", "algs*"]
 
 [tool.ruff]
 line-length = 100
