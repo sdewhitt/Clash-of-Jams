@@ -25,6 +25,7 @@ from app.routers import (
     health,
     leaderboards,
     matchmaking,
+    multiplayer,
     ratings,
     runs,
     scenarios,
@@ -32,6 +33,9 @@ from app.routers import (
 )
 from app.services.matchmaking import MatchmakingService
 from app.services.matchmaking_store import FirestoreMatchmakingStore
+from app.services.multiplayer import SessionService
+from app.services.multiplayer_store import FirestoreSessionStore
+from app.services.multiplayer_transport import SessionHub
 
 
 def create_app() -> FastAPI:
@@ -46,6 +50,14 @@ def create_app() -> FastAPI:
         ),
     )
 
+    sessions = SessionService(
+        lambda: FirestoreSessionStore(get_firestore_client()),
+        duration_seconds=settings.multiplayer_duration_seconds,
+        recovery_seconds=settings.multiplayer_recovery_seconds,
+        countdown_seconds=settings.multiplayer_countdown_seconds,
+    )
+    hub = SessionHub(sessions)
+
     @asynccontextmanager
     async def lifespan(_app):
         async def match_queue():
@@ -57,14 +69,28 @@ def create_app() -> FastAPI:
                 await asyncio.sleep(1)
 
         task = asyncio.create_task(match_queue())
+
+        async def update_sessions():
+            while True:
+                try:
+                    await run_in_threadpool(sessions.tick)
+                    for match_id in {channel.match_id for channel in hub.channels.values()}:
+                        await hub.broadcast(match_id)
+                except Exception:
+                    logging.getLogger(__name__).exception("Session update failed")
+                await asyncio.sleep(0.5)
+
+        session_task = asyncio.create_task(update_sessions())
         try:
             yield
         finally:
             task.cancel()
+            session_task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
                 pass
+            await asyncio.gather(session_task, return_exceptions=True)
 
     app = FastAPI(
         title=settings.app_name,
@@ -73,6 +99,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.state.matchmaking = matchmaker
+    app.state.sessions = sessions
+    app.state.session_hub = hub
 
     app.add_middleware(
         CORSMiddleware,
@@ -89,6 +117,7 @@ def create_app() -> FastAPI:
     app.include_router(runs.router, prefix=settings.api_prefix)
     app.include_router(skill_ratings.router, prefix=settings.api_prefix)
     app.include_router(matchmaking.router, prefix=settings.api_prefix)
+    app.include_router(multiplayer.router, prefix=settings.api_prefix)
 
     return app
 

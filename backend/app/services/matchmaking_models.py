@@ -37,6 +37,7 @@ class QueueStatus(ApiModel):
     instrument: Instrument | None = None
     wait_seconds: float = 0
     rating_window: float | None = None
+    search_expanded: bool = False
     waiting_for: Literal["opponent", "scenario"] | None = None
     match: MatchedLobby | None = None
     policy_version: str = "matchmaking-v1"

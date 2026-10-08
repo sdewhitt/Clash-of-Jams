@@ -19,6 +19,7 @@ export interface QueueStatus {
   instrument: Instrument | null
   waitSeconds: number
   ratingWindow: number | null
+  searchExpanded: boolean
   waitingFor: 'opponent' | 'scenario' | null
   match: MatchedLobby | null
   policyVersion: string
