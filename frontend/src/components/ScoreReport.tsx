@@ -1,4 +1,5 @@
 import type { ScoreExplanation } from '@/scoring/explain'
+import { MAX_SCORE } from '@/scoring/score'
 
 type ScoreReportProps = {
   finalScore: number
@@ -29,8 +30,8 @@ export function ScoreReport({ finalScore, explanation }: ScoreReportProps) {
       `}
     >
       <div className="flex items-baseline gap-4">
-        <span className="text-5xl font-bold tabular-nums">{finalScore}</span>
-        <span className="text-muted">/ 100</span>
+        <span className="text-5xl font-bold tabular-nums">{finalScore.toLocaleString()}</span>
+        <span className="text-muted">/ {MAX_SCORE.toLocaleString()}</span>
       </div>
       <p className="font-semibold">{explanation.summary}</p>
 

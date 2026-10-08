@@ -64,7 +64,7 @@ describe('piano audio recordings', () => {
   it.each(PIANO_RECORDINGS.map((r) => [r.id, r] as const))('%s scores at least 95', (_, rec) => {
     const { withinSemitone, score } = transcribeAsPiano(rec)
     expect(withinSemitone / rec.notes.length).toBeGreaterThanOrEqual(0.95)
-    expect(score?.finalScore).toBeGreaterThanOrEqual(95)
+    expect(score?.finalScore).toBeGreaterThanOrEqual(95_000)
   })
 
   it('identifies at least 95% of 1000 notes across the low, middle and high registers', () => {
@@ -97,7 +97,7 @@ describe('MIDI digital piano', () => {
     for (const note of PIANO_CHORD.notes) recorder.handleMessage([0x80, note.midiPitch, 0], 1900)
     const performed = recorder.takeNotes(2000)
     const result = scorePerformance({ expected: PIANO_CHORD.notes, tempoMap, performed })
-    expect(result.finalScore).toBe(100)
+    expect(result.finalScore).toBe(100_000)
   })
 
   it('plays every key from A0 to C8', () => {
@@ -118,6 +118,6 @@ describe('MIDI digital piano', () => {
       recorder.handleMessage([0x80, note.midiPitch, 0], note.startBeat * 1000 + 800)
     }
     const performed = keepNotesInRange(recorder.takeNotes(100000), PIANO_PROFILE)
-    expect(scorePerformance({ expected, tempoMap, performed }).finalScore).toBe(100)
+    expect(scorePerformance({ expected, tempoMap, performed }).finalScore).toBe(100_000)
   })
 })
