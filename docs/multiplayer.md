@@ -2,6 +2,8 @@
 
 Home → Online Play → automatic queue → shared lobby → both Ready → 3-second countdown → 60-second demo → results. Matchmaking continues to choose one random compatible scenario/version for both players using its existing Elo/difficulty policy. No Elo or matchmaking algorithm was replaced.
 
+The queue shows a live minutes:seconds timer anchored to the server's queue age. It changes to “Searching a wider ELO range…” when the server confirms the player's search window has expanded (first expansion at 10 seconds under the current policy). New queue tickets reset the timer and message; returning to an existing queue retains its elapsed time.
+
 The demo input is a button or Space, with one accepted tap per server second. Its normalized score is accepted beats / 60. This exercises multiplayer independently of the team's instrument/scoring work; it does not measure musical performance. Both screens show live scores and progress. Arrow keys or touch buttons send four fixed phrases; free-form chat is unavailable.
 
 ## Server and database
@@ -85,7 +87,7 @@ For two computers, both frontends must proxy to the **same** backend. `localhost
 
 ## Verification
 
-Verified locally: 143 backend tests, 180 frontend unit tests, 57 Firestore rule tests, frontend typecheck/build/lint, and 82 browser checks across desktop Chromium, desktop WebKit and mobile Chromium (16 specifically cover multiplayer/matchmaking). The shared-play check also verifies a fresh page load with an unavailable socket, HTTP-loaded reconnect details, disabled live controls, and manual recovery; that updated journey passed in all three browser projects. The full-minute check runs once in Chromium; its two other project instances are deliberately skipped. Existing frontend lint/bundle warnings remain.
+Verified locally: 143 backend tests, 182 frontend unit tests, 57 Firestore rule tests, frontend typecheck/build/lint, and 82 browser checks across desktop Chromium, desktop WebKit and mobile Chromium (16 specifically cover multiplayer/matchmaking). The shared-play check also verifies a fresh page load with an unavailable socket, HTTP-loaded reconnect details, disabled live controls, and manual recovery; that updated journey passed in all three browser projects. The queue timer and real Elo-expansion notice also passed in all three browser projects; the updated backend matchmaking tests pass (22 tests). The full-minute check runs once in Chromium; its two other project instances are deliberately skipped. Existing frontend lint/bundle warnings remain.
 
 Backend tests cover concurrent readiness, duplicate/out-of-order input, replay/replacement connections, the exact 20-second boundary, natural completion, draws, resignation, both disconnected, failed storage/retry, authorization, transport and real Firestore/Elo transactions. Browser tests use actual Firebase Auth and WebSockets; gameplay input is explicitly synthetic.
 

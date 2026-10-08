@@ -19,6 +19,7 @@ const idle: QueueStatus = {
   instrument: null,
   waitSeconds: 0,
   ratingWindow: null,
+  searchExpanded: false,
   waitingFor: null,
   match: null,
   policyVersion: 'matchmaking-v1',
@@ -164,6 +165,42 @@ describe('queue lifecycle', () => {
 })
 
 describe('matchmaking UI', () => {
+  it('ticks between server polls and preserves the existing queue age', async () => {
+    vi.useFakeTimers()
+    vi.mocked(joinQueue).mockResolvedValue({ ...queued, waitSeconds: 65.25 })
+    vi.mocked(getQueueStatus).mockReturnValue(new Promise(() => {}))
+    renderAtRoute(<MultiplayerConnect />, { path: '/multiplayer', auth: signedIn() })
+    await act(async () => {})
+    expect(screen.getByRole('timer', { name: 'Time in queue' })).toHaveTextContent('1:05')
+    await act(async () => vi.advanceTimersByTimeAsync(1000))
+    expect(screen.getByRole('timer')).toHaveTextContent('1:06')
+    await act(async () => vi.advanceTimersByTimeAsync(2000))
+    expect(screen.getByRole('timer')).toHaveTextContent('1:08')
+  })
+
+  it('shows the wider Elo message only after server-confirmed expansion and resets on requeue', async () => {
+    vi.useFakeTimers()
+    vi.mocked(joinQueue).mockResolvedValue({ ...queued, waitSeconds: 9 })
+    vi.mocked(getQueueStatus).mockResolvedValue({
+      ...queued,
+      waitSeconds: 10.5,
+      searchExpanded: true,
+      ratingWindow: 125,
+    })
+    renderAtRoute(<MultiplayerConnect />, { path: '/multiplayer', auth: signedIn() })
+    await act(async () => {})
+    await act(async () => vi.advanceTimersByTimeAsync(1000))
+    expect(screen.getByRole('timer')).toHaveTextContent('0:10')
+    expect(screen.getByRole('status')).toHaveTextContent('Finding a suitable opponent')
+    await act(async () => vi.advanceTimersByTimeAsync(500))
+    expect(screen.getByRole('status')).toHaveTextContent('Searching a wider ELO range')
+    vi.mocked(getQueueStatus).mockResolvedValue(idle)
+    vi.mocked(joinQueue).mockResolvedValue({ ...queued, queueId: 'ticket-2' })
+    await act(async () => vi.advanceTimersByTimeAsync(1500))
+    expect(screen.getByRole('timer')).toHaveTextContent('0:00')
+    expect(screen.getByRole('status')).toHaveTextContent('Finding a suitable opponent')
+  })
+
   it('shows brief queue copy and cancelling returns Home', async () => {
     renderAtRoute(<MultiplayerConnect />, {
       path: '/multiplayer',

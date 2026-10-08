@@ -113,11 +113,26 @@ test('two authenticated players receive one shared lobby, refresh and leave safe
   }
 })
 
-test('an unmatched player can cancel without creating a lobby', async ({ page, player, data }) => {
+test('an unmatched player sees a live timer and wider Elo search before cancelling', async ({
+  page,
+  player,
+  data,
+}, info) => {
   await data.update('userSettings/' + player.uid, { preferredInstrument: 'woodwind' })
   await signIn(page, player)
   await page.getByRole('button', { name: 'Online Play', exact: true }).click()
   await expect(page.getByRole('status')).toContainText('Finding a suitable opponent')
+  const timer = page.getByRole('timer', { name: 'Time in queue' })
+  await expect(timer).toContainText('0:00')
+  await expect(timer).toContainText('0:02')
+  await expect(page.getByRole('status')).toContainText('Searching a wider ELO range', {
+    timeout: 15_000,
+  })
+  await expect(timer).toContainText(/0:1\d/)
+  await info.attach('expanded-matchmaking-queue', {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  })
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(page).toHaveURL(/\/home$/)
   expect(await data.read('matchmakingReservations/' + player.uid)).toBeUndefined()
@@ -132,8 +147,8 @@ test('queue retry recovers from an unavailable backend and both controls have po
   await signIn(page, player)
   let failJoin = true
   await page.route('**/api/v1/matchmaking/queue', async (route) => {
-      if (route.request().method() === 'POST' && failJoin) {
-        await route.fulfill({
+    if (route.request().method() === 'POST' && failJoin) {
+      await route.fulfill({
         status: 503,
         json: { detail: 'Multiplayer is temporarily unavailable. Try again.' },
       })
@@ -143,10 +158,10 @@ test('queue retry recovers from an unavailable backend and both controls have po
   await expect(page.getByRole('alert')).toContainText('temporarily unavailable')
   const retry = page.getByRole('button', { name: 'Try again' })
   const cancel = page.getByRole('button', { name: 'Cancel', exact: true })
-    await expect(retry).toHaveCSS('cursor', 'pointer')
-    await expect(cancel).toHaveCSS('cursor', 'pointer')
-    failJoin = false
-    await retry.click()
+  await expect(retry).toHaveCSS('cursor', 'pointer')
+  await expect(cancel).toHaveCSS('cursor', 'pointer')
+  failJoin = false
+  await retry.click()
   await expect(page.getByRole('alert')).not.toBeVisible()
   await expect(page.getByRole('status')).toContainText('Finding a suitable opponent')
   await cancel.click()

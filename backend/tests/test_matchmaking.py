@@ -197,6 +197,31 @@ def test_duplicate_join_preserves_ticket_and_wait_age(service):
     assert first.queue_id == again.queue_id and again.wait_seconds == 10
 
 
+def test_queue_reports_actual_search_expansion(service):
+    matchmaker, _, clock = service
+    assert not matchmaker.join("a").search_expanded
+    clock[0] = 9.999
+    assert not matchmaker.status("a").search_expanded
+    clock[0] = 10
+    status = matchmaker.status("a")
+    assert status.search_expanded
+    assert status.model_dump(by_alias=True)["searchExpanded"] is True
+    matchmaker.cancel("a", status.queue_id)
+    assert not matchmaker.join("a").search_expanded
+
+
+def test_queue_expansion_notice_follows_custom_policy(service):
+    matchmaker, _, clock = service
+    matchmaker.policy = MatchmakingPolicy(expansion_seconds=20)
+    matchmaker.join("a")
+    clock[0] = 10
+    assert not matchmaker.status("a").search_expanded
+    clock[0] = 20
+    assert matchmaker.status("a").search_expanded
+    matchmaker.policy = MatchmakingPolicy(expansion_step=0)
+    assert not matchmaker.status("a").search_expanded
+
+
 def test_cancellation_and_stale_ticket_do_not_cancel_a_newer_entry(service):
     matchmaker, _, _ = service
     first = matchmaker.join("a")
