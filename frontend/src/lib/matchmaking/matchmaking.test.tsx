@@ -196,6 +196,27 @@ describe('matchmaking UI', () => {
     expect(await screen.findByTestId('location')).toHaveTextContent('/home')
   })
 
+  it('Try again rejoins after a connection failure and clears the error', async () => {
+    vi.mocked(joinQueue).mockRejectedValueOnce(new Error('Could not reach the server.'))
+    renderAtRoute(<MultiplayerConnect />, { path: '/multiplayer', auth: signedIn() })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach the server.')
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    expect(joinQueue).toHaveBeenCalledTimes(2)
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(cancelQueue).toHaveBeenCalledWith('ticket-1')
+  })
+
+  it('Recent Matches is directly below Online Play and opens its own page', async () => {
+    vi.mocked(getQueueStatus).mockResolvedValue(idle)
+    renderAtRoute(<Home />, { auth: signedIn(), path: '/home' })
+    const buttons = screen.getAllByRole('button')
+    const online = screen.getByRole('button', { name: 'Online Play' })
+    expect(buttons[buttons.indexOf(online) + 1]).toHaveTextContent('Recent Matches')
+    await userEvent.click(screen.getByRole('button', { name: 'Recent Matches' }))
+    expect(await screen.findByTestId('location')).toHaveTextContent('/recent_matches')
+  })
+
   it('Home offers rejoin for an assigned lobby without joining a queue', async () => {
     vi.mocked(getQueueStatus).mockResolvedValue(matched)
     renderAtRoute(<Home />, { auth: signedIn(), path: '/home' })

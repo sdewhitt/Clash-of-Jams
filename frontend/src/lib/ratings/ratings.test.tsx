@@ -11,7 +11,9 @@ import { RatingHistory } from '@/pages/RatingHistory'
 import { renderWithAuth, signedIn } from '@/test/render'
 
 type Snapshot = { docs: { data: () => unknown }[]; data: () => Record<string, unknown> }
-const { listeners } = vi.hoisted(() => ({
+const { listeners, settings, updateDoc } = vi.hoisted(() => ({
+  settings: new Map<string, Record<string, unknown>>(),
+  updateDoc: vi.fn(),
   listeners: new Map<
     string,
     {
@@ -27,9 +29,11 @@ vi.mock('firebase/firestore', async (importOriginal) => ({
   collection: (_db: unknown, path: string) => ({ path }),
   doc: (_db: unknown, ...parts: string[]) => ({ path: parts.join('/') }),
   query: (ref: { path: string }) => ref,
+  updateDoc,
   onSnapshot: (ref: { path: string }, next: (snapshot: Snapshot) => void, error: () => void) => {
     const unsubscribe = vi.fn()
     listeners.set(ref.path, { next, error, unsubscribe })
+    if (settings.has(ref.path)) next({ docs: [], data: () => settings.get(ref.path)! })
     return unsubscribe
   },
 }))
@@ -81,7 +85,16 @@ function emitRating(elo = 400, instrument: Instrument = 'piano') {
   ])
 }
 
-beforeEach(() => listeners.clear())
+beforeEach(() => {
+  listeners.clear()
+  settings.clear()
+  updateDoc
+    .mockReset()
+    .mockImplementation(async (ref: { path: string }, data: Record<string, unknown>) => {
+      settings.set(ref.path, data)
+      listeners.get(ref.path)?.next({ docs: [], data: () => data })
+    })
+})
 
 describe('live rating subscriptions', () => {
   it('uses the preferred instrument and updates ratings without a reload', () => {
@@ -134,14 +147,51 @@ describe('live rating subscriptions', () => {
 })
 
 describe('Elo UI', () => {
-  it('shows live Elo beside the username and links to rating history', () => {
+  it('shows live Elo beside the username without navigating away', () => {
     renderWithAuth(<Home />, { auth: signedIn(), route: '/home' })
     emitRating()
     expect(screen.getByText('Piano-400')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /View piano Elo/ })).toHaveAttribute('href', '/ratings')
+    expect(screen.getByRole('button', { name: /View piano Elo/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
     emitRating(416)
     expect(screen.getByText('Piano-416')).toBeInTheDocument()
     expect(screen.queryByText('Piano-400')).not.toBeInTheDocument()
+  })
+
+  it('opens Elo details, saves the instrument and restores it after remount', async () => {
+    const mounted = renderWithAuth(<Home />, { auth: signedIn(), route: '/home' })
+    emitRating()
+    await userEvent.click(screen.getByRole('button', { name: /View piano Elo/ }))
+    expect(screen.getByRole('region', { name: 'Elo details' })).toHaveTextContent(
+      'Beating a stronger opponent',
+    )
+    await userEvent.selectOptions(screen.getByLabelText('Instrument'), 'guitar')
+    expect(updateDoc).toHaveBeenCalledWith(
+      { path: 'userSettings/user-1' },
+      expect.objectContaining({ preferredInstrument: 'guitar' }),
+    )
+    emitRating(450, 'guitar')
+    expect(screen.getByRole('button', { name: /View guitar Elo/ })).toHaveTextContent('Guitar-450')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('region', { name: 'Elo details' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /View guitar Elo/ })).toHaveFocus()
+    mounted.unmount()
+    renderWithAuth(<Home />, { auth: signedIn(), route: '/home' })
+    emitRating(450, 'guitar')
+    await userEvent.click(screen.getByRole('button', { name: /View guitar Elo/ }))
+    expect(screen.getByLabelText('Instrument')).toHaveValue('guitar')
+  })
+
+  it('shows a failed preference save and retains the previous instrument', async () => {
+    updateDoc.mockRejectedValueOnce(new Error('permission-denied'))
+    renderWithAuth(<Home />, { auth: signedIn(), route: '/home' })
+    emitRating()
+    await userEvent.click(screen.getByRole('button', { name: /View piano Elo/ }))
+    await userEvent.selectOptions(screen.getByLabelText('Instrument'), 'guitar')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save your instrument')
+    expect(screen.getByLabelText('Instrument')).toHaveValue('piano')
   })
 
   it('shows empty history then renders a committed rating breakdown', () => {

@@ -24,7 +24,7 @@ export function MultiplayerConnect() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b-4 border-accent-start bg-linear-to-r from-accent-base-start via-accent-base-middle to-accent-base-end px-4 py-5 sm:px-12">
+      <header className="relative flex flex-wrap items-center justify-between gap-4 border-b-4 border-accent-start bg-linear-to-r from-accent-base-start via-accent-base-middle to-accent-base-end px-4 py-5 sm:px-12">
         <div className="flex items-center gap-4">
           <BackButton
             onClick={() => {
@@ -73,7 +73,12 @@ export function MultiplayerConnect() {
           {error && (
             <div className="flex flex-col gap-3">
               <p role="alert">{error}</p>
-              <button type="button" onClick={retry} disabled={leaving} className="underline">
+              <button
+                type="button"
+                onClick={retry}
+                disabled={leaving}
+                className="cursor-pointer underline disabled:cursor-not-allowed"
+              >
                 Try again
               </button>
             </div>
@@ -84,7 +89,7 @@ export function MultiplayerConnect() {
               void leave()
             }}
             disabled={leaving}
-            className="rounded-lg border-2 border-accent-start bg-white px-6 py-3 font-bold text-black disabled:opacity-50"
+            className="cursor-pointer rounded-lg border-2 border-accent-start bg-white px-6 py-3 font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
           >
             {leaving ? 'Leaving…' : match ? 'Leave lobby' : 'Cancel'}
           </button>

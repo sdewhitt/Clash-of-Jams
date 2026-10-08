@@ -2,7 +2,7 @@ import { signIn, signOut } from './support/auth.js'
 import { test, expect } from './support/fixtures.js'
 import { TEST_ENV } from './support/environment.js'
 
-for (const destination of ['/home', '/ratings', '/profile', '/scenario_editor']) {
+for (const destination of ['/home', '/recent_matches', '/profile', '/scenario_editor']) {
   test('signed-out access to ' + destination + ' returns to login', async ({ page }) => {
     await page.goto(destination)
     await expect(page).toHaveURL(/\/login$/)
@@ -14,15 +14,15 @@ test('real login rejects wrong credentials and restores the requested route', as
   page,
   player,
 }) => {
-  await page.goto('/ratings')
+  await page.goto('/recent_matches')
   await page.getByLabel('Email', { exact: true }).fill(player.email)
   await page.getByLabel('Password', { exact: true }).fill('IncorrectPassword!')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByText('Incorrect email or password.', { exact: true })).toBeVisible()
   await page.getByLabel('Password', { exact: true }).fill(player.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await expect(page).toHaveURL(/\/ratings$/)
-  await expect(page.getByRole('heading', { name: 'Your Elo', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/recent_matches$/)
+  await expect(page.getByRole('heading', { name: 'Recent Matches', exact: true })).toBeVisible()
 })
 
 test('sign-out protects history and a second account gets its own profile', async ({
@@ -32,9 +32,9 @@ test('sign-out protects history and a second account gets its own profile', asyn
 }) => {
   await signIn(page, player)
   await signOut(page)
-  await page.goto('/ratings')
+  await page.goto('/recent_matches')
   await expect(page).toHaveURL(/\/login$/)
-  await signIn(page, opponent, '/ratings')
+  await signIn(page, opponent, '/recent_matches')
   await expect(page.getByRole('button', { name: 'Open User Profile Menu' })).not.toContainText(
     player.displayName,
   )
@@ -47,7 +47,7 @@ test('home header fits a small phone and exposes keyboard navigation', async ({
 }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 740 })
   await signIn(page, player)
-  const link = page.getByRole('link', { name: 'View piano Elo and rating history' })
+  const link = page.getByRole('button', { name: 'View piano Elo details' })
   await expect(link).toContainText('Piano-400')
   const menu = page.getByRole('button', { name: 'Open User Profile Menu' })
   const width = page.viewportSize()!.width
@@ -63,7 +63,11 @@ test('home header fits a small phone and exposes keyboard navigation', async ({
   await page.keyboard.press(key)
   await expect(link).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/ratings$/)
+  await expect(page.getByRole('region', { name: 'Elo details' })).toBeVisible()
+  await expect(page).toHaveURL(/\/home$/)
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Recent Matches', exact: true }).click()
+  await expect(page).toHaveURL(/\/recent_matches$/)
 })
 
 test('the real API rejects a request without a Firebase ID token', async ({ request }) => {

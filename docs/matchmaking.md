@@ -100,8 +100,25 @@ with the same preferred instrument and similar Elo. Publish at least one
 playable scenario with suitable difficulty through the existing editor. Open
 Online Play on each, show the shared scenario/opponent, refresh one, return to
 Home and rejoin, then leave the lobby and show the other returning to queue.
-For two devices, use a reachable backend URL and its frontend origin in CORS;
-`localhost` refers to each device itself.
+Start the shared backend from `backend/`:
+
+```bash
+.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Run `npm run dev` from `frontend/`. By default, browser API requests use the
+frontend's `/api` proxy, which reaches this backend at `127.0.0.1:8000`.
+Both accounts must use the same backend. If both devices open one frontend
+server's LAN URL, no API override is needed. If each device runs its own
+frontend, set `API_PROXY_TARGET=http://<backend-computer-LAN-IP>:8000` in
+each frontend's `.env.local` and restart Vite. Leave `VITE_API_BASE_URL` empty
+for proxy mode; an explicit origin remains available for deployed frontends.
+`localhost` on two different computers is not a shared server.
+
+The Home Elo badge opens an instrument selector and explanation. Selection is
+saved to the existing `userSettings.preferredInstrument`, so reloads and
+matchmaking use the same instrument. Recent Matches is a separate Home entry
+under Online Play at `/recent_matches`; old `/ratings` links redirect there.
 
 The existing Playwright harness can run the demo against isolated Auth and
 Firestore emulators, including local fixture accounts and a published chart:
