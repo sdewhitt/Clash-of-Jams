@@ -54,7 +54,7 @@ const outcomes = [
 for (const outcome of outcomes) {
   test('live history explains ' + outcome.result, async ({ page, data, player, opponent }) => {
     await signIn(page, player, '/recent_matches')
-    await expect(page.getByText('No rated matches yet.', { exact: false })).toBeVisible()
+    await expect(page.getByText('No previous matches.', { exact: false })).toBeVisible()
     await (await prepareResult(data, player, opponent, outcome.result)).apply()
     const card = page.getByRole('article')
     await expect(card).toHaveCount(1)
@@ -87,7 +87,7 @@ test('instrument selection isolates history and preferred-instrument changes rea
   await page.getByRole('combobox', { name: 'Instrument' }).selectOption('guitar')
   await expect(page.getByRole('region', { name: 'Instrument rating' })).toContainText('Guitar-400')
   await expect(page.getByRole('article')).toHaveCount(0)
-  await expect(page.getByText('No rated matches yet.', { exact: false })).toBeVisible()
+  await expect(page.getByText('No previous matches.', { exact: false })).toBeVisible()
   await page.getByRole('combobox', { name: 'Instrument' }).selectOption('piano')
   await expect(page.getByRole('article')).toHaveCount(1)
   await page.goto('/home')
@@ -141,7 +141,7 @@ test('switching accounts never reveals the previous player history', async ({
   await signIn(page, newcomer, '/recent_matches')
   await expect(page.getByRole('article')).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Instrument rating' })).toContainText('Piano-400')
-  await expect(page.getByText('No rated matches yet.', { exact: false })).toBeVisible()
+  await expect(page.getByText('No previous matches.', { exact: false })).toBeVisible()
 })
 
 test('a missing rating is shown explicitly instead of inventing a score', async ({

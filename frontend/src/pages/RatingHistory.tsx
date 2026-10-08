@@ -18,8 +18,9 @@ export function RatingHistory() {
     user?.uid,
     preferredInstrument,
   )
-  const history = useRatingHistory(user?.uid, instrument)
   const rating = ratings.find((item) => item.instrument === instrument)
+  // A confirmed zero match count is already an empty history; don't fetch it.
+  const history = useRatingHistory(user?.uid, instrument, !loading && rating?.gamesPlayed !== 0)
 
   return (
     <main className="min-h-screen text-ink">
@@ -82,13 +83,13 @@ export function RatingHistory() {
           )}
         </section>
         <h2 className="text-xl font-bold">Recent matches</h2>
-        {history.loading ? (
+        {loading || history.loading ? (
           <p>Loading history…</p>
         ) : history.error ? (
           <p role="alert">{history.error}</p>
         ) : history.events.length === 0 ? (
           <p className="rounded-xl border-2 border-accent-start p-5 text-muted">
-            No rated matches yet. Your match results will appear here.
+            No previous matches. Your match results will appear here.
           </p>
         ) : (
           history.events.map((event) => <RatingResult key={event.matchId} event={event} />)

@@ -38,7 +38,7 @@ test('sign-out protects history and a second account gets its own profile', asyn
   await expect(page.getByRole('button', { name: 'Open User Profile Menu' })).not.toContainText(
     player.displayName,
   )
-  await expect(page.getByText('No rated matches yet.', { exact: false })).toBeVisible()
+  await expect(page.getByText('No previous matches.', { exact: false })).toBeVisible()
 })
 
 test('home header fits a small phone and exposes keyboard navigation', async ({
