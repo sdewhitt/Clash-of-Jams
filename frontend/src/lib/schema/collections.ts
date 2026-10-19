@@ -183,6 +183,7 @@ export function newUserSettings(args: {
     publicGenres: [],
     publicElos: [],
     inputLatencyOffsetMs: 0,
+    midiLatencyOffsetMs: 0,
     masterVolume: 0.8,
     metronomeEnabled: true,
     updatedAt: serverTimestamp(),

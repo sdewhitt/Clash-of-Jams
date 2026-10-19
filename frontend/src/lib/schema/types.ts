@@ -130,6 +130,11 @@ export interface UserSettings {
   publicElos: Instrument[]
   /** Milliseconds of input latency the gameplay engine compensates for. */
   inputLatencyOffsetMs: number
+  /**
+   * The same for a MIDI controller, which skips the microphone and runs far lower. Calibrated
+   * from the scenario editor and subtracted from notes recorded there. Older documents lack it.
+   */
+  midiLatencyOffsetMs?: number
   masterVolume: number
   metronomeEnabled: boolean
   updatedAt: Timestamp

@@ -134,6 +134,11 @@ rather than a change to the chart.
 of the rules in force when the run happened, so changing a scenario's rules
 later cannot silently rewrite old scores.
 
+**Two latencies, not one.** `UserSettings.inputLatencyOffsetMs` is the whole
+microphone loop; `midiLatencyOffsetMs` is a MIDI controller's, which is a fraction
+of it and is calibrated from the scenario editor. Documents written before the
+field existed lack it, and readers treat a missing value as 0.
+
 ## How the invariants are enforced
 
 | Design document invariant                     | Mechanism                                                                                                                                                                            |

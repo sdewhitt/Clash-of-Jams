@@ -28,8 +28,12 @@ export const EDITOR_LIMITS: ChartLimits = {
   minDurationBeats: 1 / 16,
 }
 
-/** Mezzo-forte. Dynamics get their own editing pass in story #26. */
+/** Mezzo-forte, for notes placed with the mouse. */
 export const DEFAULT_VELOCITY = 80
+
+/** MIDI's velocity range; 0 would be a note-off. */
+export const MIN_VELOCITY = 1
+export const MAX_VELOCITY = 127
 
 export interface NoteInput {
   midiPitch: number
@@ -79,6 +83,32 @@ export function addNote(
   )
 }
 
+/**
+ * Adds many notes at once, as a MIDI recording does. Notes outside the limits are dropped
+ * rather than failing the batch; with `replace`, the part's existing notes go first.
+ */
+export function addNotes(
+  chart: NoteChart,
+  partId: string,
+  notes: readonly NoteInput[],
+  { replace = false, limits = EDITOR_LIMITS }: { replace?: boolean; limits?: ChartLimits } = {},
+): NoteChart {
+  const accepted = notes.filter((note) => isNoteInRange(note, limits))
+  if (accepted.length === 0 && !replace) return chart
+  return mapPart(chart, partId, (part) =>
+    normalizeNotes([
+      ...(replace ? [] : part.notes),
+      ...accepted.map((note) => ({
+        index: 0,
+        midiPitch: note.midiPitch,
+        startBeat: note.startBeat,
+        durationBeats: note.durationBeats,
+        velocity: clampVelocity(note.velocity ?? DEFAULT_VELOCITY),
+      })),
+    ]),
+  )
+}
+
 export function removeNote(chart: NoteChart, partId: string, index: number): NoteChart {
   const part = findPart(chart, partId)
   if (!part?.notes[index]) return chart
@@ -107,6 +137,24 @@ export function resizeNote(
   limits: ChartLimits = EDITOR_LIMITS,
 ): NoteChart {
   return replaceNote(chart, partId, index, (note) => ({ ...note, durationBeats }), limits)
+}
+
+/** Changes a note's dynamics, leaving its pitch, onset and length alone. */
+export function setVelocity(
+  chart: NoteChart,
+  partId: string,
+  index: number,
+  velocity: number,
+  limits: ChartLimits = EDITOR_LIMITS,
+): NoteChart {
+  if (!Number.isFinite(velocity)) return chart
+  const clamped = clampVelocity(velocity)
+  if (findPart(chart, partId)?.notes[index]?.velocity === clamped) return chart
+  return replaceNote(chart, partId, index, (note) => ({ ...note, velocity: clamped }), limits)
+}
+
+export function clampVelocity(velocity: number) {
+  return Math.min(MAX_VELOCITY, Math.max(MIN_VELOCITY, Math.round(velocity)))
 }
 
 /** Finds a note by its values, which is how a freshly added one is located. */
