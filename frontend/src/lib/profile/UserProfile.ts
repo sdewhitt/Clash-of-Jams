@@ -1,5 +1,6 @@
 import { doc, serverTimestamp, updateDoc, setDoc, runTransaction, } from 'firebase/firestore';
 import { type Theme } from "@/context/ThemeContext";
+import { PROFANE_USERNAME_MESSAGE, isProfaneUsername } from '@/lib/auth/profanity';
 import { db } from '@/lib/firebase';
 import { scenarioThemesPath } from '../schema/collections';
 
@@ -204,6 +205,10 @@ export async function updateUsername( uid: string, oldUsername: string, newUsern
         throw new Error(
             "Valid usernames can only contain letters, numbers, and underscores."
         );
+    }
+
+    if (isProfaneUsername(username)) {
+        throw new Error(PROFANE_USERNAME_MESSAGE);
     }
 
     const userRef = doc(db, "users", uid);

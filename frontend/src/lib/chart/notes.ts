@@ -49,6 +49,24 @@ export function beatToMs(chart: NoteChart, beat: number) {
   return ms
 }
 
+/**
+ * The beat at a wall-clock position, the inverse of beatToMs. Times before 0 come out as
+ * negative beats at the opening tempo, which is how a note played early is represented.
+ */
+export function msToBeat(chart: NoteChart, ms: number) {
+  const sorted = sortedTempoMap(chart)
+  if (ms <= 0) return (ms / 60_000) * sorted[0].bpm
+  let elapsed = 0
+  for (let i = 0; i < sorted.length; i++) {
+    const from = Math.max(sorted[i].atBeat, 0)
+    const nextAt = sorted[i + 1]?.atBeat
+    const spanMs = nextAt === undefined ? Infinity : ((nextAt - from) / sorted[i].bpm) * 60_000
+    if (ms - elapsed <= spanMs) return from + ((ms - elapsed) / 60_000) * sorted[i].bpm
+    elapsed += spanMs
+  }
+  return 0
+}
+
 /** The beat the last note lets go, or 0 for an empty chart. */
 export function chartEndBeat(chart: NoteChart) {
   let end = 0

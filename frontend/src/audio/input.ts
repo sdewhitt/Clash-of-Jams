@@ -11,6 +11,8 @@ export interface AudioInputOptions {
   analyzer?: Partial<AnalyzerOptions>
   segmenter?: Partial<SegmenterOptions>
   onFrame?: (frame: AudioFrame) => void
+  /** Every raw block from the microphone, stamped on the audio clock, e.g. to keep the take. */
+  onSamples?: (block: SampleBlock) => void
   onNote?: (note: DetectedNote) => void
 }
 
@@ -82,6 +84,7 @@ export async function openAudioInput(options: AudioInputOptions = {}): Promise<A
   }
 
   node.port.onmessage = ({ data }: MessageEvent<SampleBlock>) => {
+    options.onSamples?.(data)
     for (const frame of analyzer.push(data.samples, data.time)) {
       options.onFrame?.(frame)
       collect(segmenter.push(frame))

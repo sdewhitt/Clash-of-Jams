@@ -6,12 +6,22 @@
  * points at, which is what makes a save-then-reopen round trip land on the
  * notes and metadata that were saved. Saving is refused without a signed-in
  * author or a title, so a half-formed scenario never reaches Firestore.
+ *
+ * Notes can also come from outside the grid: a MusicXML or MIDI file replaces
+ * the chart, and a MIDI controller records into it (user stories #26 and #30).
+ * Any chart can be exported back out as a .mid file.
  */
 import { useEffect, useRef, useState } from 'react'
 
 import { PianoRoll } from '@/components/PianoRoll'
+import { addNotes } from '@/lib/chart/edits'
+import type { NoteInput } from '@/lib/chart/edits'
 import { chartDurationMs } from '@/lib/chart/notes'
 import { useAuth } from '@/lib/auth/useAuth'
+import { downloadBytes, fileNameFor } from '@/lib/download'
+import { MIDI_ACCEPT, chartToMidi, midiTrackImport, readMidiUpload } from '@/lib/import/midiFile'
+import type { MidiFile, MidiImport } from '@/lib/import/midiFile'
+import type { MusicXmlImport } from '@/lib/import/musicxml'
 import { MUSICXML_ACCEPT, importMusicXmlFile } from '@/lib/import/musicxmlFile'
 import { loadScenario, saveScenarioDraft } from '@/lib/scenarios/store'
 import { INSTRUMENTS, VISIBILITIES } from '@/lib/schema/types'
@@ -29,6 +39,7 @@ import {
   withOpeningTempo,
 } from '@/pages/scenario_editor/draft'
 import type { ScenarioDraft } from '@/pages/scenario_editor/draft'
+import { MidiRecordPanel } from '@/pages/scenario_editor/MidiRecordPanel'
 import { PlayTest } from '@/pages/scenario_editor/PlayTest'
 
 const FIELD_CLASS =
@@ -68,6 +79,11 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
   // The id this panel wrote itself, which therefore needs no read back.
   const [savedHere, setSavedHere] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const midiInput = useRef<HTMLInputElement>(null)
+  // A multi-track MIDI file waiting for the author to pick a track.
+  const [pendingMidi, setPendingMidi] = useState<{ file: MidiFile; fileName: string } | null>(null)
+  // A MIDI take in progress, drawn over the chart until it is committed.
+  const [take, setTake] = useState<{ notes: NoteInput[]; replace: boolean } | null>(null)
 
   // Resetting during render is React's own answer to "the prop changed, drop
   // the state derived from it"; an effect would paint the old scenario first.
@@ -80,6 +96,7 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
       setDraft(emptyDraft())
       setDirty(false)
       setPlayTesting(false)
+      setPendingMidi(null)
       setStatus(scenarioId ? { kind: 'loading' } : { kind: 'idle' })
     }
   }
@@ -124,29 +141,67 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     }
   }
 
+  function confirmReplace() {
+    return (
+      noteCount(draft.chart) === 0 ||
+      window.confirm('Importing replaces the notes already in this scenario. Continue?')
+    )
+  }
+
+  function applyImport(imported: MusicXmlImport | MidiImport, fileName: string) {
+    setDraft(withImportedScore(draft, imported))
+    setDirty(true)
+    setStatus({
+      kind: 'imported',
+      fileName,
+      notes: noteCount(imported.chart),
+      warnings: imported.warnings,
+    })
+  }
+
   async function handleImport(file: File) {
-    if (
-      noteCount(draft.chart) > 0 &&
-      !window.confirm('Importing replaces the notes already in this scenario. Continue?')
-    ) {
-      return
-    }
+    if (!confirmReplace()) return
     try {
-      const imported = await importMusicXmlFile(file)
-      setDraft(withImportedScore(draft, imported))
-      setDirty(true)
-      setStatus({
-        kind: 'imported',
-        fileName: file.name,
-        notes: noteCount(imported.chart),
-        warnings: imported.warnings,
-      })
+      applyImport(await importMusicXmlFile(file), file.name)
     } catch (error: unknown) {
       setStatus({ kind: 'error', message: messageOf(error) })
     }
   }
 
+  /** A one-track file imports straight away; with more, the author picks which one. */
+  async function handleMidiImport(file: File) {
+    try {
+      const midi = await readMidiUpload(file)
+      if (midi.tracks.length > 1) {
+        setPendingMidi({ file: midi, fileName: file.name })
+        return
+      }
+      if (!confirmReplace()) return
+      applyImport(midiTrackImport(midi, midi.tracks[0].trackIndex), file.name)
+    } catch (error: unknown) {
+      setStatus({ kind: 'error', message: messageOf(error) })
+    }
+  }
+
+  function handleTrackChosen(trackIndex: number) {
+    if (!pendingMidi) return
+    const { file, fileName } = pendingMidi
+    setPendingMidi(null)
+    if (!confirmReplace()) return
+    try {
+      applyImport(midiTrackImport(file, trackIndex), fileName)
+    } catch (error: unknown) {
+      setStatus({ kind: 'error', message: messageOf(error) })
+    }
+  }
+
+  function handleExport() {
+    const bytes = chartToMidi(draft.chart, draft.title.trim())
+    downloadBytes(bytes, `${fileNameFor(draft.title)}.mid`, 'audio/midi')
+  }
+
   const tempo = openingTempo(draft.chart)
+  const partId = draft.chart.parts[0]?.partId ?? DEFAULT_PART_ID
   const notes = noteCount(draft.chart)
   const canSave =
     Boolean(user) && draft.title.trim().length > 0 && status.kind !== 'saving' && dirty
@@ -205,6 +260,40 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
             if (file) void handleImport(file)
           }}
         />
+
+        <button
+          type="button"
+          onClick={() => midiInput.current?.click()}
+          className="rounded-lg border-2 border-base-middle px-6 py-3 font-bold text-ink
+            transition-colors hover:border-accent-start hover:bg-accent-base-middle"
+        >
+          Import MIDI
+        </button>
+        <input
+          ref={midiInput}
+          type="file"
+          accept={MIDI_ACCEPT}
+          aria-label="MIDI file"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            if (file) void handleMidiImport(file)
+          }}
+        />
+
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={notes === 0}
+          title={notes === 0 ? 'Add some notes to export this scenario.' : undefined}
+          className="rounded-lg border-2 border-base-middle px-6 py-3 font-bold text-ink
+            transition-colors hover:border-accent-start hover:bg-accent-base-middle
+            disabled:cursor-not-allowed disabled:text-faint disabled:hover:border-base-middle
+            disabled:hover:bg-transparent"
+        >
+          Export MIDI
+        </button>
 
         <button
           type="button"
@@ -365,9 +454,21 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
         </div>
       </div>
 
-      <PianoRoll
+      <MidiRecordPanel
         chart={draft.chart}
-        partId={draft.chart.parts[0]?.partId ?? DEFAULT_PART_ID}
+        uid={user?.uid ?? null}
+        onPreview={setTake}
+        onCommit={(recorded, replace) =>
+          edit({ ...draft, chart: addNotes(draft.chart, partId, recorded, { replace }) })
+        }
+      />
+
+      <PianoRoll
+        chart={
+          take ? addNotes(draft.chart, partId, take.notes, { replace: take.replace }) : draft.chart
+        }
+        partId={partId}
+        readOnly={take !== null}
         onChange={(chart) => edit({ ...draft, chart })}
       />
 
@@ -377,9 +478,78 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
         {(chartDurationMs(draft.chart) / 1000).toFixed(1)}s
       </p>
 
+      {pendingMidi && (
+        <MidiTrackPicker
+          fileName={pendingMidi.fileName}
+          tracks={pendingMidi.file.tracks}
+          onPick={handleTrackChosen}
+          onCancel={() => setPendingMidi(null)}
+        />
+      )}
+
       {playTesting && (
         <PlayTest draft={draft} uid={user?.uid ?? null} onClose={() => setPlayTesting(false)} />
       )}
+    </div>
+  )
+}
+
+function MidiTrackPicker({
+  fileName,
+  tracks,
+  onPick,
+  onCancel,
+}: {
+  fileName: string
+  tracks: MidiFile['tracks']
+  onPick: (trackIndex: number) => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="midi-track-title"
+        onKeyDown={(event) => event.key === 'Escape' && onCancel()}
+        className="flex max-h-full w-full max-w-md flex-col gap-4 overflow-y-auto rounded-xl
+          border-4 border-accent-start bg-base-start p-6"
+      >
+        <h2 id="midi-track-title" className="text-xl font-bold text-ink">
+          Choose a track
+        </h2>
+        <p className="text-sm text-muted">
+          {fileName} has {tracks.length} tracks. A scenario is one part, so pick the one to play.
+        </p>
+        <ul className="flex flex-col gap-2">
+          {tracks.map((track) => (
+            <li key={track.trackIndex}>
+              <button
+                type="button"
+                onClick={() => onPick(track.trackIndex)}
+                className="flex w-full items-center justify-between rounded-lg border-2
+                  border-base-middle px-4 py-2 text-left text-ink transition-colors
+                  hover:border-accent-start hover:bg-accent-base-middle"
+              >
+                <span className="font-bold">{track.name}</span>
+                <span className="text-sm text-muted">
+                  {track.noteCount} {track.noteCount === 1 ? 'note' : 'notes'}
+                  {track.percussion ? ' -- drums' : ''}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          autoFocus
+          onClick={onCancel}
+          className="self-end rounded-lg border-2 border-base-middle px-4 py-2 text-sm font-bold
+            text-ink hover:border-accent-start"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }

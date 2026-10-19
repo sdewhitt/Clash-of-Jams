@@ -93,6 +93,7 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 | `moderationActions/{actionId}`            | `ModerationAction`    |                                           |
 | `matchInvitations/{invitationId}`         | `MatchInvitation`     |                                           |
 | `recordingShares/{shareId}`               | `RecordingShare`      |                                           |
+| `scoreShares/{shareId}`                   | `ScoreShare`          | A run's result, sent to friends.          |
 | `importJobs/{jobId}`                      | `ImportJob`           | MIDI, MusicXML and sheet-image ingestion. |
 
 `_schema/meta` holds the schema version and the collection list the script last
@@ -133,6 +134,19 @@ rather than a change to the chart.
 **Scoring rules are copied, not referenced.** `Run.scoringRules` is a snapshot
 of the rules in force when the run happened, so changing a scenario's rules
 later cannot silently rewrite old scores.
+
+**Shared scores are snapshots.** Sending a result to friends writes a
+`scoreShares` document holding the scenario title and final score as they were,
+plus the `recipientUids` it went to. Recipients read the snapshot rather than the
+scenario, which may be private; the rules compare the copied score with the run it
+names, so a client cannot send a better score than it played. "Shared with me" is
+an `array-contains` query on `recipientUids`, ordered by `createdAt`. Exported run
+audio is downloaded on the player's device and never stored.
+
+**Two latencies, not one.** `UserSettings.inputLatencyOffsetMs` is the whole
+microphone loop; `midiLatencyOffsetMs` is a MIDI controller's, which is a fraction
+of it and is calibrated from the scenario editor. Documents written before the
+field existed lack it, and readers treat a missing value as 0.
 
 ## How the invariants are enforced
 
