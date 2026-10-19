@@ -41,13 +41,15 @@ vi.mock('firebase/auth', async (importOriginal) => {
   return {
     ...actual,
     signInWithPopup: vi.fn(),
+    createUserWithEmailAndPassword: vi.fn(),
     signOut: vi.fn(async () => {}),
   }
 })
 
-const { GoogleAuthProvider, signInWithPopup, signOut } = await import('firebase/auth')
+const { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithPopup, signOut } =
+  await import('firebase/auth')
 const { auth } = await import('@/lib/firebase')
-const { authErrorMessage, ensureAccountDocuments, signInWithGoogle, signOutCurrentUser } =
+const { authErrorMessage, ensureAccountDocuments, signInWithGoogle, signOutCurrentUser, signUp } =
   await import('@/lib/auth/account')
 
 function googleUser(overrides: Partial<User> = {}): User {
@@ -72,6 +74,7 @@ beforeEach(() => {
   store.clear()
   commits.length = 0
   vi.mocked(signInWithPopup).mockReset()
+  vi.mocked(createUserWithEmailAndPassword).mockReset()
   vi.mocked(signOut).mockClear()
 })
 
@@ -168,6 +171,40 @@ describe('ensureAccountDocuments', () => {
 
     expect(store.get('users/u-email')).toMatchObject({ username: 'adalovelace' })
     expect(store.get('users/u-none')).toMatchObject({ username: 'player' })
+  })
+
+  it('uses the placeholder instead of a profane provider name', async () => {
+    await ensureAccountDocuments(googleUser({ uid: 'u-rude', displayName: 'Big Fuck' }))
+
+    expect(store.get('users/u-rude')).toMatchObject({ username: 'player' })
+  })
+})
+
+// User story #73: profane usernames are stopped before anything is claimed.
+describe('signUp', () => {
+  const args = { email: 'new@example.com', password: 'hunter22' }
+
+  it.each(['fuck_this', 'Sh1tHead', 'big_ass_guy'])(
+    'rejects %s before creating an account or any document',
+    async (username) => {
+      await expect(signUp({ ...args, username })).rejects.toThrow(/not allowed/)
+
+      expect(createUserWithEmailAndPassword).not.toHaveBeenCalled()
+      expect(store.size).toBe(0)
+    },
+  )
+
+  it('still applies the length and character rules', async () => {
+    await expect(signUp({ ...args, username: 'ab' })).rejects.toThrow(/3-20 characters/)
+    await expect(signUp({ ...args, username: 'has space' })).rejects.toThrow(/3-20 characters/)
+    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled()
+  })
+
+  it('still rejects a clean username that is taken', async () => {
+    store.set('usernames/classic_rock', { uid: 'someone-else' })
+
+    await expect(signUp({ ...args, username: 'Classic_Rock' })).rejects.toThrow(/taken/)
+    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled()
   })
 })
 
