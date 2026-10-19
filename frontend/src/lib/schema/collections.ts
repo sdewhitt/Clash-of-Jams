@@ -22,6 +22,7 @@ import type {
   Playlist,
   PlaylistItem,
   RecordingShare,
+  ScoreShare,
   Run,
   Scenario,
   ScenarioReview,
@@ -55,6 +56,7 @@ export const COLLECTIONS = {
   moderationActions: 'moderationActions',
   matchInvitations: 'matchInvitations',
   recordingShares: 'recordingShares',
+  scoreShares: 'scoreShares',
   importJobs: 'importJobs',
 } as const
 
@@ -553,6 +555,29 @@ export function newRecordingShare(args: {
     mediaAssetId: args.mediaAssetId,
     caption: args.caption ?? '',
     visibility: args.visibility ?? 'private',
+    createdAt: serverTimestamp(),
+  }
+}
+
+export function newScoreShare(args: {
+  id: string
+  ownerUid: string
+  runId: string
+  scenarioId: string
+  scenarioTitle: string
+  finalScore: number
+  recipientUids: string[]
+  message?: string
+}): WithFieldValue<ScoreShare> {
+  return {
+    id: args.id,
+    ownerUid: args.ownerUid,
+    runId: args.runId,
+    scenarioId: args.scenarioId,
+    scenarioTitle: args.scenarioTitle,
+    finalScore: args.finalScore,
+    message: args.message ?? '',
+    recipientUids: args.recipientUids,
     createdAt: serverTimestamp(),
   }
 }

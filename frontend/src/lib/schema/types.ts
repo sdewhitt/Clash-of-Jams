@@ -537,6 +537,25 @@ export interface RecordingShare {
   createdAt: Timestamp
 }
 
+/**
+ * scoreShares/{shareId} -- a run's result, sent to friends from the results screen.
+ *
+ * The title and score are copied from the scenario and run when it is sent, so a recipient
+ * sees them without reading a scenario that may be private. The rules check the copied score
+ * against the run itself, so it cannot be inflated.
+ */
+export interface ScoreShare {
+  id: string
+  ownerUid: string
+  runId: string
+  scenarioId: string
+  scenarioTitle: string
+  finalScore: number
+  message: string
+  recipientUids: string[]
+  createdAt: Timestamp
+}
+
 /** importJobs/{jobId} — sheet music image, MusicXML and MIDI ingestion. */
 export interface ImportJob {
   id: string

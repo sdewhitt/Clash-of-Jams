@@ -11,6 +11,7 @@ import { MyFriends } from '@/pages/social/MyFriends'
 import { FindFriends } from '@/pages/social/FindFriends'
 import { MyCommunities } from '@/pages/social/MyCommunities'
 import { FindCommunities } from '@/pages/social/FindCommunities'
+import { SharedScores } from '@/pages/social/SharedScores'
 import { Settings } from '@/pages/Settings'
 import { Tuner } from '@/pages/Tuner'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
@@ -32,6 +33,7 @@ const PROTECTED_ROUTES = [
   { path: '/friends/find_friends', element: <FindFriends /> },
   { path: '/friends/my_communities', element: <MyCommunities /> },
   { path: '/friends/find_communities', element: <FindCommunities /> },
+  { path: '/friends/shared_scores', element: <SharedScores /> },
   { path: '/settings', element: <Settings /> },
   { path: '/tuner', element: <Tuner /> },
   { path: '/scenario_editor', element: <ScenarioEditor /> },

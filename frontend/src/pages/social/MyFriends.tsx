@@ -71,6 +71,25 @@ export function MyFriends() {
                     >
                         Add a Friend
                     </button>
+                    <button
+                        className={`
+                            rounded-lg
+                            bg-linear-to-b
+                            from-contrast-start
+                            via-contrast-middle
+                            to-contrast-end
+                            outline-3
+                            outline-contrast-middle
+                            text-ink
+                            hover:brightness-125
+                            active:scale-95
+                            px-3
+                            py-3`
+                        }
+                        onClick={() => navPortal("/friends/shared_scores")}
+                    >
+                        Shared With You
+                    </button>
                 </div>
                 <div className="px-8 pt-6">
                     <input
