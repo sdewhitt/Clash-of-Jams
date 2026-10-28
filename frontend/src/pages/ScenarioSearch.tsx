@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
@@ -7,12 +7,8 @@ import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
 import { StarDisplay } from "@/components/StarRating"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
+import { loadCachedSearch, saveCachedSearch, type ScenarioWithAuthor } from "@/lib/scenarios/searchCache"
 import { INSTRUMENTS, type Scenario, type ScenarioReview } from "@/lib/schema/types"
-
-type ScenarioWithAuthor = {
-    scenario: Scenario
-    authorName: string
-}
 
 // Mirrors backend/app/schemas.py's PublicReview; timestamps arrive as ISO strings.
 type ApiReview = Omit<ScenarioReview, "createdAt" | "updatedAt"> & {
@@ -22,15 +18,19 @@ type ApiReview = Omit<ScenarioReview, "createdAt" | "updatedAt"> & {
     displayName: string
 }
 
-// Mirrors backend/app/schemas.py's FilterResponse (camelCase on the wire).
-type FilterResponse = {
-    instruments: string[]
-    minPlays: number | null
-    maxPlays: number | null
-    minRating: number | null
-    maxRating: number | null
-    minDifficulty: number | null
-    maxDifficulty: number | null
+type Bounds = [min: number, max: number]
+
+/** Ratings are stars, so their slider always spans the whole scale. */
+const RATING_BOUNDS: Bounds = [0, 5]
+
+/** Rows rendered at first, and added by each "Show more"; a large catalog stays quick to draw. */
+const PAGE_SIZE = 50
+
+/** The smallest and largest value across the listing, or null when there is nothing to span. */
+function boundsOf(rows: ScenarioWithAuthor[], value: (scenario: Scenario) => number): Bounds | null {
+    if (rows.length === 0) return null
+    const values = rows.map(({ scenario }) => value(scenario))
+    return [Math.min(...values), Math.max(...values)]
 }
 
 const SORT_OPTIONS = [
@@ -76,7 +76,8 @@ export function ScenarioSearch() {
     const [sortKey, setSortKey] = useState<SortKey>("title")
     const [sortAscending, setSortAscending] = useState(true)
 
-    const [scenarios, setScenarios] = useState<ScenarioWithAuthor[]>([])
+    // Last visit's listing, shown straight away and replaced once the fresh one arrives.
+    const [scenarios, setScenarios] = useState<ScenarioWithAuthor[]>(() => loadCachedSearch(user?.uid) ?? [])
     // So a failed fetch reads as an error rather than as "nothing matches".
     const [scenariosFailed, setScenariosFailed] = useState(false)
     const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -92,27 +93,26 @@ export function ScenarioSearch() {
     } | null>(null)
     const selectedReviews = loadedReviews?.scenarioId === selectedId ? loadedReviews : null
 
-    // Each range is null until we know the real bounds from the API — a
-    // slider with a null range renders disabled instead of guessing 0-0.
-    const [filterBounds, setFilterBounds] = useState<FilterResponse | null>(null)
-    const [ratingRange, setRatingRange] = useState<[number, number] | null>(null)
-    const [playsRange, setPlaysRange] = useState<[number, number] | null>(null)
-    const [difficultyRange, setDifficultyRange] = useState<[number, number] | null>(null)
+    // Slider bounds come from the listing itself. Each range stays null until the slider is
+    // moved, meaning "no filter", so a refreshed listing widens the bounds without a reset.
+    const playsBounds = useMemo(() => boundsOf(scenarios, (s) => s.playCount), [scenarios])
+    const difficultyBounds = useMemo(() => boundsOf(scenarios, (s) => s.authorDifficulty), [scenarios])
+    const [ratingRange, setRatingRange] = useState<Bounds | null>(null)
+    const [playsRange, setPlaysRange] = useState<Bounds | null>(null)
+    const [difficultyRange, setDifficultyRange] = useState<Bounds | null>(null)
+    const [shownCount, setShownCount] = useState(PAGE_SIZE)
 
     useEffect(() => {
         apiFetch<ScenarioWithAuthor[]>("/scenarios/scenario_with_author")
-            .then(setScenarios)
+            .then((rows) => {
+                setScenarios(rows)
+                saveCachedSearch(user?.uid, rows)
+            })
             .catch((err) => {
                 console.error(err)
                 setScenariosFailed(true)
             })
-    }, [])
-
-    useEffect(() => {
-        apiFetch<FilterResponse>("/scenarios/filter_items")
-            .then(setFilterBounds)
-            .catch(console.error)
-    }, [])
+    }, [user?.uid])
 
     useEffect(() => {
         if (!selectedId) return
@@ -129,22 +129,6 @@ export function ScenarioSearch() {
             cancelled = true
         }
     }, [selectedId])
-
-    // Seed each slider's range from the fetched bounds, once they arrive.
-    // Left null (and the slider left disabled) if a bound isn't available yet,
-    // e.g. rating, since that feature isn't implemented on the backend.
-    useEffect(() => {
-        if (!filterBounds) return
-        if (filterBounds.minPlays !== null && filterBounds.maxPlays !== null) {
-            setPlaysRange([filterBounds.minPlays, filterBounds.maxPlays])
-        }
-        if (filterBounds.minDifficulty !== null && filterBounds.maxDifficulty !== null) {
-            setDifficultyRange([filterBounds.minDifficulty, filterBounds.maxDifficulty])
-        }
-        if (filterBounds.minRating !== null && filterBounds.maxRating !== null) {
-            setRatingRange([filterBounds.minRating, filterBounds.maxRating])
-        }
-    }, [filterBounds])
 
     function compareScenarios(a: ScenarioWithAuthor, b: ScenarioWithAuthor): number {
         let result: number
@@ -269,30 +253,29 @@ export function ScenarioSearch() {
 
                             <RangeSlider
                                 label="Rating"
-                                min={filterBounds?.minRating ?? 0}
-                                max={filterBounds?.maxRating ?? 0}
+                                min={RATING_BOUNDS[0]}
+                                max={RATING_BOUNDS[1]}
                                 step={0.5}
-                                value={ratingRange ?? [0, 0]}
+                                value={ratingRange ?? RATING_BOUNDS}
                                 onChange={setRatingRange}
-                                disabled={ratingRange === null}
                             />
                             <RangeSlider
                                 label="Plays"
-                                min={filterBounds?.minPlays ?? 0}
-                                max={filterBounds?.maxPlays ?? 0}
+                                min={playsBounds?.[0] ?? 0}
+                                max={playsBounds?.[1] ?? 0}
                                 step={1}
-                                value={playsRange ?? [0, 0]}
+                                value={playsRange ?? playsBounds ?? [0, 0]}
                                 onChange={setPlaysRange}
-                                disabled={playsRange === null}
+                                disabled={playsBounds === null}
                             />
                             <RangeSlider
                                 label="Difficulty"
-                                min={filterBounds?.minDifficulty ?? 0}
-                                max={filterBounds?.maxDifficulty ?? 0}
+                                min={difficultyBounds?.[0] ?? 0}
+                                max={difficultyBounds?.[1] ?? 0}
                                 step={1}
-                                value={difficultyRange ?? [0, 0]}
+                                value={difficultyRange ?? difficultyBounds ?? [0, 0]}
                                 onChange={setDifficultyRange}
-                                disabled={difficultyRange === null}
+                                disabled={difficultyBounds === null}
                             />
 
                             <div className="col-span-2 flex gap-2">
@@ -333,7 +316,7 @@ export function ScenarioSearch() {
                             py-4
                         `}>
                             <ul className="flex flex-col gap-3">
-                                {visibleScenarios.map(({ scenario, authorName }) => {
+                                {visibleScenarios.slice(0, shownCount).map(({ scenario, authorName }) => {
                                     const isSelected = scenario.id === selectedId
                                     return (
                                         <li
@@ -401,6 +384,15 @@ export function ScenarioSearch() {
                                     )
                                 })}
                             </ul>
+                            {visibleScenarios.length > shownCount && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShownCount((count) => count + PAGE_SIZE)}
+                                    className="mt-3 w-full rounded-lg bg-accent-start py-2 font-semibold text-ink hover:brightness-110"
+                                >
+                                    Show more ({visibleScenarios.length - shownCount} left)
+                                </button>
+                            )}
                             {visibleScenarios.length === 0 && (
                                 <p className="py-8 text-center text-muted">
                                     {scenariosFailed ? "Couldn't load scenarios." : "No scenarios match these filters."}

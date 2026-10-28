@@ -6,18 +6,10 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { saveCachedSearch, type ScenarioWithAuthor } from '@/lib/scenarios/searchCache'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { stubApi } from '@/test/api'
 import { renderWithAuth, signedIn } from '@/test/render'
-
-const FILTER_BOUNDS = {
-  minPlays: 0,
-  maxPlays: 10,
-  minRating: 0,
-  maxRating: 5,
-  minDifficulty: 1,
-  maxDifficulty: 10,
-}
 
 function scenario(id: string, title: string, authorName: string) {
   return {
@@ -51,10 +43,7 @@ const SCENARIOS = [
 ]
 
 function renderSearch(scenarios: { status?: number; body: unknown }) {
-  stubApi({
-    '/scenarios/scenario_with_author': scenarios,
-    '/scenarios/filter_items': { body: FILTER_BOUNDS },
-  })
+  stubApi({ '/scenarios/scenario_with_author': scenarios })
   renderWithAuth(<ScenarioSearch />, { auth: signedIn() })
 }
 
@@ -65,6 +54,7 @@ function listedTitles() {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  localStorage.clear()
 })
 
 describe('ScenarioSearch API responses', () => {
@@ -114,5 +104,42 @@ describe('ScenarioSearch search and sort', () => {
     expect(listedTitles()).toEqual(['AAAAA', 'BBBBB', 'CCCCC'])
     await userEvent.click(screen.getByRole('button', { name: 'Sort ascending' }))
     expect(listedTitles()).toEqual(['CCCCC', 'BBBBB', 'AAAAA'])
+  })
+})
+
+describe('ScenarioSearch loading', () => {
+  it("shows last visit's listing while the fresh one loads, then replaces it", async () => {
+    saveCachedSearch('user-1', [
+      scenario('a', 'AAAAA', 'TestUser'),
+    ] as unknown as ScenarioWithAuthor[])
+    let respond!: () => void
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            respond = () => resolve(Response.json(SCENARIOS))
+          }),
+      ),
+    )
+    renderWithAuth(<ScenarioSearch />, { auth: signedIn() })
+
+    expect(listedTitles()).toEqual(['AAAAA'])
+    respond()
+    await screen.findByText('CCCCC')
+    expect(listedTitles()).toEqual(['AAAAA', 'BBBBB', 'CCCCC'])
+  })
+
+  it('draws a page of rows at a time from a large catalog', async () => {
+    const titles = Array.from({ length: 60 }, (_, i) =>
+      String.fromCharCode(65 + Math.floor(i / 26), 65 + (i % 26)).padEnd(5, 'X'),
+    )
+    renderSearch({ body: titles.map((title, i) => scenario(`s${i}`, title, 'TestUser')) })
+    await screen.findByText('AAXXX')
+
+    expect(listedTitles()).toHaveLength(50)
+    await userEvent.click(screen.getByRole('button', { name: 'Show more (10 left)' }))
+    expect(listedTitles()).toHaveLength(60)
+    expect(screen.queryByRole('button', { name: /Show more/ })).not.toBeInTheDocument()
   })
 })
