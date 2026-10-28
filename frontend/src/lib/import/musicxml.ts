@@ -444,7 +444,7 @@ function scoreTitle(root: Element) {
   )
 }
 
-function guessInstrument(description: string): Instrument | null {
+export function guessInstrument(description: string): Instrument | null {
   const lower = description.toLowerCase()
   return INSTRUMENT_HINTS.find(([pattern]) => pattern.test(lower))?.[1] ?? null
 }

@@ -7,13 +7,14 @@ is a module-level dict so the endpoints run end to end today; replace _STORE
 with Firestore reads and writes when the persistence layer lands.
 """
 
+import time
 from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, status
 
 from app.dependencies import CurrentUserDep
-from app.schemas import Scenario, ScenarioCreate, FilterResponse, ScenarioWithAuthor
+from app.schemas import Scenario, ScenarioCreate, ScenarioWithAuthor
 from app.firebase import get_firestore_client
 from google.cloud.firestore_v1.base_query import FieldFilter
 
@@ -24,17 +25,55 @@ _STORE: dict[str, Scenario] = {}
 db = get_firestore_client()
 
 
-def _searchable_scenarios(uid: str) -> list[Scenario]:
+# How long one read of the public catalog serves every caller. Search lists the whole
+# catalog, so without this each page view would read every public scenario again.
+PUBLIC_CATALOG_TTL_S = 60.0
+_public_catalog: tuple[float, list[ScenarioWithAuthor]] | None = None
+
+
+def _with_authors(scenarios: list[Scenario]) -> list[ScenarioWithAuthor]:
+    """Pair each scenario with its author's display name, reading each author once.
+
+    One batched read for every author rather than one round trip per scenario.
+    Scenarios whose author has no profile are dropped.
+    """
+    uids = {s.author_uid for s in scenarios}
+    refs = [db.collection("users").document(uid) for uid in uids]
+    names = {
+        snap.id: snap.get("displayName")
+        for snap in db.get_all(refs, field_paths=["displayName"])
+        if snap.exists
+    }
+    return [
+        ScenarioWithAuthor(scenario=s, author_name=names[s.author_uid])
+        for s in scenarios
+        if s.author_uid in names
+    ]
+
+
+def _public_scenarios() -> list[ScenarioWithAuthor]:
+    """Every public scenario with its author, cached for PUBLIC_CATALOG_TTL_S."""
+    global _public_catalog
+    now = time.monotonic()
+    if _public_catalog is None or now - _public_catalog[0] > PUBLIC_CATALOG_TTL_S:
+        docs = db.collection("scenarios").where(
+            filter=FieldFilter("visibility", "==", "public")
+        ).stream()
+        _public_catalog = (now, _with_authors([Scenario(**doc.to_dict()) for doc in docs]))
+    return _public_catalog[1]
+
+
+def _searchable_scenarios(uid: str) -> list[ScenarioWithAuthor]:
     """Every public scenario, plus the caller's own at any visibility.
 
     Two equality queries merged by id rather than one OR query, so neither
     needs a composite index. An author can then find and play what they made
-    without publishing it first.
+    without publishing it first. Their own are read fresh, so an edit or a
+    publish shows up for them straight away even while the public list is cached.
     """
-    scenarios = db.collection("scenarios")
-    public = scenarios.where(filter=FieldFilter("visibility", "==", "public")).stream()
-    own = scenarios.where(filter=FieldFilter("authorUid", "==", uid)).stream()
-    by_id = {doc.id: Scenario(**doc.to_dict()) for doc in [*public, *own]}
+    own_docs = db.collection("scenarios").where(filter=FieldFilter("authorUid", "==", uid)).stream()
+    own = _with_authors([Scenario(**doc.to_dict()) for doc in own_docs])
+    by_id = {row.scenario.id: row for row in [*_public_scenarios(), *own]}
     return list(by_id.values())
 
 
@@ -83,38 +122,10 @@ def list_public_scenarios() -> list[Scenario]:
     return [Scenario(**doc.to_dict()) for doc in docs]
 
 
-@router.get("/filter_items", response_model=FilterResponse)
-def list_filter_items(user: CurrentUserDep) -> FilterResponse:
-    """Get the possible filters for scenarios to populate dropdowns and sliders"""
-    # Same set the search lists, or a slider's bounds could hide the caller's own scenario.
-    scenario_list = _searchable_scenarios(user.uid)
-    filter_response = FilterResponse()
-
-    for s in scenario_list:
-        if filter_response.max_difficulty is None or s.author_difficulty > filter_response.max_difficulty:
-            filter_response.max_difficulty = s.author_difficulty
-        if filter_response.min_difficulty is None or s.author_difficulty < filter_response.min_difficulty:
-            filter_response.min_difficulty = s.author_difficulty
-        if filter_response.max_plays is None or s.play_count > filter_response.max_plays:
-            filter_response.max_plays = s.play_count
-        if filter_response.min_plays is None or s.play_count < filter_response.min_plays:
-            filter_response.min_plays = s.play_count
-
-    return filter_response
-
-
 @router.get("/scenario_with_author", response_model=list[ScenarioWithAuthor])
 def list_scenario_with_author(user: CurrentUserDep) -> list[ScenarioWithAuthor]:
     """List public scenarios and the caller's own, with their authors, for search feature"""
-    scenario_list = _searchable_scenarios(user.uid)
-    out_list = []
-    for s in scenario_list:
-        doc = db.collection("users").document(s.author_uid).get(field_paths=["displayName"])
-        if not doc.exists:
-            continue
-        out_list.append(ScenarioWithAuthor(scenario=s, author_name=doc.get("displayName")))
-
-    return out_list
+    return _searchable_scenarios(user.uid)
 
 
 @router.get("/{scenario_id}", response_model=Scenario)

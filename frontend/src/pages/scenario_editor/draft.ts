@@ -92,11 +92,14 @@ export function withInstrument(draft: ScenarioDraft, instrument: Instrument): Sc
 }
 
 /**
- * Replaces the draft's chart with an imported score. The score's title only
+ * Replaces the draft's chart with an imported score (MusicXML or MIDI). The score's title only
  * fills a blank one, and its instrument wins only when the import could tell
  * what it was, so a file never overwrites what the author already chose.
  */
-export function withImportedScore(draft: ScenarioDraft, imported: MusicXmlImport): ScenarioDraft {
+export function withImportedScore(
+  draft: ScenarioDraft,
+  imported: Pick<MusicXmlImport, 'title' | 'instrument' | 'chart'>,
+): ScenarioDraft {
   return withInstrument(
     {
       ...draft,
