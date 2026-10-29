@@ -3,7 +3,7 @@ import { useNavigate } from "react-router"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { getUserSettings } from "@/lib/profile/UserSettings";
+// import { getUserSettings } from "@/lib/profile/UserSettings";
 import { useSkillRatings } from "@/lib/ratings/useSkillRatings";
 import type { UserPreferences, UserSettings } from '@/lib/schema/types';
 import { EloDisplay } from "@/components/EloDisplay";
