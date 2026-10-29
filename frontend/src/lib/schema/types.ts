@@ -109,6 +109,19 @@ export interface UserProfile {
   updatedAt: Timestamp
 }
 
+export interface PublicProfile {
+  uid: string
+  username: string
+  displayName: string
+  avatarUrl: string | null
+  bio: string | null
+  preferredInstrument: Instrument | null
+  preferredGenres: Genre[]
+  elos: Instrument[]
+  publicHistory: boolean
+  updatedAt: Timestamp
+}
+
 /** usernames/{usernameLower} — reservation document enforcing invariant 1. */
 export interface UsernameReservation {
   uid: string
@@ -123,15 +136,19 @@ export interface UserSettings {
   theme: string
   reduceFlashing: boolean
   publicBio: boolean
-  preferredInstrument: Instrument
   publicInstrument: boolean
-  preferredGenres: Genre[]
-  publicGenres: Genre[]
+  publicGenres: boolean
   publicElos: Instrument[]
   /** Milliseconds of input latency the gameplay engine compensates for. */
   inputLatencyOffsetMs: number
   masterVolume: number
   metronomeEnabled: boolean
+  updatedAt: Timestamp
+}
+
+export interface UserPreferences {
+  preferredInstrument: Instrument
+  preferredGenres: Genre[]
   updatedAt: Timestamp
 }
 

@@ -32,8 +32,10 @@ import type {
   UserProfile,
   UserReport,
   UserSettings,
+  UserPreferences,
   UserStatus,
   UsernameReservation,
+  PublicProfile,
 } from './types.ts'
 
 /** Bumped whenever a document shape changes in a way that needs a migration. */
@@ -44,7 +46,9 @@ export const COLLECTIONS = {
   users: 'users',
   usernames: 'usernames',
   userSettings: 'userSettings',
+  userPreferences: 'userPreferences',
   userStatus: 'userStatus',
+  publicProfile: 'publicProfile',
   scenarios: 'scenarios',
   mediaAssets: 'mediaAssets',
   runs: 'runs',
@@ -158,6 +162,25 @@ export function newUserProfile(args: {
   }
 }
 
+export function newPublicProfile(args: {
+  uid: string
+  username: string,
+  displayName: string,
+}): WithFieldValue<PublicProfile> {
+  return {
+    uid: args.uid,
+    username: args.username,
+    displayName: args.displayName ?? args.username,
+    avatarUrl: null,
+    bio: null,
+    preferredInstrument: null,
+    preferredGenres: [],
+    elos: [],
+    publicHistory: true,
+    updatedAt: serverTimestamp(),
+  }
+}
+
 export function newUsernameReservation(args: {
   uid: string
   username: string
@@ -171,7 +194,6 @@ export function newUsernameReservation(args: {
 
 export function newUserSettings(args: {
   uid: string
-  preferredInstrument?: Instrument
 }): WithFieldValue<UserSettings> {
   return {
     uid: args.uid,
@@ -179,14 +201,20 @@ export function newUserSettings(args: {
     theme: 'default',
     reduceFlashing: false,
     publicBio: true,
-    preferredInstrument: args.preferredInstrument ?? 'piano',
     publicInstrument: true,
-    preferredGenres: [],
-    publicGenres: [],
+    publicGenres: true,
     publicElos: [],
     inputLatencyOffsetMs: 0,
     masterVolume: 0.8,
     metronomeEnabled: true,
+    updatedAt: serverTimestamp(),
+  }
+}
+
+export function newUserPreferences(): WithFieldValue<UserPreferences> {
+  return {
+    preferredInstrument: 'piano',
+    preferredGenres: [],
     updatedAt: serverTimestamp(),
   }
 }

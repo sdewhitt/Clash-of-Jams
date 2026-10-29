@@ -184,6 +184,11 @@ service cloud.firestore {
       }
     }
 
+    match /publicProfile/{uid} {
+      allow read: if true;
+      allow create, update, delete: if isSelf(uid) || isAdmin();
+    }
+
     // Reservations are public so the sign-up form can check availability, and
     // a user may only claim one that points at themselves.
     match /usernames/{usernameLower} {
@@ -201,7 +206,15 @@ service cloud.firestore {
       }
     }
 
+    match /userPreferences/{uid} {
+      allow read, create, update: if request.auth != null
+        && request.auth.uid == uid
+
+      allow delete: if false || isAdmin();
+    }
+
     match /userStatus/{uid} {
+      allow read: if true;
       allow create, update: if request.auth != null
         && request.auth.uid == uid
 

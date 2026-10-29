@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { updatePreferredInstrument } from '@/lib/profile/UserProfile'
+import { updatePreferredInstrument } from '@/lib/profile/UserPreferences'
 import type { Instrument } from '@/lib/schema/types'
 
 /** Reuse the account preference used by profiles and matchmaking. */

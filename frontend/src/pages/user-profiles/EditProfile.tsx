@@ -2,18 +2,20 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/useAuth"
 import { useNavigate } from "react-router"
 import type { User } from 'firebase/auth'
-import type { ScenarioTheme, SkillRating, UserProfile } from '@/lib/schema/types'
+import type { PublicProfile, ScenarioTheme, SkillRating, UserPreferences, UserProfile } from '@/lib/schema/types'
 import { BackButton } from "@/components/BackButton"
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { SettingsButton } from "@/components/SettingsButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { processImage, updateBioPublicity, updateEloPublicity, updateGenrePublicity, updateInstrumentPublicity, updatePreferredGenres, updatePreferredInstrument, updateScenarioThemeAccompany, updateScenarioThemeAdvanced, updateScenarioThemeDefault, updateUserAvatar, updateUserBio, updateUsername, updateUserTheme } from "@/lib/profile/UserProfile";
+import { processImage, updateBioPublicity, updateGenrePublicity, updateInstrumentPublicity, updateScenarioThemeAccompany, updateScenarioThemeAdvanced, updateScenarioThemeDefault, updateUserAvatar, updateUserBio, updateUsername, updateUserTheme } from "@/lib/profile/UserProfile";
 import { getAvatars, type Avatar } from "@/lib/profile/Avatar";
 import { getScenarioThemes, getUserElos, getUserScenarioTheme, getUserSettings } from "@/lib/profile/UserSettings";
 import type { UserSettings } from "@/lib/schema/types";
 import { useTheme, type Theme } from "@/context/ThemeContext";
 import { UsernameEditor } from "@/components/UsernameEditor";
 import { BioEditor } from "@/components/BioEditor";
+import { getUserPreferences, updatePreferredGenres, updatePreferredInstrument } from "@/lib/profile/UserPreferences";
+import { getPublicProfile, getUserStatus, updateDoNotDistrub, updateEloPublicity, updatePublicProfile } from "@/lib/profile/PublicProfile";
 
 type ProfileSection =
     | "profile"
@@ -37,7 +39,10 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     const [avatars, setAvatars] = useState<Avatar[]>([]);
     const [showAllAvatars, setShowAllAvatars] = useState(false);
     const [, setAvatarsLoading] = useState(true);
+   
     const [userSettings, setUserSettings] = useState<UserSettings>();
+    const [userPreferences, setUserPreferences] = useState<UserPreferences>();
+    const [publicProfile, setPublicProfile] = useState<PublicProfile>();
 
     const [draftTheme, setDraftTheme] = useState<Theme>();
     const [savedTheme, setSavedTheme] = useState<Theme>();
@@ -64,10 +69,13 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     const [savedGenres, setSavedGenres] = useState<string[]>([]);
     const { setTheme } = useTheme();
 
+    const [isProfilePublic, setProfilePublicity] = useState(true);
     const [isBioPublic, setBioPublicity] = useState(true);
-    const [isInstrumentPublic, setInstrumentPublicity] = useState(true)
-    const [publicGenres, setPublicGenres] = useState<string[]>([]);
+    const [isInstrumentPublic, setInstrumentPublicity] = useState(true);
+    const [publicGenres, setPublicGenres] = useState(true);
     const [publicElos, setPublicElos] = useState<string[]>([]);
+
+    const [doNotDisturb, setDoNotDisturb] = useState(true)
 
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -122,16 +130,6 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         });
     }
 
-    function togglePublicGenre(genre: string) {
-        setPublicGenres((currentGenres) => {
-            if (currentGenres.includes(genre)) {
-                return currentGenres.filter((current) => current !== genre);
-            }
-
-            return [...currentGenres, genre];
-        });
-    }
-
     function togglePublicElos(elo: string) {
         setPublicElos((currentElos) => {
             if (currentElos.includes(elo)) {
@@ -160,6 +158,43 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         }
     }
 
+    async function loadUserPreferences() {
+        try {
+            if (!user) {
+                return;
+            }
+            const preferences = await getUserPreferences(user.uid);
+            setUserPreferences(preferences)
+        } catch (error) {
+            console.error("Failed to load user preferences:", error);
+        }
+    }
+
+    async function loadPublicProfile() {
+        try {
+            if (!user) {
+                return;
+            }
+            setProfilePublicity(profile?.isProfilePublic ?? true)
+            const userProfile = await getPublicProfile(user.uid);
+            setPublicProfile(userProfile)
+        } catch (error) {
+            console.error("Failed to load public profile:", error);
+        }
+    }
+
+    async function loadUserStatus() {
+        try {
+            if (!user) {
+                return;
+            }
+            const userStatus = await getUserStatus(user.uid);
+            setDoNotDisturb(userStatus?.dnd ?? false)
+        } catch (error) {
+            console.error("Failed to load user status:", error);
+        }
+    }
+
     useEffect(() => {
         async function loadAvatars() {
             try {
@@ -175,6 +210,9 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
 
         loadAvatars();
         loadUserSettings();
+        loadUserPreferences();
+        loadPublicProfile();
+        loadUserStatus();
     }, []);
 
     useEffect(() => {
@@ -240,18 +278,42 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         setDraftTheme(userSettings?.theme as Theme);
         setSavedTheme(userSettings?.theme as Theme);
 
-        setInstrument(userSettings?.preferredInstrument ?? "");
         setInstrumentPublicity(userSettings?.publicInstrument ?? true);
-        setSavedInstrument(userSettings?.preferredInstrument ?? "");
 
-        setDraftGenres(userSettings?.preferredGenres ?? []);
-        setPublicGenres(userSettings?.publicGenres ?? []);
-        setSavedGenres(userSettings?.preferredGenres ?? []);
-
-        setPublicElos(userSettings?.publicElos ?? []);
+        setPublicGenres(userSettings?.publicGenres ?? true);
 
         setTheme(userSettings?.theme as Theme);
     }, [userSettings]);
+
+    useEffect(() => {
+        setInstrument(userPreferences?.preferredInstrument ?? "");
+        setSavedInstrument(userPreferences?.preferredInstrument ?? "");
+
+        setDraftGenres(userPreferences?.preferredGenres ?? []);
+        setSavedGenres(userPreferences?.preferredGenres ?? []);
+    }, [userPreferences]);
+
+    useEffect(() => {
+        setPublicElos(publicProfile?.elos ?? []);
+    }, [publicProfile]);
+
+    const updateAllPublicity = async (profileToggle: boolean) => {
+        if ( profileToggle ) {
+            setProfilePublicity(profileToggle);
+            setProfilePublicity(profileToggle);
+            setBioPublicity(userSettings?.publicBio ?? true);
+            setInstrumentPublicity(userSettings?.publicInstrument ?? true);
+            setPublicElos(publicProfile?.elos ?? []);
+            setPublicGenres(userSettings?.publicGenres ?? true);
+        }
+        else {
+            setProfilePublicity(profileToggle);
+            setBioPublicity(profileToggle);
+            setInstrumentPublicity(profileToggle);
+            setPublicElos([]);
+            setPublicGenres(profileToggle);
+        }
+    }
 
     const handleThemeChange = async (uid: string, chosenTheme: Theme) => {
         setTheme(chosenTheme);
@@ -266,21 +328,23 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         setNeedThemeName(false);
     };
 
-
-    const handleGeneralUpdates = async (uid: string, oldUsername: string, newUsername: string, bio: string, instrument: string, genres: string[]) => {
+    const handleGeneralUpdates = async (uid: string, oldUsername: string, newUsername: string, bio: string, instrument: string, genres: string[], dnd: boolean) => {
         setError(null);
         setIsSaving(true);
 
         try {
             await Promise.all([
                 updateUsername(uid, oldUsername, newUsername),
-                updateUserBio(uid, bio),
-                updatePreferredInstrument(uid, instrument),
-                updatePreferredGenres(uid, genres),
+                updateUserBio(uid, isBioPublic, bio),
+                updatePreferredInstrument(uid, isInstrumentPublic, instrument),
+                updatePreferredGenres(uid, publicGenres, genres),
+                updateDoNotDistrub(uid, dnd)
             ]);
 
             setSavedUsername(newUsername)
             await loadUserSettings();
+            await loadUserPreferences();
+            await loadPublicProfile();
         } catch (error) {
             setError(
                 error instanceof Error
@@ -292,15 +356,16 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         }
     };
 
-    const handlePublicityUpdates = async (uid: string, bio: boolean, instrument: boolean, genres: string[], elos: string[]) => {
+    const handlePublicityUpdates = async (uid: string, profileStatus: boolean, bio: boolean, instrument: boolean, genres: boolean, elos: string[]) => {
         setError(null);
         setIsSaving(true);
 
         try {
             await Promise.all([
-                updateBioPublicity(uid, bio),
-                updateInstrumentPublicity(uid, instrument),
-                updateGenrePublicity(uid, genres),
+                updatePublicProfile(uid, savedUsername, profileStatus, bio, savedBio, instrument, savedInstrument, genres, savedGenres, elos),
+                updateBioPublicity(uid, bio, savedBio),
+                updateInstrumentPublicity(uid, instrument, savedInstrument),
+                updateGenrePublicity(uid, genres, savedGenres),
                 updateEloPublicity(uid, elos),
             ]);
             
@@ -327,8 +392,8 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     const handlePublicityCancel = async () => {
         setBioPublicity(userSettings?.publicBio ?? true);
         setInstrumentPublicity(userSettings?.publicInstrument ?? true);
-        setPublicElos(userSettings?.publicElos ?? []);
-        setPublicGenres(userSettings?.publicGenres ?? []);
+        setPublicElos(publicProfile?.elos ?? []);
+        setPublicGenres(userSettings?.publicGenres ?? true);
     };
 
     const updateScenarioThemeChanges = async () => {
@@ -407,6 +472,50 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                             Displayed On Public Profile
                         </div>
                     </div>
+                    <div className="mx-8">
+                        <p className="text-md font-medium text-accent-start select-none">
+                            Profile Publicity:
+                        </p>
+
+                        <div className="mt-2">
+                            <button
+                                type="button"
+                                onClick={() => updateAllPublicity(!isProfilePublic)}
+                                aria-pressed={isProfilePublic}
+                                className={`
+                                    w-full
+                                    rounded-lg
+                                    px-4 py-2
+                                    select-none
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    text-ink
+                                    transition
+                                    duration-200
+                                    border-2
+                                    ${
+                                        isProfilePublic
+                                            ? `
+                                                opacity-100%
+                                                border-accent-start
+                                                brightness-100
+                                            `
+                                            : `
+                                                opacity-30%
+                                                border-line
+                                                brightness-60
+                                            `
+                                    }
+                                    hover:scale-105
+                                    active:scale-95
+                                `}
+                            >
+                                {isProfilePublic ? "Public" : "Private"} Profile
+                            </button>
+                        </div>
+                    </div>
                     {savedBio && savedBio.trim() !== "" && (
                         <div className="mx-8">
                             <label
@@ -420,8 +529,9 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                                     
                                     type="button"
                                     onClick={() => setBioPublicity(!isBioPublic)}
-                                    aria-pressed={isInstrumentPublic}
+                                    aria-pressed={isBioPublic}
                                     className={`
+                                        w-full
                                         rounded-lg
                                         px-4 py-2
                                         select-none
@@ -469,7 +579,8 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                                 onClick={() => setInstrumentPublicity(!isInstrumentPublic)}
                                 aria-pressed={isInstrumentPublic}
                                 className={`
-                                    rounded-full
+                                    w-full
+                                    rounded-lg
                                     px-4 py-2
                                     select-none
                                     bg-linear-to-b
@@ -502,54 +613,47 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                         </div>
                     </div>
                     <div className="mx-8">
-                        <label
-                            htmlFor="preferredGenres"
-                            className="text-md font-medium text-accent-start select-none"
-                        >
+                        <p className="text-md font-medium text-accent-start select-none">
                             Preferred Genres:
-                        </label>
-                        <div id="preferredGenres" className="flex flex-row overscroll-x-contain gap-4 mx-2">
-                            {savedGenres.map((genre) => {
-                                const isSelected = publicGenres.includes(genre);
-                                return (
-                                    <button
-                                        key={genre}
-                                        type="button"
-                                        onClick={() => togglePublicGenre(genre)}
-                                        aria-pressed={isSelected}
-                                        className={`
-                                            rounded-full
-                                            px-4 py-2
-                                            select-none
-                                            bg-linear-to-b
-                                            from-accent-start
-                                            via-accent-middle
-                                            to-accent-end
-                                            text-ink
-                                            transition
-                                            duration-200
-                                            border-2
-                                            ${
-                                                isSelected
-                                                    ? `
-                                                        opacity-100%
-                                                        border-accent-start
-                                                        brightness-100
-                                                    `
-                                                    : `
-                                                        opacity-30%
-                                                        border-line
-                                                        brightness-60
-                                                    `
-                                            }
-                                            hover:scale-105
-                                            active:scale-95
-                                        `}
-                                    >
-                                        {formatLabel(genre)}
-                                    </button>
-                                );
-                            })}
+                        </p>
+
+                        <div className="mt-2">
+                            <button
+                                type="button"
+                                onClick={() => setPublicGenres(!publicGenres)}
+                                aria-pressed={publicGenres}
+                                className={`
+                                    w-full
+                                    rounded-lg
+                                    px-4 py-2
+                                    select-none
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    text-ink
+                                    transition
+                                    duration-200
+                                    border-2
+                                    ${
+                                        publicGenres
+                                            ? `
+                                                opacity-100%
+                                                border-accent-start
+                                                brightness-100
+                                            `
+                                            : `
+                                                opacity-30%
+                                                border-line
+                                                brightness-60
+                                            `
+                                    }
+                                    hover:scale-105
+                                    active:scale-95
+                                `}
+                            >
+                                Publicize Preferred Genres
+                            </button>
                         </div>
                     </div>
                     <div className="mx-8">
@@ -636,7 +740,7 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                                     active:scale-95
                                     py-2
                                 `}
-                                onClick={() => handlePublicityUpdates(user.uid, isBioPublic, isInstrumentPublic, publicGenres, publicElos)}
+                                onClick={() => handlePublicityUpdates(user.uid, isProfilePublic, isBioPublic, isInstrumentPublic, publicGenres, publicElos)}
                             >
                                 Save
                             </button>
@@ -704,6 +808,53 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                     />
                     <div className="flex flex-col gap-2">
                         <label
+                            htmlFor="dndMode"
+                            className="text-md font-medium text-accent-start select-none"
+                        >
+                            Set Do Not Disturb:
+                        </label>
+                        <div>
+                            <button
+                                id="dndMode"
+                                type="button"
+                                onClick={() => setDoNotDisturb(!doNotDisturb)}
+                                aria-pressed={doNotDisturb}
+                                className={`
+                                    w-full
+                                    rounded-lg
+                                    py-2
+                                    select-none
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    text-ink
+                                    transition
+                                    duration-200
+                                    border-2
+                                    ${
+                                        doNotDisturb
+                                            ? `
+                                                opacity-100%
+                                                border-accent-start
+                                                brightness-100
+                                            `
+                                            : `
+                                                opacity-30%
+                                                border-line
+                                                brightness-60
+                                            `
+                                    }
+                                    hover:scale-101
+                                    active:scale-95
+                                `}
+                            >
+                                Do Not Disturb
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <label
                             htmlFor="preferredInstrument"
                             className="text-md font-medium text-accent-start select-none"
                         >
@@ -740,15 +891,12 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                         </select>
                     </div>
                     <div className="flex flex-col gap-2">
-                        <label
-                            htmlFor="preferredGenres"
-                            className="text-md font-medium text-accent-start select-none"
-                        >
+                        <p className="text-md font-medium text-accent-start select-none">
                             Preferred Genres:
-                        </label>
+                        </p>
+
                         <div
-                            id="preferredGenres"
-                            className="flex flex-row gap-3 overscroll-x-auto"
+                            className="flex flex-row gap-3 overscroll-x-auto mt-2"
                         >
                             {availableGenres.map((genre) => {
                                 const isSelected = draftGenres.includes(genre);
@@ -827,7 +975,7 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                                     active:scale-95
                                     py-2
                                 `}
-                                onClick={() => handleGeneralUpdates(user.uid, profile?.usernameLower ?? "", draftUsername, draftBio, instrument, draftGenres)}
+                                onClick={() => handleGeneralUpdates(user.uid, profile?.usernameLower ?? "", draftUsername, draftBio, instrument, draftGenres, doNotDisturb)}
                             >
                                 Save
                             </button>
