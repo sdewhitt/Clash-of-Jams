@@ -135,6 +135,12 @@ export interface UserSettings {
   updatedAt: Timestamp
 }
 
+/** userStatus/{uid} — tracking online presence of users within firestore. */
+export interface UserStatus {
+  dnd: boolean
+  lastHeartbeat: Timestamp
+}
+
 /**
  * scenarios/{scenarioId} — ownership and metadata only.
  *

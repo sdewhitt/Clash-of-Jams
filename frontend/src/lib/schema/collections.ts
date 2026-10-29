@@ -32,6 +32,7 @@ import type {
   UserProfile,
   UserReport,
   UserSettings,
+  UserStatus,
   UsernameReservation,
 } from './types.ts'
 
@@ -43,6 +44,7 @@ export const COLLECTIONS = {
   users: 'users',
   usernames: 'usernames',
   userSettings: 'userSettings',
+  userStatus: 'userStatus',
   scenarios: 'scenarios',
   mediaAssets: 'mediaAssets',
   runs: 'runs',
@@ -186,6 +188,13 @@ export function newUserSettings(args: {
     masterVolume: 0.8,
     metronomeEnabled: true,
     updatedAt: serverTimestamp(),
+  }
+}
+
+export function newUserStatus(): WithFieldValue<UserStatus> {
+  return {
+    dnd: false,
+    lastHeartbeat: serverTimestamp(),
   }
 }
 

@@ -201,6 +201,13 @@ service cloud.firestore {
       }
     }
 
+    match /userStatus/{uid} {
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+
+      allow delete: if false;
+    }
+
     // The preset avatars offered on the profile editor. Read-only to clients.
     match /avatars/{avatarId} {
       allow read: if signedIn();

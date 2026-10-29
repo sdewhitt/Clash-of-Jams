@@ -22,6 +22,7 @@ import { AudioLab } from '@/pages/AudioLab'
 import { PlayScenario } from '@/pages/PlayScenario'
 import { EloLeaderboard } from '@/pages/EloLeaderboard'
 import { RatingHistory } from '@/pages/RatingHistory'
+import OnlineStatusManager from '@/context/StatusManager'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
@@ -65,6 +66,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <OnlineStatusManager />
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
