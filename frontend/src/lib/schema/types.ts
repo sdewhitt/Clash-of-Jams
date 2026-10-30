@@ -83,6 +83,8 @@ export type HitVerdict = (typeof HIT_VERDICTS)[number]
 
 export type ModerationTargetType = 'user' | 'scenario' | 'recording'
 
+export type RelationshipStatus = "friend" | "friendOfFriend" | "none";
+
 /* ------------------------------------------------------- primary database */
 
 /**
@@ -105,6 +107,7 @@ export interface UserProfile {
   isBanned: boolean
   isSocialRestricted: boolean
   isProfilePublic: boolean
+  friends: string[]
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -112,14 +115,21 @@ export interface UserProfile {
 export interface PublicProfile {
   uid: string
   username: string
+  usernameLower: string
   displayName: string
   avatarUrl: string | null
   bio: string | null
   preferredInstrument: Instrument | null
   preferredGenres: Genre[]
   elos: Instrument[]
+  friends: string[]
   publicHistory: boolean
   updatedAt: Timestamp
+}
+
+export interface SearchProfile extends PublicProfile {
+  relationship: RelationshipStatus;
+  mutualFriendCount: number;
 }
 
 /** usernames/{usernameLower} — reservation document enforcing invariant 1. */
@@ -135,6 +145,7 @@ export interface UserSettings {
   scenarioTheme: string
   theme: string
   reduceFlashing: boolean
+  acceptingFriends: boolean
   publicBio: boolean
   publicInstrument: boolean
   publicGenres: boolean

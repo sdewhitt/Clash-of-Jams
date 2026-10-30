@@ -157,6 +157,7 @@ export function newUserProfile(args: {
     isBanned: false,
     isSocialRestricted: false,
     isProfilePublic: true,
+    friends: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
@@ -170,12 +171,14 @@ export function newPublicProfile(args: {
   return {
     uid: args.uid,
     username: args.username,
+    usernameLower: usernameKey(args.username),
     displayName: args.displayName ?? args.username,
     avatarUrl: null,
     bio: null,
     preferredInstrument: null,
     preferredGenres: [],
     elos: [],
+    friends: [],
     publicHistory: true,
     updatedAt: serverTimestamp(),
   }
@@ -200,6 +203,7 @@ export function newUserSettings(args: {
     scenarioTheme: "default",
     theme: 'default',
     reduceFlashing: false,
+    acceptingFriends: true,
     publicBio: true,
     publicInstrument: true,
     publicGenres: true,

@@ -5,7 +5,7 @@ import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 // import { getUserSettings } from "@/lib/profile/UserSettings";
 import { useSkillRatings } from "@/lib/ratings/useSkillRatings";
-import type { UserPreferences, UserSettings } from '@/lib/schema/types';
+import type { UserPreferences, /*UserSettings*/ } from '@/lib/schema/types';
 import { EloDisplay } from "@/components/EloDisplay";
 import { getUserPreferences } from "@/lib/profile/UserPreferences";
 

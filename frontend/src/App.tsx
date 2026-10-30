@@ -23,11 +23,13 @@ import { PlayScenario } from '@/pages/PlayScenario'
 import { EloLeaderboard } from '@/pages/EloLeaderboard'
 import { RatingHistory } from '@/pages/RatingHistory'
 import OnlineStatusManager from '@/context/StatusManager'
+import { PublicProfile } from './pages/user-profiles/PublicProfile'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
   { path: '/home', element: <Home /> },
   { path: '/profile', element: <UserProfile /> },
+  { path: '/profile/:uid', element: <PublicProfile />},
   { path: '/profile/edit_profile', element: <EditProfile /> },
   { path: '/friends/my_friends', element: <MyFriends /> },
   { path: '/friends/find_friends', element: <FindFriends /> },

@@ -36,7 +36,7 @@ export function MyFriends() {
                     />
                 </div>
             </header>
-            <div className="px-6 py-6">
+            <div className="p-6">
                 <div className={`
                     flex 
                     w-fill
@@ -83,7 +83,7 @@ export function MyFriends() {
                             px-2 py-2 
                             rounded-lg 
                             bg-accent-middle 
-                            text-ink 
+                            text-inverse-ink 
                             outline-2 
                             outline-accent-start 
                             focus:outline-none 
