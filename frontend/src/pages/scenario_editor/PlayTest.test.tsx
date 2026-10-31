@@ -50,6 +50,8 @@ vi.mock('@/components/ScenarioPlayer', async (importOriginal) => {
       if (!player.fake) return <actual.ScenarioPlayer {...props} />
       const finished: FinishedRun = {
         instrument: props.defaultInstrument,
+        inputKind: 'microphone',
+        midiDeviceId: '',
         performed: [],
         result: RESULT,
         explanation: explainScore({ result: RESULT, expected: props.expected }),
