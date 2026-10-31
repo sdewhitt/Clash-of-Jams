@@ -25,7 +25,6 @@ export function useOnlineStatus( uid: string, ): FriendPresenceState {
       doc(db, 'userStatus', uid),
       (snapshot) => {
         const data = snapshot.data()
-
         const heartbeat = data?.lastHeartbeat as Timestamp | undefined
         const mode = (data?.dnd as boolean | undefined) ?? false
 

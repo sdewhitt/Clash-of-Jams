@@ -36,6 +36,9 @@ import type {
   UserStatus,
   UsernameReservation,
   PublicProfile,
+  AppNotification,
+  FriendRequest,
+  FriendshipState,
 } from './types.ts'
 
 /** Bumped whenever a document shape changes in a way that needs a migration. */
@@ -230,6 +233,22 @@ export function newUserStatus(): WithFieldValue<UserStatus> {
   }
 }
 
+export function newAppNotification( args: {
+  notifiedUid: string
+  notifierUid: string
+  notificationType: string
+  requestId: string
+}): WithFieldValue<AppNotification> {
+  return {
+    notifiedUid: args.notifiedUid,
+    notifierUid: args.notifierUid,
+    notificationType: args.notificationType,
+    requestId: args.requestId,
+    read: false,
+    createdAt: serverTimestamp(),
+  }
+}
+
 export function newScenario(args: {
   id: string
   authorUid: string
@@ -415,22 +434,35 @@ export function newScenarioTheme(args: {
   }
 }
 
+export function newFriendRequests(args: {
+  uidOne: string
+  uidTwo: string
+  initiatorUid: string
+  state: FriendshipState
+}): WithFieldValue<FriendRequest> {
+  const [idA, idB] = args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
+  return {
+    potentialFriends: [idA, idB],
+    initiatorUid: args.initiatorUid,
+    status: args.state,
+    createdAt: serverTimestamp(),
+  }
+}
+
 export function newFriendship(args: {
   uidOne: string
   uidTwo: string
-  requestedByUid: string
-  state?: Friendship['state']
 }): WithFieldValue<Friendship> {
-  const [idA, idB] =
-    args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
+  const [idA, idB] = args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
   return {
     id: friendshipId(idA, idB),
-    idA,
-    idB,
-    requestedByUid: args.requestedByUid,
-    state: args.state ?? 'pending',
+    friends: [idA, idB],
+    totalFriendlies: 0,
+    uidA: idA,
+    uidAWins: 0, 
+    uidB: idB,
+    uidBWins: 0,
     createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
   }
 }
 

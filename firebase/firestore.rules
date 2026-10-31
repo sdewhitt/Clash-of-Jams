@@ -24,6 +24,27 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
     }
 
+    function pairId(uidOne, uidTwo) {
+      return uidOne < uidTwo
+        ? uidOne + '_' + uidTwo
+        : uidTwo + '_' + uidOne;
+    }
+
+    function isFriendRequestParticipant(data) {
+      return signedIn() &&
+        data.potentialFriends is list &&
+        data.potentialFriends.size() == 2 &&
+        data.potentialFriends.hasAny([request.auth.uid]);
+    }
+
+    function isFriendshipParticipant(data) {
+      return signedIn() &&
+        (
+          data.uidA == request.auth.uid ||
+          data.uidB == request.auth.uid
+        );
+    }
+
     function scenarioAuthor(scenarioId) {
       return get(/databases/$(database)/documents/scenarios/$(scenarioId)).data.authorUid;
     }
@@ -53,13 +74,17 @@ service cloud.firestore {
       return request.resource.data[field] == resource.data[field];
     }
 
+    function changed(field) {
+      return request.resource.data[field] != resource.data[field];
+    }
+
     function hasExactly(d, fields) {
       return d.keys().hasAll(fields) && d.keys().hasOnly(fields);
     }
 
     function isValidUser(d) {
       return hasExactly(d, ['uid', 'username', 'usernameLower', 'displayName', 'avatarUrl', 'bio',
-            'role', 'isBanned', 'isSocialRestricted', 'isProfilePublic', 'createdAt', 'updatedAt'])
+            'role', 'isBanned', 'isSocialRestricted', 'isProfilePublic', 'createdAt', 'updatedAt', 'friends'])
         && d.uid is string
         && d.username is string
         && d.usernameLower == d.username.lower()
@@ -71,7 +96,8 @@ service cloud.firestore {
         && d.isSocialRestricted is bool
         && d.isProfilePublic is bool
         && d.createdAt is timestamp
-        && d.updatedAt is timestamp;
+        && d.updatedAt is timestamp
+        && d.friends is list;
     }
 
     function isValidScenario(d, scenarioId) {
@@ -151,11 +177,17 @@ service cloud.firestore {
       allow update: if isValidUser(request.resource.data)
         && unchanged('uid')
         && unchanged('createdAt')
-        && (isAdmin()
-          || (isSelf(uid)
-              && unchanged('role')
-              && unchanged('isBanned')
-              && unchanged('isSocialRestricted')));
+        && (
+            isAdmin()
+            || changed('friends')
+            || (
+                isSelf(uid)
+                && unchanged('role')
+                && unchanged('isBanned')
+                && unchanged('isSocialRestricted')
+                && unchanged('friends')
+            )
+        );
       allow delete: if isAdmin();
 
       // Ratings are readable for leaderboards. Sign-up creates one per
@@ -185,8 +217,13 @@ service cloud.firestore {
     }
 
     match /publicProfile/{uid} {
-      allow read: if true;
-      allow create, update, delete: if isSelf(uid) || isAdmin();
+        allow read: if true;
+
+        allow create, delete: if isSelf(uid) || isAdmin();
+
+        allow update: if changed('friends')
+            || isAdmin()
+            || isSelf(uid);
     }
 
     // Reservations are public so the sign-up form can check availability, and
@@ -211,14 +248,6 @@ service cloud.firestore {
         && request.auth.uid == uid
 
       allow delete: if false || isAdmin();
-    }
-
-    match /userStatus/{uid} {
-      allow read: if true;
-      allow create, update: if request.auth != null
-        && request.auth.uid == uid
-
-      allow delete: if false;
     }
 
     // The preset avatars offered on the profile editor. Read-only to clients.
@@ -312,13 +341,148 @@ service cloud.firestore {
       }
     }
 
-    match /friendships/{pairId} {
-      allow read: if signedIn()
-        && (isSelf(resource.data.idA) || isSelf(resource.data.idB));
-      allow create: if isSelf(request.resource.data.requestedByUid)
-        && request.resource.data.idA < request.resource.data.idB
-        && (isSelf(request.resource.data.idA) || isSelf(request.resource.data.idB));
-      allow update, delete: if isSelf(resource.data.idA) || isSelf(resource.data.idB) || isAdmin();
+    // --------------------------------------------------
+    // Friend requests
+    // --------------------------------------------------
+
+    match /friendRequests/{requestId} {
+      allow get: if signedIn() && (
+        !exists(/databases/$(database)/documents/friendRequests/$(requestId)) ||
+        isFriendRequestParticipant(resource.data)
+      );
+
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly([
+          'potentialFriends',
+          'initiatorUid',
+          'status',
+          'createdAt'
+        ]) &&
+        request.resource.data.keys().hasAll([
+          'potentialFriends',
+          'initiatorUid',
+          'status',
+          'createdAt'
+        ]) &&
+        request.resource.data.potentialFriends is list &&
+        request.resource.data.potentialFriends.size() == 2 &&
+        request.resource.data.potentialFriends.hasAny([
+          request.auth.uid
+        ]) &&
+        request.resource.data.initiatorUid == request.auth.uid &&
+        request.resource.data.potentialFriends.hasAll([
+          request.auth.uid
+        ]) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.createdAt is timestamp &&
+        requestId == pairId(
+          request.resource.data.potentialFriends[0],
+          request.resource.data.potentialFriends[1]
+        );
+
+      allow list, update: if isFriendRequestParticipant(resource.data);
+
+      allow delete: if signedIn()
+        && resource.data.potentialFriends.hasAny([request.auth.uid]);
+    }
+
+    // --------------------------------------------------
+    // Established friendships
+    // --------------------------------------------------
+
+    match /friendships/{friendshipId} {
+
+      allow get: if signedIn() && (
+          !exists( /databases/$(database)/documents/friendships/$(friendshipId)) ||
+          isFriendshipParticipant(resource.data)
+      );
+
+      allow list: if isFriendshipParticipant(resource.data);
+
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasAll([
+          'friends',
+          'id',
+          'uidA',
+          'uidAWins',
+          'uidB',
+          'uidBWins',
+          'totalFriendlies',
+          'createdAt'
+        ]) &&
+        request.resource.data.keys().hasOnly([
+          'friends',
+          'id',
+          'uidA',
+          'uidAWins',
+          'uidB',
+          'uidBWins',
+          'totalFriendlies',
+          'createdAt'
+        ]) &&
+        request.resource.data.id == friendshipId &&
+        request.resource.data.uidA < request.resource.data.uidB &&
+        request.resource.data.friends is list &&
+        request.resource.data.friends.size() == 2 &&
+        request.resource.data.friends.hasAll([
+          request.resource.data.uidA,
+          request.resource.data.uidB
+        ]) &&
+        request.auth.uid in [
+          request.resource.data.uidA,
+          request.resource.data.uidB
+        ] &&
+        request.resource.data.uidAWins == 0 &&
+        request.resource.data.uidBWins == 0 &&
+        request.resource.data.totalFriendlies == 0;
+
+      // Either participant can remove the friendship.
+      allow delete: if isFriendshipParticipant(resource.data);
+
+      // Statistics remain server-managed.
+      allow update: if false;
+    }
+
+    // --------------------------------------------------
+    // Notifications
+    // --------------------------------------------------
+
+    match /notifications/{notificationId} {
+
+      allow get, list: if isSelf(resource.data.notifiedUid);
+
+      allow create: if signedIn()
+        && request.resource.data.notifierUid == request.auth.uid
+        && request.resource.data.notifiedUid != request.auth.uid
+        && request.resource.data.read == false
+
+      allow update: if isSelf(resource.data.notifiedUid) &&
+        request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['read']) &&
+        request.resource.data.read is bool;
+
+      allow delete: if isSelf(resource.data.notifiedUid);
+    }
+
+    // --------------------------------------------------
+    // User presence
+    // --------------------------------------------------
+
+    match /userStatus/{uid} {
+
+      // Authenticated users can see other users' presence.
+      allow read: if signedIn();
+
+      // Users can only write their own presence.
+      allow create, update: if isSelf(uid) &&
+        request.resource.data.keys().hasOnly([
+          'dnd',
+          'lastHeartbeat'
+        ]) &&
+        request.resource.data.dnd is bool &&
+        request.resource.data.lastHeartbeat is timestamp;
+
+      allow delete: if isSelf(uid);
     }
 
     match /communities/{communityId} {

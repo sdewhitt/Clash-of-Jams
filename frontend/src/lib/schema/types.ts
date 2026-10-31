@@ -72,7 +72,7 @@ export type ReportState = (typeof REPORT_STATES)[number]
 export const INVITATION_STATES = ['pending', 'accepted', 'declined', 'expired'] as const
 export type InvitationState = (typeof INVITATION_STATES)[number]
 
-export const FRIENDSHIP_STATES = ['pending', 'accepted', 'blocked'] as const
+export const FRIENDSHIP_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
 export type FriendshipState = (typeof FRIENDSHIP_STATES)[number]
 
 export const COMMUNITY_ROLES = ['owner', 'moderator', 'member'] as const
@@ -97,13 +97,13 @@ export type RelationshipStatus = "friend" | "friendOfFriend" | "none";
 export interface UserProfile {
   uid: string
   username: string
-  /** Lowercased username, mirrored into usernames/{usernameLower}. */
+  /** Lowercased username, mirrored into usernames/{usernameLower}. **/
   usernameLower: string
   displayName: string
   avatarUrl: string | null
   bio: string
   role: Role
-  /** Moderation state — set by the admin module, never by the user. */
+  /** Moderation state — set by the admin module, never by the user. **/
   isBanned: boolean
   isSocialRestricted: boolean
   isProfilePublic: boolean
@@ -112,6 +112,7 @@ export interface UserProfile {
   updatedAt: Timestamp
 }
 
+/** publicProfile/{uid} — outward facing use profiles for public queries. **/
 export interface PublicProfile {
   uid: string
   username: string
@@ -127,19 +128,20 @@ export interface PublicProfile {
   updatedAt: Timestamp
 }
 
+/** Interface used to query public users for friend-of-friends **/
 export interface SearchProfile extends PublicProfile {
   relationship: RelationshipStatus;
   mutualFriendCount: number;
 }
 
-/** usernames/{usernameLower} — reservation document enforcing invariant 1. */
+/** usernames/{usernameLower} — reservation document enforcing invariant 1. **/
 export interface UsernameReservation {
   uid: string
   username: string
   createdAt: Timestamp
 }
 
-/** userSettings/{uid} — themes, accessibility options, instrument preferences. */
+/** userSettings/{uid} — themes, accessibility options, instrument preferences. **/
 export interface UserSettings {
   uid: string
   scenarioTheme: string
@@ -150,23 +152,34 @@ export interface UserSettings {
   publicInstrument: boolean
   publicGenres: boolean
   publicElos: Instrument[]
-  /** Milliseconds of input latency the gameplay engine compensates for. */
+  /** Milliseconds of input latency the gameplay engine compensates for. **/
   inputLatencyOffsetMs: number
   masterVolume: number
   metronomeEnabled: boolean
   updatedAt: Timestamp
 }
 
+/** userPreference/{uid} — tracking user preferences of features/tools. **/
 export interface UserPreferences {
   preferredInstrument: Instrument
   preferredGenres: Genre[]
   updatedAt: Timestamp
 }
 
-/** userStatus/{uid} — tracking online presence of users within firestore. */
+/** userStatus/{uid} — tracking online presence of users within firestore. **/
 export interface UserStatus {
   dnd: boolean
   lastHeartbeat: Timestamp
+}
+
+/** notifications/{notificationId} — tracking online presence of users within firestore. **/
+export interface AppNotification {
+  notifiedUid: string
+  notifierUid: string
+  notificationType: string
+  requestId: string
+  read: boolean
+  createdAt: Timestamp | null
 }
 
 /**
@@ -452,13 +465,21 @@ export interface RatingEvent {
  * That ordering is what keeps the pair unique regardless of who initiated.
  */
 export interface Friendship {
+  friends: string[]
   id: string
-  idA: string
-  idB: string
-  requestedByUid: string
-  state: FriendshipState
+  uidA: string
+  uidAWins: number
+  uidB: string
+  uidBWins: number
+  totalFriendlies: number
   createdAt: Timestamp
-  updatedAt: Timestamp
+}
+
+export interface FriendRequest {
+  potentialFriends: string[]
+  initiatorUid: string
+  status: FriendshipState
+  createdAt: Timestamp
 }
 
 /** communities/{communityId} */
