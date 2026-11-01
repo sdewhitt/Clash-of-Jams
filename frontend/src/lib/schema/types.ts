@@ -142,6 +142,7 @@ export interface PublicProfile {
   preferredInstrument: Instrument | null
   preferredGenres: Genre[]
   elos: Instrument[]
+  acceptingFriends: boolean
   friends: string[]
   publicHistory: boolean
   updatedAt: Timestamp

@@ -72,10 +72,12 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     const { setTheme } = useTheme();
 
     const [isProfilePublic, setProfilePublicity] = useState(true);
+    const [isAcceptingFriends, setAcceptingFriends] = useState(true);
     const [isBioPublic, setBioPublicity] = useState(true);
     const [isInstrumentPublic, setInstrumentPublicity] = useState(true);
     const [publicGenres, setPublicGenres] = useState(true);
     const [publicElos, setPublicElos] = useState<string[]>([]);
+    const [publicHistory, setPublicHistory] = useState(true);
 
     const [doNotDisturb, setDoNotDisturb] = useState(true)
 
@@ -300,20 +302,21 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     }, [publicProfile]);
 
     const updateAllPublicity = async (profileToggle: boolean) => {
+        setProfilePublicity(profileToggle);
+        setAcceptingFriends(profileToggle);
         if ( profileToggle ) {
-            setProfilePublicity(profileToggle);
-            setProfilePublicity(profileToggle);
             setBioPublicity(userSettings?.publicBio ?? true);
             setInstrumentPublicity(userSettings?.publicInstrument ?? true);
             setPublicElos(publicProfile?.elos ?? []);
+            setPublicHistory(publicProfile?.publicHistory ?? true)
             setPublicGenres(userSettings?.publicGenres ?? true);
         }
         else {
-            setProfilePublicity(profileToggle);
             setBioPublicity(profileToggle);
             setInstrumentPublicity(profileToggle);
             setPublicElos([]);
             setPublicGenres(profileToggle);
+            setPublicHistory(profileToggle);
         }
     }
 
@@ -358,13 +361,13 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         }
     };
 
-    const handlePublicityUpdates = async (uid: string, profileStatus: boolean, bio: boolean, instrument: boolean, genres: boolean, elos: string[]) => {
+    const handlePublicityUpdates = async (uid: string, profileStatus: boolean, friendStatus: boolean, publicHistory: boolean, bio: boolean, instrument: boolean, genres: boolean, elos: string[]) => {
         setError(null);
         setIsSaving(true);
 
         try {
             await Promise.all([
-                updatePublicProfile(uid, savedUsername, profileStatus, bio, savedBio, instrument, savedInstrument, genres, savedGenres, elos),
+                updatePublicProfile(uid, savedUsername, profileStatus, bio, savedBio, instrument, savedInstrument, genres, savedGenres, elos, friendStatus, profile?.avatarUrl ?? "../../favicon.svg", publicHistory),
                 updateBioPublicity(uid, bio, savedBio),
                 updateInstrumentPublicity(uid, instrument, savedInstrument),
                 updateGenrePublicity(uid, genres, savedGenres),
@@ -515,6 +518,94 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                                 `}
                             >
                                 {isProfilePublic ? "Public" : "Private"} Profile
+                            </button>
+                        </div>
+                    </div>
+                    <div className="mx-8">
+                        <p className="text-md font-medium text-accent-start select-none">
+                            Accepting Friends:
+                        </p>
+
+                        <div className="mt-2">
+                            <button
+                                type="button"
+                                onClick={() => setAcceptingFriends(!isAcceptingFriends)}
+                                aria-pressed={isAcceptingFriends}
+                                className={`
+                                    w-full
+                                    rounded-lg
+                                    px-4 py-2
+                                    select-none
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    text-ink
+                                    transition
+                                    duration-200
+                                    border-2
+                                    ${
+                                        isAcceptingFriends
+                                            ? `
+                                                opacity-100%
+                                                border-accent-start
+                                                brightness-100
+                                            `
+                                            : `
+                                                opacity-30%
+                                                border-line
+                                                brightness-60
+                                            `
+                                    }
+                                    hover:scale-105
+                                    active:scale-95
+                                `}
+                            >
+                                {isAcceptingFriends ? "" : "Not "}Accepting Friend Requests
+                            </button>
+                        </div>
+                    </div>
+                    <div className="mx-8">
+                        <p className="text-md font-medium text-accent-start select-none">
+                            Publicize Scenario History:
+                        </p>
+
+                        <div className="mt-2">
+                            <button
+                                type="button"
+                                onClick={() => setPublicHistory(!publicHistory)}
+                                aria-pressed={publicHistory}
+                                className={`
+                                    w-full
+                                    rounded-lg
+                                    px-4 py-2
+                                    select-none
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    text-ink
+                                    transition
+                                    duration-200
+                                    border-2
+                                    ${
+                                        publicHistory
+                                            ? `
+                                                opacity-100%
+                                                border-accent-start
+                                                brightness-100
+                                            `
+                                            : `
+                                                opacity-30%
+                                                border-line
+                                                brightness-60
+                                            `
+                                    }
+                                    hover:scale-105
+                                    active:scale-95
+                                `}
+                            >
+                                {publicHistory ? "Public" : "Private"} History
                             </button>
                         </div>
                     </div>
@@ -742,7 +833,7 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                                     active:scale-95
                                     py-2
                                 `}
-                                onClick={() => handlePublicityUpdates(user.uid, isProfilePublic, isBioPublic, isInstrumentPublic, publicGenres, publicElos)}
+                                onClick={() => handlePublicityUpdates(user.uid, isProfilePublic, isAcceptingFriends, publicHistory, isBioPublic, isInstrumentPublic, publicGenres, publicElos)}
                             >
                                 Save
                             </button>

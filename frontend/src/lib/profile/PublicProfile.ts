@@ -15,16 +15,40 @@ export async function getPublicProfile(uid: string): Promise<PublicProfile> {
     } as PublicProfile;
 }
 
-export async function updatePublicProfile(uid: string, savedUsername: string, publicToggle: boolean, bio: boolean, savedBio: string, instrument: boolean, savedInstrument: string, genres: boolean, savedGenres: string[], elos: string[] ) {
+export async function updatePublicProfile(uid: string, savedUsername: string, publicToggle: boolean, bio: boolean, savedBio: string, instrument: boolean, savedInstrument: string, genres: boolean, savedGenres: string[], elos: string[], acceptingFriends: boolean, avatarUrl: string, publicHistory: boolean) {
+    const userRef = doc(db, COLLECTIONS.users, uid);
     const docRef = doc(db, COLLECTIONS.publicProfile, uid);
 
     if (!publicToggle) {
+        await updateDoc(userRef, {friends: []});
         await deleteDoc(docRef);
         return;
     }
-  
-    await setDoc( docRef, { uid: uid, username: savedUsername, displayName: savedUsername, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, }, { merge: true } );
+
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+        await setDoc( docRef, { uid: uid, username: savedUsername, usernameLower: savedUsername.toLowerCase(), displayName: savedUsername, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, acceptingFriends: acceptingFriends, updatedAt: serverTimestamp(), publicHistory: publicHistory}, { merge: true } );
+    }
+    else {
+        await setDoc( docRef, { uid: uid, username: savedUsername, usernameLower: savedUsername.toLowerCase(), displayName: savedUsername, avatarUrl: avatarUrl, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, acceptingFriends: acceptingFriends, friends: [], updatedAt: serverTimestamp(), publicHistory: publicHistory}, { merge: true } );
+    }
 }
+
+export async function updateAcceptingFriends( uid: string, accepting: boolean ) {
+    const userRef = doc(db, "userSettings", uid);
+    const publicRef = doc(db, "publicProfile", uid);
+
+    await updateDoc(publicRef, {
+        acceptingFriends: accepting,
+        updatedAt: serverTimestamp(),
+    });
+
+    await updateDoc(userRef, {
+        acceptingFriends: accepting,
+        updatedAt: serverTimestamp(),
+    });
+}
+
 
 export async function updateEloPublicity( uid: string, elos: string[] ) {
     const userRef = doc(db, "userSettings", uid);

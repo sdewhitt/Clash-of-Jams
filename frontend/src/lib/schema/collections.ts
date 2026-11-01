@@ -167,8 +167,9 @@ export function newUserProfile(args: {
 
 export function newPublicProfile(args: {
   uid: string
-  username: string,
-  displayName: string,
+  username: string
+  displayName: string
+  acceptingFriends: boolean
 }): WithFieldValue<PublicProfile> {
   return {
     uid: args.uid,
@@ -180,6 +181,7 @@ export function newPublicProfile(args: {
     preferredInstrument: null,
     preferredGenres: [],
     elos: [],
+    acceptingFriends: args.acceptingFriends,
     friends: [],
     publicHistory: true,
     updatedAt: serverTimestamp(),

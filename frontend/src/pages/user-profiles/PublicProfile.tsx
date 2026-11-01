@@ -149,7 +149,7 @@ export function PublicProfile() {
                         <div className="h-full w-full flex flex-col justify-center gap-2">
                             <div className="flex flex-row justify-between">
                                 <h2 className="select-none text-ink text-6xl mx-4">{userProfile?.displayName ?? userProfile?.username ?? "…"}</h2>
-                                <FriendRequestButton currentUid={profile?.uid ?? ""} profileUid={uid ?? ""}/>
+                                {userProfile?.acceptingFriends && (<FriendRequestButton currentUid={profile?.uid ?? ""} profileUid={uid ?? ""}/>)}
                             </div>
                             <div className="border-t-4 border-contrast-start" />
                             <div className="flex flex-col gap-2">
