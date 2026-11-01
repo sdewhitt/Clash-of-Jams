@@ -41,9 +41,7 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
                 setLoading(true);
                 setError(null);
 
-                const result = await apiFetch<ScenarioWithAuthor[]>(
-                    "/scenarios/scenario_with_author"
-                );
+                const result = await apiFetch<ScenarioWithAuthor[]>("/scenarios/scenario_with_author");
 
                 if (!cancelled) {
                     setScenarios(result);
@@ -86,9 +84,6 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
             setSubmitting(true);
             setError(null);
 
-            //console.log(props.friendUid)
-            console.log("Hello?")
-
             if (props.mode === "challenge") {
                 const response = await createFriendMatchInvitation({
                     toUid: props.friendUid,
@@ -98,10 +93,7 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
 
                 props.onClose();
 
-                navigate(
-                    `/multiplayer/friend-invitations/${encodeURIComponent(response.invitationId)}`,
-                    { replace: true }
-                );
+                navigate(`/multiplayer/friend-invitations/${encodeURIComponent(response.invitationId)}`, { replace: true });
                 return;
             }
 
@@ -157,18 +149,22 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="challenge-dialog-title"
-                className="
+                className={`
                     w-full max-w-xl
                     max-h-[85vh]
                     overflow-y-auto
                     rounded-2xl
+                    bg-radial
+                    from-contrast-start
+                    via-contrast-middle 
+                    to-contrast-end
                     border-2 border-accent-start
                     bg-surface
                     p-6
                     shadow-2xl
-                "
+                `}
             >
-                <header className="mb-5 flex items-center justify-between">
+                <header className="mb-5 flex items-center justify-between border-b-2">
                     <h2
                         id="challenge-dialog-title"
                         className="text-2xl font-bold text-ink"
@@ -187,7 +183,7 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
                     </button>
                 </header>
 
-                <p className="mb-4 text-sm text-muted">
+                <p className="mb-4 text-sm text-ink">
                     {isAccepting
                         ? "Choose a scenario to play against your friend. The game will randomly select between your scenario and theirs."
                         : "Choose a scenario to challenge your friend with."}
@@ -209,62 +205,62 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
                     <ul className="flex max-h-80 flex-col gap-3 overflow-y-auto">
                         {scenarios.map(({ scenario, authorName }) => {
                             const selected = scenario.id === selectedId;
-                            const playable = Boolean(
-                                scenario.currentVersionId
-                            );
-
-                            return (
-                                <li key={scenario.id}>
-                                    <button
-                                        type="button"
-                                        disabled={!playable || submitting}
-                                        onClick={() => {
-                                            setSelectedId(scenario.id);
-                                            setError(null);
-                                        }}
-                                        aria-pressed={selected}
-                                        className={`
-                                            w-full rounded-xl border-2 p-4 text-left
-                                            transition-colors
-                                            disabled:cursor-not-allowed
-                                            disabled:opacity-80
-                                            ${
-                                                selected
-                                                    ? "border-accent-soft bg-accent-start/30"
-                                                    : "border-line bg-base hover:border-accent-start"
-                                            }
-                                        `}
-                                    >
-                                        <div className="flex items-center justify-between gap-3">
-                                            <span className="font-semibold text-ink">
-                                                {scenario.title}
-                                            </span>
-
-                                            {selected && (
-                                                <span className="text-sm text-accent-soft">
-                                                    Selected
+                            const playable = Boolean( scenario.currentVersionId );
+                            if (playable) {
+                                return (
+                                    <li key={scenario.id}>
+                                        <button
+                                            type="button"
+                                            disabled={!playable || submitting}
+                                            onClick={() => {
+                                                setSelectedId(scenario.id);
+                                                setError(null);
+                                            }}
+                                            aria-pressed={selected}
+                                            className={`
+                                                w-full rounded-xl border-2 p-4 text-left
+                                                bg-radial
+                                                from-accent-start
+                                                via-accent-middle 
+                                                to-accent-end
+                                                transition-colors
+                                                disabled:cursor-not-allowed
+                                                disabled:opacity-80
+                                                ${
+                                                    selected
+                                                        ? "border-accent-soft brightness-80"
+                                                        : "border-line hover:border-accent-start"
+                                                }
+                                            `}
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="font-semibold text-ink">
+                                                    {scenario.title}
                                                 </span>
-                                            )}
-                                        </div>
 
-                                        <p className="mt-1 text-sm text-muted">
-                                            by {authorName}
-                                        </p>
+                                                {selected && (
+                                                    <span className="text-sm text-accent-soft">
+                                                        Selected
+                                                    </span>
+                                                )}
+                                            </div>
 
-                                        {!playable && (
-                                            <p className="mt-2 text-xs text-red-400">
-                                                No playable version available
+                                            <p className="mt-1 text-sm text-ink">
+                                                by {authorName} for {scenario.instrument}
                                             </p>
-                                        )}
-                                    </button>
-                                </li>
-                            );
+                                        </button>
+                                    </li>
+                                );
+                            }
+                            else {
+                                return;
+                            }
                         })}
                     </ul>
                 )}
 
                 {error && scenarios.length > 0 && (
-                    <p role="alert" className="mt-4 text-sm text-red-400">
+                    <p role="alert" className="mt-4 text-sm font-bold text-center text-ink">
                         {error}
                     </p>
                 )}
@@ -275,9 +271,15 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
                         onClick={props.onClose}
                         disabled={submitting}
                         className="
-                            rounded-lg border border-line
-                            px-4 py-2 text-ink
-                            hover:bg-base
+                            rounded-lg
+                            bg-radial
+                            from-accent-start
+                            via-accent-middle 
+                            to-accent-end
+                            px-5 py-2 font-semibold text-inverse-ink
+                            border border-2 border-ink
+                            hover:brightness-110
+                            disabled:cursor-not-allowed
                             disabled:opacity-80
                         "
                     >
@@ -294,8 +296,13 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
                             loading
                         }
                         className="
-                            rounded-lg bg-accent-start
-                            px-5 py-2 font-semibold text-white
+                            rounded-lg
+                            bg-radial
+                            from-accent-start
+                            via-accent-middle 
+                            to-accent-end
+                            px-5 py-2 font-semibold text-inverse-ink
+                            border border-2 border-ink
                             hover:brightness-110
                             disabled:cursor-not-allowed
                             disabled:opacity-80
