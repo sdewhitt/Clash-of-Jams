@@ -102,7 +102,7 @@ export function FriendMatchWaiting() {
                 }>
                     <div className="flex ml-12">
                         <BackButton onClick={() => navigate(-1)}/>
-                        <h1 className="ml-4 text-4xl font-bold text-ink">My Profile</h1>
+                        <h1 className="ml-4 text-4xl font-bold text-ink">Friendly Competition</h1>
                     </div>
     
                     <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
@@ -115,7 +115,28 @@ export function FriendMatchWaiting() {
                         />
                     </div>
                 </header>
-                <h1 className="items-center">Your challenge was declined.</h1>
+                <div
+                    className={`
+                        flex flex-col
+                        items-centers
+                        w-full
+                    `}
+                >
+                    <h1 className={`
+                        bg-linear-to-b
+                        from-accent-base-start
+                        via-accent-base-middle
+                        to-accent-base-end
+                        text-5xl text-center
+                        border-4
+                        border-accent-start
+                        rounded-2xl
+                        m-24
+                        p-12
+                    `}>
+                        Your challenge was declined.
+                    </h1>
+                </div>
             </div>
         );
     }
@@ -140,7 +161,7 @@ export function FriendMatchWaiting() {
                 }>
                     <div className="flex ml-12">
                         <BackButton onClick={() => navigate(-1)}/>
-                        <h1 className="ml-4 text-4xl font-bold text-ink">My Profile</h1>
+                        <h1 className="ml-4 text-4xl font-bold text-ink">Friendly Competition</h1>
                     </div>
     
                     <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
@@ -153,7 +174,28 @@ export function FriendMatchWaiting() {
                         />
                     </div>
                 </header>
-                <h1 className="items-center">Your challenge has expired.</h1>
+                <div
+                    className={`
+                        flex flex-col
+                        items-centers
+                        w-full
+                    `}
+                >
+                    <h1 className={`
+                        bg-linear-to-b
+                        from-accent-base-start
+                        via-accent-base-middle
+                        to-accent-base-end
+                        text-5xl text-center
+                        border-4
+                        border-accent-start
+                        rounded-2xl
+                        m-24
+                        p-12
+                    `}>
+                        Your challenge was declined.
+                    </h1>
+                </div>
             </div>
         );
     }
