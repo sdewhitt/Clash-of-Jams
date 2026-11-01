@@ -193,6 +193,7 @@ export interface UserStatus {
 
 /** notifications/{notificationId} — tracking online presence of users within firestore. **/
 export interface AppNotification {
+  id?: string
   notifiedUid: string
   notifierUid: string
   notificationType: string

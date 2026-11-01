@@ -1,26 +1,37 @@
-
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { apiFetch } from "@/lib/api";
 import type { Scenario } from "@/lib/schema/types";
-import { createFriendMatchInvitation } from "@/lib/matchmaking/GameInvitation";
+import { acceptFriendMatchInvitation, createFriendMatchInvitation } from "@/lib/matchmaking/gameInvitation";
 
 type ScenarioWithAuthor = {
     scenario: Scenario;
     authorName: string;
 };
 
-interface ChallengeFriendDialogProps {
-    friendUid: string;
-    onClose: () => void;
-}
+type ChallengeFriendDialogProps =
+    | {
+        mode: "challenge";
+        friendUid: string;
+        onClose: () => void;
+    }
+    | {
+        mode: "accept";
+        invitationId: string;
+        onClose: () => void;
+    };
 
-export function ChallengeFriendDialog({ friendUid, onClose, }: ChallengeFriendDialogProps) {
+export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
+    const navigate = useNavigate();
+
     const [scenarios, setScenarios] = useState<ScenarioWithAuthor[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const isAccepting = props.mode === "accept";
 
     useEffect(() => {
         let cancelled = false;
@@ -60,7 +71,7 @@ export function ChallengeFriendDialog({ friendUid, onClose, }: ChallengeFriendDi
     const selectedScenario =
         scenarios.find(({ scenario }) => scenario.id === selectedId) ?? null;
 
-    async function handleChallenge() {
+    async function handleSubmit() {
         if (!selectedScenario || submitting) return;
 
         const { scenario } = selectedScenario;
@@ -75,32 +86,70 @@ export function ChallengeFriendDialog({ friendUid, onClose, }: ChallengeFriendDi
             setSubmitting(true);
             setError(null);
 
-            await createFriendMatchInvitation({
-                toUid: friendUid,
+            //console.log(props.friendUid)
+            console.log("Hello?")
+
+            if (props.mode === "challenge") {
+                const response = await createFriendMatchInvitation({
+                    toUid: props.friendUid,
+                    scenarioId: scenario.id,
+                    scenarioVersionId: versionId,
+                });
+
+                props.onClose();
+
+                navigate(
+                    `/multiplayer/friend-invitations/${encodeURIComponent(response.invitationId)}`,
+                    { replace: true }
+                );
+                return;
+            }
+
+            const response = await acceptFriendMatchInvitation({
+                invitationId: props.invitationId,
                 scenarioId: scenario.id,
                 scenarioVersionId: versionId,
             });
 
-            onClose();
+            if (!response.matchId) {
+                setError(
+                    "The invitation was processed, but no match was returned. Please check your notifications."
+                );
+                return;
+            }
+
+            navigate(
+                `/multiplayer/${encodeURIComponent(response.matchId)}`,
+                { replace: true }
+            );
         } catch (err) {
-            console.error("Failed to send challenge:", err);
+            console.error(
+                isAccepting
+                    ? "Failed to accept invitation:"
+                    : "Failed to send challenge:",
+                err
+            );
 
             setError(
                 err instanceof Error
                     ? err.message
-                    : "Unable to send your challenge."
+                    : isAccepting
+                        ? "Unable to accept this invitation."
+                        : "Unable to send your challenge."
             );
         } finally {
             setSubmitting(false);
         }
     }
 
+    const title = isAccepting ? "Accept Friend Challenge" : "Challenge Friend";
+
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
             onMouseDown={(e) => {
                 if (e.target === e.currentTarget && !submitting) {
-                    onClose();
+                    props.onClose();
                 }
             }}
         >
@@ -124,12 +173,12 @@ export function ChallengeFriendDialog({ friendUid, onClose, }: ChallengeFriendDi
                         id="challenge-dialog-title"
                         className="text-2xl font-bold text-ink"
                     >
-                        Challenge Friend
+                        {title}
                     </h2>
 
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={props.onClose}
                         disabled={submitting}
                         aria-label="Close dialog"
                         className="text-xl text-muted hover:text-ink disabled:opacity-50"
@@ -139,7 +188,9 @@ export function ChallengeFriendDialog({ friendUid, onClose, }: ChallengeFriendDi
                 </header>
 
                 <p className="mb-4 text-sm text-muted">
-                    Choose a scenario to challenge your friend with.
+                    {isAccepting
+                        ? "Choose a scenario to play against your friend. The game will randomly select between your scenario and theirs."
+                        : "Choose a scenario to challenge your friend with."}
                 </p>
 
                 {loading ? (
@@ -221,7 +272,7 @@ export function ChallengeFriendDialog({ friendUid, onClose, }: ChallengeFriendDi
                 <footer className="mt-6 flex justify-end gap-3">
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={props.onClose}
                         disabled={submitting}
                         className="
                             rounded-lg border border-line
@@ -235,7 +286,7 @@ export function ChallengeFriendDialog({ friendUid, onClose, }: ChallengeFriendDi
 
                     <button
                         type="button"
-                        onClick={handleChallenge}
+                        onClick={() => void handleSubmit()}
                         disabled={
                             !selectedScenario ||
                             !selectedScenario.scenario.currentVersionId ||
@@ -250,7 +301,13 @@ export function ChallengeFriendDialog({ friendUid, onClose, }: ChallengeFriendDi
                             disabled:opacity-80
                         "
                     >
-                        {submitting ? "Sending..." : "Send Challenge"}
+                        {submitting
+                            ? isAccepting
+                                ? "Accepting..."
+                                : "Sending..."
+                            : isAccepting
+                                ? "Accept Challenge"
+                                : "Send Challenge"}
                     </button>
                 </footer>
             </section>
