@@ -50,12 +50,12 @@ const SCENARIOS = [
   scenario('a', 'AAAAA', 'TestUser'),
 ]
 
-function renderSearch(scenarios: { status?: number; body: unknown }) {
+function renderSearch(scenarios: { status?: number; body: unknown }, route = '/') {
   stubApi({
     '/scenarios/scenario_with_author': scenarios,
     '/scenarios/filter_items': { body: FILTER_BOUNDS },
   })
-  renderWithAuth(<ScenarioSearch />, { auth: signedIn() })
+  renderWithAuth(<ScenarioSearch />, { auth: signedIn(), route })
 }
 
 /** Scenario titles in the order the list shows them. */
@@ -114,5 +114,17 @@ describe('ScenarioSearch search and sort', () => {
     expect(listedTitles()).toEqual(['AAAAA', 'BBBBB', 'CCCCC'])
     await userEvent.click(screen.getByRole('button', { name: 'Sort ascending' }))
     expect(listedTitles()).toEqual(['CCCCC', 'BBBBB', 'AAAAA'])
+  })
+})
+
+describe('ScenarioSearch links', () => {
+  it('opens with the scenario named in ?scenario= selected', async () => {
+    renderSearch({ body: SCENARIOS }, '/scenario_search?scenario=c')
+
+    const selected = await screen.findByRole('button', { name: 'Selected' })
+    expect(selected).toHaveAttribute('aria-pressed', 'true')
+    // The title shows twice: once in the list, once in the preview panel.
+    expect(screen.getAllByText('CCCCC')).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Select' })).toHaveLength(2)
   })
 })

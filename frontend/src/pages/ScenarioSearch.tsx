@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router"
+import { useNavigate, useSearchParams } from "react-router"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { RangeSlider } from "@/components/RangeSlider"
@@ -79,7 +79,9 @@ export function ScenarioSearch() {
     const [scenarios, setScenarios] = useState<ScenarioWithAuthor[]>([])
     // So a failed fetch reads as an error rather than as "nothing matches".
     const [scenariosFailed, setScenariosFailed] = useState(false)
-    const [selectedId, setSelectedId] = useState<string | null>(null)
+    // ?scenario=<id> opens with that scenario's preview showing, e.g. from play history.
+    const [searchParams] = useSearchParams()
+    const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get("scenario"))
     // Kept across selections, so someone reading reviews can flip between scenarios without re-picking the tab.
     const [detailsTab, setDetailsTab] = useState<DetailsTab>("leaderboard")
     const selected = scenarios.find(({ scenario }) => scenario.id === selectedId) ?? null

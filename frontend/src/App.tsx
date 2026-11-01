@@ -20,6 +20,7 @@ import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
 import { MultiplayerSession } from '@/pages/MultiplayerSession'
 import { AudioLab } from '@/pages/AudioLab'
 import { PlayScenario } from '@/pages/PlayScenario'
+import { PlayHistory } from '@/pages/PlayHistory'
 import { EloLeaderboard } from '@/pages/EloLeaderboard'
 import { RatingHistory } from '@/pages/RatingHistory'
 
@@ -41,6 +42,7 @@ const PROTECTED_ROUTES = [
   { path: '/multiplayer/:matchId', element: <MultiplayerSession /> },
   { path: '/audio_lab', element: <AudioLab /> },
   { path: '/play/:scenarioId', element: <PlayScenario /> },
+  { path: '/play_history', element: <PlayHistory /> },
   { path: '/leaderboards', element: <EloLeaderboard /> },
   { path: '/recent_matches', element: <RatingHistory /> },
   { path: '/ratings', element: <Navigate to="/recent_matches" replace /> },
