@@ -228,7 +228,43 @@ class LeaderboardResponse(ApiModel):
     latest_played_at: datetime | None = None
 
 
+class ScoreSummary(ApiModel):
+    """subscores from the scoring engine"""
 
+    pitch_accuracy: float
+    rhythm_accuracy: float
+    completeness: float
+    notes_hit: int
+    notes_missed: int
+    extra_notes: int
+
+
+class ScenarioAttempt(ApiModel):
+    """one run on a single scenario"""
+    run_id: str
+    scenario_version_id: str
+    instrument: Instrument
+    final_score: float
+    played_at: datetime
+    validation: RunValidation
+    match_id: str | None = None
+    breakdown: ScoreSummary
+
+
+class ScenarioScoreStats(ApiModel):
+    """summary of non-rejected runs"""
+    attempt_count: int
+    best_score: float
+    average_score: float
+    most_recent_score: float
+    first_score: float
+    improvement: float | None # difference btwn most recent and first, none if no attempts
+
+
+class ScenarioScoreHistory(ApiModel):
+    scenario_id: str
+    stats: ScenarioScoreStats | None # none until we have a non-rejected run
+    attempts: list[ScenarioAttempt]
 
 
 class Role(StrEnum):
