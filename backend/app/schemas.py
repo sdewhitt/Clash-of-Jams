@@ -196,6 +196,28 @@ class RunValidationResult(ApiModel):
     reason: str | None = None
 
 
+class PlayHistoryEntry(ApiModel):
+    """One of the caller's runs, with what the history page needs to know about its scenario."""
+
+    run_id: str
+    scenario_id: str
+    scenario_version_id: str
+    scenario_title: str | None  # None once the scenario is deleted or made private
+    instrument: Instrument
+    final_score: float
+    played_at: datetime
+    validation: RunValidation
+    match_id: str | None = None
+    scenario_available: bool  # False when the scenario can no longer be opened or played
+    is_current_version: bool  # False when the scenario has been updated since this run
+
+
+class PlayHistoryResponse(ApiModel):
+    entries: list[PlayHistoryEntry]
+    # Pass back as ?before= to get the next page; None on the last page.
+    next_before: datetime | None = None
+
+
 class LeaderboardResponse(ApiModel):
     entries: list[LeaderboardEntry]
     my_entry: LeaderboardEntry | None = None
