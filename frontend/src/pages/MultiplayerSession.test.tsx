@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
 
 import { useSession } from '@/lib/multiplayer/useSession'
-import { cancelQueue, getQueueStatus } from '@/lib/matchmaking/api'
+import { cancelQueue, getQueueStatus } from '@/lib/schema/types'
 import { sessionSnapshot } from '@/test/multiplayer'
 import { renderAtRoute, signedIn } from '@/test/render'
 import { MultiplayerSession } from './MultiplayerSession'

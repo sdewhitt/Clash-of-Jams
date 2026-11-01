@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FinishedRun } from '@/components/ScenarioPlayer'
-import { getUserSettings } from '@/lib/profile/UserSettings'
+import { getUserSettings } from '@/lib/profile/userSettings'
 import { submitRun } from '@/lib/runs/store'
 import { listMyScenarios, loadScenario, saveScenarioDraft } from '@/lib/scenarios/store'
 import type { UserSettings } from '@/lib/schema/types'

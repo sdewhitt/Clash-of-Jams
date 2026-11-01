@@ -4,7 +4,7 @@
  * Nothing here touches the Firebase app instance, so this module is safe to
  * import from both the browser app and the Node init script.
  */
-import { serverTimestamp, type WithFieldValue } from 'firebase/firestore'
+import { serverTimestamp, Timestamp, type WithFieldValue } from 'firebase/firestore'
 
 import type {
   ChartPart,
@@ -458,6 +458,7 @@ export function newFriendship(args: {
     id: friendshipId(idA, idB),
     friends: [idA, idB],
     totalFriendlies: 0,
+    matchHistory: [],
     uidA: idA,
     uidAWins: 0, 
     uidB: idB,
@@ -590,23 +591,20 @@ export function newModerationAction(args: {
   }
 }
 
-export function newMatchInvitation(args: {
-  id: string
-  matchId: string
-  fromUid: string
-  toUid: string
-  expiresAt: MatchInvitation['expiresAt']
-}): WithFieldValue<MatchInvitation> {
-  return {
-    id: args.id,
-    matchId: args.matchId,
-    fromUid: args.fromUid,
-    toUid: args.toUid,
-    state: 'pending',
-    createdAt: serverTimestamp(),
-    expiresAt: args.expiresAt,
-  }
-}
+// export function newMatchInvitation(args: {
+//   matchId: string
+//   fromUid: string
+//   toUid: string
+// }): WithFieldValue<MatchInvitation> {
+//   return {
+//     matchId: args.matchId,
+//     fromUid: args.fromUid,
+//     toUid: args.toUid,
+//     state: 'pending',
+//     createdAt: serverTimestamp(),
+//     expiresAt: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000)
+//   }
+// }
 
 export function newRecordingShare(args: {
   id: string

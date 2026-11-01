@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-
 import { auth } from '@/lib/firebase'
 import { ApiError, apiFetch } from '@/lib/api'
-
-import type { SessionEvent, SessionReply, SessionSnapshot } from './types'
+import type { SessionEvent, SessionReply, SessionSnapshot } from '@/lib/schema/types'
 
 interface Entry {
   uid: string

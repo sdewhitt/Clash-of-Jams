@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FinishedRun } from '@/components/ScenarioPlayer'
 import { apiFetch } from '@/lib/api'
-import { getUserSettings } from '@/lib/profile/UserSettings'
+import { getUserSettings } from '@/lib/profile/userSettings'
 import { submitRun } from '@/lib/runs/store'
 import { loadScenario } from '@/lib/scenarios/store'
 import { DEFAULT_SCORING_RULES } from '@/lib/schema/collections'

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { processImage } from "@/lib/profile/UserProfile";
+import { processImage } from "@/lib/profile/userProfile";
 
 type AvatarUploadProps = {
     onAvatarUpdated: (url: string) => void;

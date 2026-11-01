@@ -7,7 +7,7 @@ import { ProfileButton } from "@/components/ProfileButton"
 import { useSkillRatings } from "@/lib/ratings/useSkillRatings";
 import type { UserPreferences, /*UserSettings*/ } from '@/lib/schema/types';
 import { EloDisplay } from "@/components/EloDisplay";
-import { getUserPreferences } from "@/lib/profile/UserPreferences";
+import { getUserPreferences } from "@/lib/profile/userPreferences";
 
 export function UserProfile() {
     const { user, profile, loading } = useAuth();

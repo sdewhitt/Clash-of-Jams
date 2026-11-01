@@ -4,22 +4,23 @@ import { doc, onSnapshot, type Timestamp, } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { ONLINE_TIMEOUT_MS } from '@/lib/onlineStatus/status'
 
-interface FriendPresenceState {
+interface OnlinePresenceState {
   isOnline: boolean
   dnd: boolean
   loading: boolean
 }
 
-export function useOnlineStatus( uid: string, ): FriendPresenceState {
+export function useOnlineStatus( uid: string | undefined, ): OnlinePresenceState {
   const [ lastHeartbeat, setLastHeartbeat ] = useState<number | null>(null);
   const [ dnd, setDnd ] = useState<boolean>(false);
   const [ loading, setLoading ] = useState(true);
   const [ now, setNow ] = useState(() => Date.now());
 
   useEffect(() => {
-    setLastHeartbeat(null)
-    setDnd(false)
-    setLoading(true)
+    if (!uid) return;
+    setLastHeartbeat(null);
+    setDnd(false);
+    setLoading(true);
 
     const unsubscribe = onSnapshot(
       doc(db, 'userStatus', uid),

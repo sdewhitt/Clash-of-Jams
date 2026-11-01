@@ -511,6 +511,10 @@ service cloud.firestore {
       }
     }
 
+    match /friendMatchInvitationLocks/{lockId} {
+      allow read, write: if false;
+    }
+
     // Document id is "{scenarioId}_{reviewerUid}", which is what makes one
     // review per user per scenario impossible to work around.
     match /scenarioReviews/{reviewId} {

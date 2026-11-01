@@ -5,15 +5,26 @@ import { ProfileButton } from "@/components/ProfileButton"
 import type { PublicProfile } from '@/lib/schema/types';
 import { EloDisplay } from "@/components/EloDisplay";
 import { useAuth } from "@/lib/auth/useAuth";
-import { getPublicProfile } from "@/lib/profile/PublicProfile";
+import { getPublicProfile } from "@/lib/profile/publicProfile";
 import { useSkillRatings } from "@/lib/ratings/useSkillRatings";
 import FriendRequestButton from "@/components/FriendshipButton";
+import { useOnlineStatus } from "@/lib/onlineStatus/useOnlineStatus";
+import { useFriendship } from "@/lib/friendship/useFriendship";
+import { useFriendshipStatus } from "@/lib/friendship/friendRequests";
+
 
 export function PublicProfile() {
     const { user, profile, loading } = useAuth();
     const { uid } = useParams<{ uid: string }>();
-    const [ userProfile, setUserProfile ] = useState<PublicProfile>();
+    const [userProfile, setUserProfile] = useState<PublicProfile>();
+    const [profileLoading, setProfileLoading] = useState(true);
+
+    const isFriend = Boolean( uid && profile?.friends?.includes(uid) );
+    const { friendship, myWins, theirWins, totalMatches, loading: friendshipLoading, } = useFriendship( isFriend ? profile?.uid : undefined, isFriend ? uid : undefined );
+
     const { ratings: eloRatings } = useSkillRatings(uid);
+    const { isOnline, dnd } = useOnlineStatus(uid);
+
     const navigate = useNavigate();
 
     function formatLabel(value: string) {
@@ -22,31 +33,74 @@ export function PublicProfile() {
             .replace(/\b\w/g, (char) => char.toUpperCase());
     }
 
-    async function loadPublicProfile() {
-        if (!uid) {
-            return;
+    useEffect(() => {
+        let cancelled = false;
+    
+        async function loadPublicProfile() {
+            if (!uid) {
+                setProfileLoading(false);
+                return;
+            }
+    
+            setProfileLoading(true);
+    
+            try {
+                const result = await getPublicProfile(uid);
+    
+                if (!cancelled) {
+                    setUserProfile(result);
+                }
+            } catch (error) {
+                console.error("Failed to load public profile:", error);
+    
+                if (!cancelled) {
+                    setUserProfile(undefined);
+                }
+            } finally {
+                if (!cancelled) {
+                    setProfileLoading(false);
+                }
+            }
         }
+    
+        void loadPublicProfile();
+    
+        return () => {
+            cancelled = true;
+        };
+    }, [uid]);
 
-        try {
-            const profile = await getPublicProfile(uid);
-            setUserProfile(profile)
-
-        } catch (error) {
-            console.error("Failed to load public profile:", error);
-        }
-    }
-
-    useEffect(
-        () => { 
-            loadPublicProfile()
-            }, [uid]
-    );
-
-    if (loading) { 
+    if (loading || profileLoading) { 
         return ( 
             <main className="h-screen flex items-center justify-center"> 
-                <div className="flex flex-col items-center gap-4"> 
-                <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin" /> 
+                <header className={`
+                    sticky
+                    top-0
+                    z-50
+                    flex
+                    items-center
+                    justify-between
+                    bg-linear-to-r
+                    from-accent-base-start
+                    via-accent-base-middle
+                    to-accent-base-end
+                    border-b-4
+                    border-accent-start
+                    py-6`
+                }>
+                    <div className="flex ml-12">
+                        {isFriend ? <BackButton onClick={() => navPortal('/friends/my_friends')}></BackButton> : <BackButton onClick={() => navPortal('/friends/find_friends')}></BackButton>}
+                        <h1 className="ml-4 text-4xl font-bold text-ink">View Public Profile</h1>
+                    </div>
+
+                    <div className="mr-6">
+                        <ProfileButton
+                            username={profile?.displayName ?? user?.email ?? "…"}
+                            userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                        />
+                    </div>
+                </header>
+                <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin"> 
                     <p className="text-xl font-semibold text-ink"> Loading profile... </p> 
                 </div> 
             </main> 
@@ -75,7 +129,7 @@ export function PublicProfile() {
                 py-6`
             }>
                 <div className="flex ml-12">
-                    <BackButton onClick={() => navPortal('/friends/find_friends')}></BackButton>
+                    {isFriend ? <BackButton onClick={() => navPortal('/friends/my_friends')}></BackButton> : <BackButton onClick={() => navPortal('/friends/find_friends')}></BackButton>}
                     <h1 className="ml-4 text-4xl font-bold text-ink">View Public Profile</h1>
                 </div>
 
@@ -231,6 +285,79 @@ export function PublicProfile() {
                         </div>
                     </div>
                 </div>
+            
+                {isFriend && (
+                    <div className="
+                        w-full
+                        flex flex-col
+                        bg-linear-to-b
+                        from-accent-start from-50
+                        via-accent-middle
+                        to-accent-end to-70
+                        outline-4
+                        outline-accent-end
+                        rounded-lg
+                        py-8
+                        px-8
+                        mb-8
+                    ">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-2xl font-bold">
+                                Head-to-Head
+                            </h2>
+
+                            <span className={
+                                dnd
+                                    ? "text-yellow-300"
+                                    : isOnline
+                                        ? "text-green-400"
+                                        : "text-red-400"
+                            }>
+                                {dnd ? "Do Not Disturb" : isOnline ? "Online" : "Offline"}
+                            </span>
+                        </div>
+
+                        {friendshipLoading ? (
+                            <p>Loading friendship statistics...</p>
+                        ) : friendship ? (
+                            <>
+                                <div className="grid grid-cols-3 text-center mt-6">
+                                    <div>
+                                        <p className="text-4xl font-bold">{myWins}</p>
+                                        <p>Your Wins</p>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-4xl font-bold">{totalMatches}</p>
+                                        <p>Total Matches</p>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-4xl font-bold">{theirWins}</p>
+                                        <p>Their Wins</p>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <p>No head-to-head matches yet.</p>
+                        )}
+
+                        <button
+                            disabled={!isOnline || dnd}
+                            className="
+                                mt-6
+                                rounded-lg
+                                bg-accent-start
+                                px-6 py-3
+                                font-semibold
+                                disabled:opacity-40
+                                disabled:cursor-not-allowed
+                            "
+                        >
+                            Challenge Friend
+                        </button>
+                    </div>
+                )}
 
                 <div className={` 
                     w-full 

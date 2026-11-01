@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import type { SearchProfile } from "@/lib/schema/types"
-import { searchPublicUsers } from "@/lib/profile/UserProfileSearch"
+import { searchPublicUsers } from "@/lib/profile/userProfileSearch"
 import UserSearchResult from "@/components/UserSearchResult"
 
 export function FindFriends() {  
@@ -28,11 +28,11 @@ export function FindFriends() {
 
         const term = searchTerm.trim();
 
+        let override = false;
         if (term.length == 0) {
-            console.log("Implement Friend of Friends Search")
+            override = true;
         }
-
-        if (term.length < 3) {
+        else if (term.length < 3) {
             setResults([]);
             setLoading(false);
             setError(null);
@@ -46,7 +46,7 @@ export function FindFriends() {
             setError(null);
 
             try {
-                const users = await searchPublicUsers(user?.uid, term);
+                const users = await searchPublicUsers(user?.uid, term, false, override);
 
                 if (!cancelled) {
                     setResults( users );
@@ -67,6 +67,7 @@ export function FindFriends() {
 
         return () => {
         cancelled = true;
+        override = false;
         window.clearTimeout(timer);
         };
     }, [searchTerm, user?.uid]);
@@ -172,7 +173,7 @@ export function FindFriends() {
                     {onlyRecommended ? "Friends of Your Friends" : "All Users"}
                 </button>
 
-                {searchTerm.trim().length < 3 && (
+                {searchTerm.trim().length != 0 && searchTerm.trim().length < 3 && (
                     <div className={`
                         flex items-center justify-center
                         rounded-lg
@@ -182,7 +183,7 @@ export function FindFriends() {
                         via-accent-middle
                         to-accent-end
                     `}>
-                        <p className="text-center text-md text-muted">
+                        <p className="text-center text-md text-inverse-ink">
                             Type at least 3 characters to search.
                         </p>
                     </div>
@@ -198,7 +199,7 @@ export function FindFriends() {
                         via-accent-middle
                         to-accent-end
                     `}>
-                        <p className="text-center text-md text-muted">
+                        <p className="text-center text-md text-inverse-ink">
                             Searching players...
                         </p>
                     </div>
@@ -214,13 +215,13 @@ export function FindFriends() {
                         via-accent-middle
                         to-accent-end
                     `}>
-                        <p className="text-center text-md text-muted">
+                        <p className="text-center text-md text-inverse-ink">
                             {error}
                         </p>
                     </div>
                 )}
 
-                {!loading && !error && searchTerm.trim().length >= 3 && results.length === 0 && (
+                {!loading && !error && (searchTerm.trim().length >= 3 || searchTerm.trim().length == 0) && results.length === 0 && (
                     <div className={`
                         flex items-center justify-center
                         rounded-lg
@@ -230,7 +231,7 @@ export function FindFriends() {
                         via-accent-middle
                         to-accent-end
                     `}>
-                        <p className="text-center text-md text-muted">
+                        <p className="text-center text-md text-inverse-ink">
                             No users found. Try another username.
                         </p>
                     </div>
@@ -281,7 +282,7 @@ export function FindFriends() {
                                     via-accent-middle
                                     to-accent-end
                                 `}>
-                                    <p className="text-center text-md text-muted">
+                                    <p className="text-center text-md text-inverse-ink">
                                         No users found that share mutual friends. Please search a different username or look at all results.
                                     </p>
                                 </div>

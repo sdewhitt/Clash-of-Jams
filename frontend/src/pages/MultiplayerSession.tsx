@@ -6,12 +6,11 @@ import { LiveElo } from '@/components/LiveElo'
 import { ProfileButton } from '@/components/ProfileButton'
 import { RatingResult } from '@/components/RatingResult'
 import { useAuth } from '@/lib/auth/useAuth'
-import { cancelQueue, getQueueStatus } from '@/lib/matchmaking/api'
-import { PRESET_MESSAGES } from '@/lib/multiplayer/types'
+import { cancelQueue, getQueueStatus } from '@/lib/schema/types'
+import { PRESET_MESSAGES } from '@/lib/schema/types'
 import { useSession } from '@/lib/multiplayer/useSession'
 
-const button =
-  'cursor-pointer rounded-xl border-2 border-accent-start px-5 py-3 font-bold focus-visible:outline-3 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50'
+const button = 'cursor-pointer rounded-xl border-2 border-accent-start px-5 py-3 font-bold focus-visible:outline-3 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50'
 
 export function MultiplayerSession() {
   const { matchId } = useParams()

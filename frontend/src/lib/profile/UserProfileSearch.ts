@@ -1,11 +1,11 @@
-import { collection, doc, endAt, getDoc, getDocs, limit, orderBy, query, startAt, } from "firebase/firestore"; 
+import { collection, doc, endAt, getDoc, getDocs, limit, orderBy, query, startAt, where, type QueryConstraint, } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { PublicProfile, RelationshipStatus, SearchProfile } from "../schema/types";
-  
-export async function searchPublicUsers( activeUid: string, queryUsername: string ): Promise<SearchProfile[]> {
+import type { PublicProfile, RelationshipStatus, SearchProfile, } from "@/lib/schema/types";
+
+export async function searchPublicUsers( activeUid: string, queryUsername: string, friend: boolean, limitOverride: boolean): Promise<SearchProfile[]> {
     const term = queryUsername.trim().toLowerCase();
 
-    if (term.length < 3) {
+    if (!limitOverride && term.length < 3) {
         return [];
     }
 
@@ -19,58 +19,63 @@ export async function searchPublicUsers( activeUid: string, queryUsername: strin
     const activeProfile = activeProfileSnap.data() as PublicProfile;
     const activeFriendIds = new Set(activeProfile.friends ?? []);
 
-    // 2. Search public profiles by username.
+    const constraints: QueryConstraint[] = [
+        limit(30),
+    ];
+
+    if (!limitOverride) {
+        constraints.push(orderBy('usernameLower'));
+        constraints.push(startAt(term));
+        constraints.push(endAt(term + "\uf8ff"));
+    }
+    
+    if (friend) {
+        constraints.push(where("friends", "array-contains", activeUid));
+    }
+    
     const profilesQuery = query(
         collection(db, "publicProfile"),
-        orderBy("usernameLower"),
-        startAt(term),
-        endAt(term + "\uf8ff"),
-        limit(30)
+        ...constraints
     );
 
     const snapshot = await getDocs(profilesQuery);
 
-    // 3. Add friendship and mutual-friend information.
     return snapshot.docs
         .map((userDoc) => {
-        const profile = userDoc.data() as PublicProfile;
+            const profile = userDoc.data() as PublicProfile;
 
-        // Assumes the document ID is the user's Firebase Auth UID.
-        const uid = profile.uid || userDoc.id;
-        const candidateFriendIds = new Set(profile.friends ?? []);
+            const uid = profile.uid || userDoc.id;
+            const candidateFriendIds = new Set(profile.friends ?? []);
 
-        // Exclude the current user from search results.
-        if (uid === activeUid) {
-            return null;
-        }
-
-        // Direct friendship?
-        const isFriend = activeFriendIds.has(uid);
-
-        // Count friends shared by the active user and candidate.
-        let mutualFriendCount = 0;
-
-        for (const friendUid of candidateFriendIds) {
-            if (activeFriendIds.has(friendUid)) {
-            mutualFriendCount++;
+            if (uid === activeUid) {
+                return null;
             }
-        }
 
-        let relationship: RelationshipStatus = "none";
+            const isFriend = activeFriendIds.has(uid);
 
-        if (isFriend) {
-            relationship = "friend";
-        } else if (mutualFriendCount > 0) {
-            relationship = "friendOfFriend";
-        }
+            let mutualFriendCount = 0;
 
-        return {
-            ...profile,
-            relationship,
-            mutualFriendCount,
-        };
-    })
-    .filter(
-        (profile): profile is SearchProfile => profile !== null
-    );
+            for (const friendUid of candidateFriendIds) {
+                if (activeFriendIds.has(friendUid)) {
+                    mutualFriendCount++;
+                }
+            }
+
+            let relationship: RelationshipStatus = "none";
+
+            if (isFriend) {
+                relationship = "friend";
+            } else if (mutualFriendCount > 0) {
+                relationship = "friendOfFriend";
+            }
+
+            return {
+                ...profile,
+                relationship,
+                mutualFriendCount,
+            };
+        })
+        .filter(
+            (profile): profile is SearchProfile => profile !== null
+        );
 }

@@ -10,9 +10,12 @@ import { useMatchmaking } from '@/lib/matchmaking/useMatchmaking'
 export function MultiplayerConnect() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
+
   const { status, receivedAt, error, leaving, cancel, retry } = useMatchmaking(user?.uid)
   const match = status?.match
+
   const [now, setNow] = useState(() => performance.now())
+  
   const queued = status?.state === 'queued'
   const elapsed = queued ? Math.floor(status.waitSeconds + Math.max(0, now - receivedAt) / 1000) : 0
 

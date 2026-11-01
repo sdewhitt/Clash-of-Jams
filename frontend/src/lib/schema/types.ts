@@ -15,6 +15,7 @@
  *    separate documents, as the design document requires.
  */
 import type { Timestamp } from 'firebase/firestore'
+import { apiFetch } from '../api'
 
 /* ------------------------------------------------------------------ enums */
 
@@ -84,6 +85,24 @@ export type HitVerdict = (typeof HIT_VERDICTS)[number]
 export type ModerationTargetType = 'user' | 'scenario' | 'recording'
 
 export type RelationshipStatus = "friend" | "friendOfFriend" | "none";
+
+export const PRESET_MESSAGES = [
+  { id: 'well_done', text: 'Well done!', key: 'ArrowUp', shortcut: '↑' },
+  { id: 'challenge', text: 'Best you can do?', key: 'ArrowRight', shortcut: '→' },
+  { id: 'thanks', text: 'Thanks!', key: 'ArrowDown', shortcut: '↓' },
+  { id: 'good_game', text: 'Good game!', key: 'ArrowLeft', shortcut: '←' },
+] as const
+
+export const joinQueue = () => apiFetch<QueueStatus>('/matchmaking/queue', { method: 'POST', body: JSON.stringify({}) })
+
+export const getQueueStatus = () => apiFetch<QueueStatus>('/matchmaking/queue')
+
+export const cancelQueue = (queueId: string, keepalive = false, leaveLobby = true) =>
+  apiFetch<QueueStatus>('/matchmaking/queue', {
+    method: 'DELETE',
+    body: JSON.stringify({ queueId, leaveLobby }),
+    keepalive,
+  })
 
 /* ------------------------------------------------------- primary database */
 
@@ -472,6 +491,7 @@ export interface Friendship {
   uidB: string
   uidBWins: number
   totalFriendlies: number
+  matchHistory: string[]
   createdAt: Timestamp
 }
 
@@ -567,12 +587,48 @@ export interface ModerationAction {
 /** matchInvitations/{invitationId} */
 export interface MatchInvitation {
   id: string
-  matchId: string
+
+  // Null until both players have selected a scenario.
+  matchId: string | null
+
   fromUid: string
   toUid: string
+
+  // Scenario selected by the challenger.
+  fromScenarioId: string
+  fromScenarioVersionId: string
+
+  // Scenario selected by the recipient.
+  toScenarioId: string | null
+  toScenarioVersionId: string | null
+
   state: InvitationState
+
   createdAt: Timestamp
   expiresAt: Timestamp
+  updatedAt: Timestamp
+}
+
+export interface CreateFriendMatchRequest {
+  toUid: string
+  scenarioId: string
+  scenarioVersionId: string
+}
+
+export interface AcceptFriendMatchRequest {
+  invitationId: string
+  scenarioId: string
+  scenarioVersionId: string
+}
+
+export interface FriendMatchInvitationResponse {
+  invitationId: string
+  matchId: string | null
+  state: InvitationState
+}
+
+export interface DeclineFriendMatchRequest {
+  invitationId: string;
 }
 
 /** recordingShares/{shareId} — a run recording the owner chose to publish. */
@@ -607,4 +663,79 @@ export interface SchemaMeta {
   collections: string[]
   initializedAt: Timestamp
   initializedBy: string
+}
+
+export interface SessionPlayer {
+  uid: string
+  displayName: string
+  elo: number
+  isReady: boolean
+  connected: boolean
+  reconnectUntilMs: number | null
+  score: number
+  beatsHit: number
+}
+
+export interface SessionSnapshot {
+  id: string
+  state: 'lobby' | 'in_progress' | 'complete' | 'abandoned'
+  protocolVersion: string
+  instrument: Instrument
+  scenarioId: string
+  scenarioVersionId: string
+  scenarioTitle: string
+  scenarioDifficulty: number
+  difficultySource: 'author' | 'crowd'
+  inputSource: 'demo'
+  serverSequence: number
+  yourLastSequence: number
+  serverTimeMs: number
+  startedAtMs: number | null
+  durationMs: number
+  beatMs: number
+  totalBeats: number
+  participants: SessionPlayer[]
+  messages: { id: number; uid: string; text: string; atMs: number }[]
+  finalizing: boolean
+  completionReason: string | null
+  ratingEvents: (Omit<RatingEvent, 'appliedAt'> & { appliedAt: string })[]
+}
+
+export interface SessionEvent {
+  eventId: string
+  sequence: number
+  kind: 'ready' | 'demo_hit' | 'emote' | 'resign'
+  phrase?: (typeof PRESET_MESSAGES)[number]['id']
+}
+
+export interface SessionReply {
+  type: 'snapshot'
+  disposition: 'snapshot' | 'accepted' | 'duplicate' | 'rejected'
+  eventId: string | null
+  error: string | null
+  snapshot: SessionSnapshot
+}
+
+export interface MatchedLobby {
+  id: string
+  state: 'lobby' | 'in_progress'
+  instrument: Instrument
+  scenarioId: string
+  scenarioVersionId: string
+  scenarioTitle: string
+  scenarioDifficulty: number
+  difficultySource: 'crowd' | 'author'
+  participants: { uid: string; displayName: string; elo: number; isProvisional: boolean }[]
+}
+
+export interface QueueStatus {
+  state: 'idle' | 'queued' | 'matched'
+  queueId: string | null
+  instrument: Instrument | null
+  waitSeconds: number
+  ratingWindow: number | null
+  searchExpanded: boolean
+  waitingFor: 'opponent' | 'scenario' | null
+  match: MatchedLobby | null
+  policyVersion: string
 }

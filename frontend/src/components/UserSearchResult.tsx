@@ -1,4 +1,4 @@
-import { useOnlineStatus } from "@/lib/onlineStatus/useFriendStatus";
+import { useOnlineStatus } from "@/lib/onlineStatus/useOnlineStatus";
 import type { SearchProfile } from "@/lib/schema/types";
 import { useNavigate } from "react-router"
 
@@ -76,12 +76,12 @@ export default function UserSearchResult({ profile, }: UserSearchResultProps) {
                 <p className="truncate font-medium">
                     {profile.displayName || profile.username}
                 </p>
-                <p className="mt-1 text-xs text-muted">
+                <p className="mt-1 text-xs text-inverse-ink">
                     {relationshipText}{loading ? "" : ` - ${dnd ? "Do Not Disturb" : `${isOnline ? "Online" : "Offline"}`}`}
                 </p>
             </div>
 
-            <span className="text-muted" aria-hidden="true">
+            <span className="text-inverse-ink" aria-hidden="true">
                 →
             </span>
         </button>
