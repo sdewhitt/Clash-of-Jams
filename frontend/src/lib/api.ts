@@ -27,6 +27,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const headers = new Headers(init.headers)
 
   const user = auth.currentUser
+
   if (user) {
     headers.set('Authorization', `Bearer ${await user.getIdToken()}`)
   }

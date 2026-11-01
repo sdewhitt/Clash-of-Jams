@@ -11,6 +11,7 @@ import FriendRequestButton from "@/components/FriendshipButton";
 import { useOnlineStatus } from "@/lib/onlineStatus/useOnlineStatus";
 import { useFriendship } from "@/lib/friendship/useFriendship";
 import { useFriendshipStatus } from "@/lib/friendship/friendRequests";
+import { ChallengeFriendDialog } from "@/components/ChallengeFriendDialog";
 
 
 export function PublicProfile() {
@@ -19,11 +20,24 @@ export function PublicProfile() {
     const [userProfile, setUserProfile] = useState<PublicProfile>();
     const [profileLoading, setProfileLoading] = useState(true);
 
-    const isFriend = Boolean( uid && profile?.friends?.includes(uid) );
-    const { friendship, myWins, theirWins, totalMatches, loading: friendshipLoading, } = useFriendship( isFriend ? profile?.uid : undefined, isFriend ? uid : undefined );
+    const currentUid = profile?.uid;
+    const isOwnProfile = currentUid === uid;
 
+    const {
+        friendStatus,
+        loading: friendStatusLoading,
+    } = useFriendshipStatus(
+        currentUid && uid && !isOwnProfile ? currentUid : "",
+        currentUid && uid && !isOwnProfile ? uid : ""
+    );
+
+    const isFriend = friendStatus === "accepted";
+    const { friendship, myWins, theirWins, totalMatches, loading: friendshipLoading, error: friendshipError, } = useFriendship( isFriend ? currentUid : undefined, isFriend ? uid : undefined );
     const { ratings: eloRatings } = useSkillRatings(uid);
-    const { isOnline, dnd } = useOnlineStatus(uid);
+    const { isOnline, dnd } = useOnlineStatus(isFriend ? uid : undefined);
+    const canChallenge = isFriend && !isOwnProfile && isOnline && !dnd;
+
+    const [challengeOpen, setChallengeOpen] = useState(false);
 
     const navigate = useNavigate();
 
@@ -318,44 +332,86 @@ export function PublicProfile() {
                         </div>
 
                         {friendshipLoading ? (
-                            <p>Loading friendship statistics...</p>
+                            <p className="mt-6 text-center text-white/70">
+                                Loading friendship statistics...
+                            </p>
+                        ) : friendshipError ? (
+                            <p className="mt-6 text-center text-red-300">
+                                {friendshipError}
+                            </p>
                         ) : friendship ? (
-                            <>
-                                <div className="grid grid-cols-3 text-center mt-6">
-                                    <div>
-                                        <p className="text-4xl font-bold">{myWins}</p>
-                                        <p>Your Wins</p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-4xl font-bold">{totalMatches}</p>
-                                        <p>Total Matches</p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-4xl font-bold">{theirWins}</p>
-                                        <p>Their Wins</p>
-                                    </div>
+                            <div className="
+                                grid grid-cols-3
+                                text-center
+                                mt-8
+                                gap-4
+                            ">
+                                <div className="flex flex-col items-center">
+                                    <p className="text-4xl font-bold">
+                                        {myWins}
+                                    </p>
+                                    <p className="mt-2 text-sm font-medium text-white/80">
+                                        Your Wins
+                                    </p>
                                 </div>
-                            </>
-                        ) : (
-                            <p>No head-to-head matches yet.</p>
-                        )}
 
+                                <div className="
+                                    flex flex-col items-center
+                                    border-x border-white/20
+                                ">
+                                    <p className="text-4xl font-bold">
+                                        {totalMatches}
+                                    </p>
+                                    <p className="mt-2 text-sm font-medium text-white/80">
+                                        Total Matches
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-col items-center">
+                                    <p className="text-4xl font-bold">
+                                        {theirWins}
+                                    </p>
+                                    <p className="mt-2 text-sm font-medium text-white/80">
+                                        Their Wins
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="mt-6 text-center text-white/70">
+                                No head-to-head matches yet.
+                            </p>
+                        )}
                         <button
-                            disabled={!isOnline || dnd}
+                            type="button"
+                            disabled={!canChallenge}
+                            onClick={() => setChallengeOpen(true)}
                             className="
-                                mt-6
+                                mt-8
+                                w-full
                                 rounded-lg
-                                bg-accent-start
+                                bg-contrast-start
                                 px-6 py-3
                                 font-semibold
-                                disabled:opacity-40
+                                shadow-md
+                                transition
+                                hover:brightness-110
+                                disabled:opacity-80
                                 disabled:cursor-not-allowed
                             "
                         >
-                            Challenge Friend
+                            {dnd
+                                ? "Player is in Do Not Disturb"
+                                : isOnline
+                                    ? "Challenge Friend"
+                                    : "Player is Offline"
+                            }
                         </button>
+                        {challengeOpen && uid && (
+                            <ChallengeFriendDialog
+                                friendUid={uid}
+                                onClose={() => setChallengeOpen(false)}
+                            />
+                        )}
                     </div>
                 )}
 

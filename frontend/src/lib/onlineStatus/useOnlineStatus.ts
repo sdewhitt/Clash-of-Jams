@@ -17,7 +17,13 @@ export function useOnlineStatus( uid: string | undefined, ): OnlinePresenceState
   const [ now, setNow ] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid) {
+      setLastHeartbeat(null);
+      setDnd(false);
+      setLoading(false);
+      return;
+    }
+
     setLastHeartbeat(null);
     setDnd(false);
     setLoading(true);

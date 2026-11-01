@@ -592,8 +592,13 @@ class FirestoreMatchmakingStore:
             if sender.to_dict().get("isBanned") or recipient.to_dict().get("isBanned"):
                 raise MatchmakingError("A participant cannot join multiplayer.", 403)
             
-            status_snapshot = transaction.get(status_ref)
-            status_data = status_snapshot.to_dict() if status_snapshot.exists else None 
+            status_snapshot = status_ref.get(transaction=transaction)
+
+            status_data = (
+                status_snapshot.to_dict()
+                if status_snapshot.exists
+                else None
+            )
 
             validate_user_presence(status_data)
 

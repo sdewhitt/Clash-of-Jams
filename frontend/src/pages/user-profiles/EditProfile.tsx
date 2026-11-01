@@ -14,7 +14,7 @@ import type { UserSettings } from "@/lib/schema/types";
 import { useTheme, type Theme } from "@/context/ThemeContext";
 import { UsernameEditor } from "@/components/UsernameEditor";
 import { BioEditor } from "@/components/BioEditor";
-import { getUserPreferences, updatePreferredGenres, updatePreferredInstrument } from "@/lib/profile/userPreferences";
+import { getUserPreferences, updatePreferredGenres, updatePreferredInstrument } from "@/lib/profile/userPreferences"; <s></s>
 import { getPublicProfile, getUserStatus, updateDoNotDistrub, updateEloPublicity, updatePublicProfile } from "@/lib/profile/publicProfile";
 
 type ProfileSection =

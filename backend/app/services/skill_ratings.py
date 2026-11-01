@@ -178,6 +178,31 @@ def finalize_match(db, result: FinalMatchResult) -> tuple[RatingEvent, RatingEve
             return events
         if data.get("state") != "in_progress" or any(history.exists for history in histories):
             raise MatchRatingError("Only an active, unfinalized match may update ratings")
+        
+        # Only friend matches contribute to head-to-head statistics.
+        friendship_ref = None
+        friendship_snapshot = None
+
+        if data.get("matchOrigin") == "friend":
+            friendship_id = data.get("friendshipId")
+
+            if not friendship_id:
+                raise MatchRatingError("Friend match is missing its friendship ID")
+
+            friendship_ref = db.collection("friendships").document(friendship_id)
+            friendship_snapshot = friendship_ref.get(transaction=transaction)
+
+            if not friendship_snapshot.exists:
+                raise MatchRatingError("Friendship record does not exist")
+
+            friendship_data = friendship_snapshot.to_dict()
+
+            if {
+                friendship_data.get("uidA"),
+                friendship_data.get("uidB"),
+            } != set(result.participant_uids):
+                raise MatchRatingError("Friendship participants do not match the match participants")
+
         scenario = (
             db.collection("scenarios").document(data["scenarioId"]).get(transaction=transaction)
         )
@@ -225,6 +250,28 @@ def finalize_match(db, result: FinalMatchResult) -> tuple[RatingEvent, RatingEve
                 "ratingModelVersion": MODEL_VERSION,
             },
         )
+
+        # Update head-to-head statistics for friend matches.
+        if friendship_ref is not None:
+            friendship_data = friendship_snapshot.to_dict()
+
+            friendship_updates = {
+                "totalFriendlies": firestore.Increment(1),
+                "matchHistory": firestore.ArrayUnion([result.match_id]),
+            }
+
+            winner_uid = (
+                None if winner == 0
+                else result.participant_uids[winner - 1]
+            )
+
+            if winner_uid == friendship_data["uidA"]:
+                friendship_updates["uidAWins"] = firestore.Increment(1)
+
+            elif winner_uid == friendship_data["uidB"]:
+                friendship_updates["uidBWins"] = firestore.Increment(1)
+
+            transaction.update(friendship_ref, friendship_updates)
         return events
 
     return commit(db.transaction())
