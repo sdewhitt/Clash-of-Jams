@@ -1770,7 +1770,7 @@ export function EditProfile() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">Edit Profile</h1>
                 </div>
 
-                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
                     <NotificationButton uid={profile?.uid ?? ""}/>
                     <LiveElo />
                     <ProfileButton

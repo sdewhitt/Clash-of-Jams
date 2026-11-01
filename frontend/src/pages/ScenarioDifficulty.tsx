@@ -138,7 +138,7 @@ export function ScenarioDifficulty() {
           <BackButton onClick={() => navigate('/home')} />
           <h1 className="text-2xl font-bold sm:text-3xl">Scenario Difficulty</h1>
         </div>
-        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+        <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
             <NotificationButton uid={profile?.uid ?? ""}/>
             <LiveElo />
             <ProfileButton

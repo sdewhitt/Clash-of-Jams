@@ -53,7 +53,7 @@ export function MultiplayerConnect() {
           />
           <h1 className="text-3xl font-bold text-ink">Multiplayer</h1>
         </div>
-        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+        <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
             <NotificationButton uid={profile?.uid ?? ""}/>
             <LiveElo />
             <ProfileButton

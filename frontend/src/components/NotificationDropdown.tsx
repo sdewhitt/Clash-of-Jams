@@ -80,13 +80,9 @@ export function NotificationDropdown({ uid, notifications, loading, error, onClo
                             return (
                                 <div
                                     key={key}
-                                    className={`
-                                        ${!notification.read ? "bg-accent-start/10" : ""}
-                                    `}
                                 >
                                     <FriendMatchInvitation
                                         notification={notification}
-                                        senderName={notification.notifierUid}
                                     />
                                 </div>
                             );

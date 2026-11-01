@@ -103,7 +103,7 @@ export function MultiplayerSession() {
     <main className="min-h-screen flex flex-col text-ink">
       <header className="relative flex flex-wrap items-center justify-between gap-4 border-b-4 border-accent-start bg-linear-to-r from-accent-base-start via-accent-base-middle to-accent-base-end px-4 py-5 sm:px-12">
         <h1 className="text-3xl font-bold">Multiplayer</h1>
-        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+        <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
             <NotificationButton uid={profile?.uid ?? ""}/>
             <LiveElo />
             <ProfileButton

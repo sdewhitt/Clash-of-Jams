@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { BackButton } from "@/components/BackButton";
+import { NotificationButton } from "@/components/NotificationButton";
+import { LiveElo } from "@/components/LiveElo";
+import { ProfileButton } from "@/components/ProfileButton";
+import { useAuth } from "@/lib/auth/useAuth";
 
 type InvitationState = "pending" | "accepted" | "declined" | "expired";
 
@@ -13,6 +18,7 @@ interface FriendInvitation {
 }
 
 export function FriendMatchWaiting() {
+    const { user, profile } = useAuth();
     const { invitationId } = useParams<{ invitationId: string }>();
     const navigate = useNavigate();
 
@@ -78,22 +84,76 @@ export function FriendMatchWaiting() {
 
     if (state === "declined") {
         return (
-            <div>
-                <h1>Your challenge was declined.</h1>
-                <button onClick={() => navigate(-1)}>
-                    Return to Profile
-                </button>
+            <div className="flex flex-col gap-8">
+                <header className={`
+                    sticky
+                    top-0
+                    z-50
+                    flex
+                    items-center
+                    justify-between
+                    bg-linear-to-r
+                    from-accent-base-start
+                    via-accent-base-middle
+                    to-accent-base-end
+                    border-b-4
+                    border-accent-start
+                    py-6`
+                }>
+                    <div className="flex ml-12">
+                        <BackButton onClick={() => navigate(-1)}/>
+                        <h1 className="ml-4 text-4xl font-bold text-ink">My Profile</h1>
+                    </div>
+    
+                    <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
+                        <NotificationButton uid={profile?.uid ?? ""}/>
+                        <LiveElo />
+                        <ProfileButton
+                            className="w-36 shrink-0 sm:w-50"
+                            username={profile?.displayName ?? user?.email ?? '…'}
+                            userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
+                        />
+                    </div>
+                </header>
+                <h1 className="items-center">Your challenge was declined.</h1>
             </div>
         );
     }
 
     if (state === "expired") {
         return (
-            <div>
-                <h1>Your challenge expired.</h1>
-                <button onClick={() => navigate(-1)}>
-                    Return to Profile
-                </button>
+            <div className="flex flex-col gap-8">
+                <header className={`
+                    sticky
+                    top-0
+                    z-50
+                    flex
+                    items-center
+                    justify-between
+                    bg-linear-to-r
+                    from-accent-base-start
+                    via-accent-base-middle
+                    to-accent-base-end
+                    border-b-4
+                    border-accent-start
+                    py-6`
+                }>
+                    <div className="flex ml-12">
+                        <BackButton onClick={() => navigate(-1)}/>
+                        <h1 className="ml-4 text-4xl font-bold text-ink">My Profile</h1>
+                    </div>
+    
+                    <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
+                        <NotificationButton uid={profile?.uid ?? ""}/>
+                        <LiveElo />
+                        <ProfileButton
+                            className="w-36 shrink-0 sm:w-50"
+                            username={profile?.displayName ?? user?.email ?? '…'}
+                            userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
+                        />
+                    </div>
+                </header>
+                <h1 className="items-center">Your challenge has expired.</h1>
             </div>
         );
     }
