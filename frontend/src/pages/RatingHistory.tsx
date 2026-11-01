@@ -9,6 +9,8 @@ import { useRatingHistory } from '@/lib/ratings/useRatingHistory'
 import { useInstrumentPreference } from '@/lib/ratings/useInstrumentPreference'
 import { useSkillRatings } from '@/lib/ratings/useSkillRatings'
 import { INSTRUMENTS, type Instrument } from '@/lib/schema/types'
+import { LiveElo } from '@/components/LiveElo'
+import { NotificationButton } from '@/components/NotificationButton'
 
 export function RatingHistory() {
   const { user, profile } = useAuth()
@@ -29,10 +31,15 @@ export function RatingHistory() {
           <BackButton onClick={() => navigate('/home')} />
           <h1 className="text-3xl font-bold">Recent Matches</h1>
         </div>
-        <ProfileButton
-          username={profile?.displayName ?? user?.email ?? '…'}
-          userAvatar={profile?.avatarUrl ?? '/favicon.svg'}
-        />
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+            <NotificationButton uid={profile?.uid ?? ""}/>
+            <LiveElo />
+            <ProfileButton
+            className="w-36 shrink-0 sm:w-50"
+            username={profile?.displayName ?? user?.email ?? '…'}
+            userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
+            />
+        </div>
       </header>
       <div className="mx-auto flex max-w-3xl flex-col gap-5 px-6 py-6">
         <section

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
+import { NotificationButton } from "@/components/NotificationButton"
+import { LiveElo } from "@/components/LiveElo"
 
 export function MyCommunities() {
     const { user, profile } = useAuth()
@@ -29,10 +31,13 @@ export function MyCommunities() {
                     <BackButton onClick={() => navPortal('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Jamming With Your Friends</h1>
                 </div>
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>

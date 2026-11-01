@@ -6,6 +6,8 @@ import { ProfileButton } from "@/components/ProfileButton"
 import type { SearchProfile } from "@/lib/schema/types"
 import { searchPublicUsers } from "@/lib/profile/userProfileSearch"
 import UserSearchResult from "@/components/UserSearchResult"
+import { NotificationButton } from "@/components/NotificationButton"
+import { LiveElo } from "@/components/LiveElo"
 
 export function FindFriends() {  
     const { user, profile } = useAuth();
@@ -97,10 +99,13 @@ export function FindFriends() {
                     <BackButton onClick={() => navPortal('/friends/my_friends')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Find Friends</h1>
                 </div>
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>

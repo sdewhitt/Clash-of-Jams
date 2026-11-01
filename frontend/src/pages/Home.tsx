@@ -4,6 +4,7 @@ import { ProfileButton } from '@/components/ProfileButton'
 import { LiveElo } from '@/components/LiveElo'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useActiveMatch } from '@/lib/matchmaking/useMatchmaking'
+import { NotificationButton } from '@/components/NotificationButton'
 
 export function Home() {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export function Home() {
       <header className="relative flex flex-wrap items-center justify-between gap-4 bg-linear-to-r from-accent-base-start from-10% via-accent-base-middle via-70% to-accent-base-end to-90% border-b-4 border-accent-start px-4 py-4 sm:px-12 sm:py-6">
         <h1 className="whitespace-nowrap text-3xl font-bold sm:text-4xl">Clash of Jams</h1>
         <div className="ml-auto flex items-center gap-3 sm:gap-4">
+          <NotificationButton uid={profile?.uid ?? ""}/>
           <LiveElo />
           <ProfileButton
             className="w-36 shrink-0 sm:w-50"

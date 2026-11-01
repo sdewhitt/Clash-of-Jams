@@ -13,6 +13,7 @@ import { useFriendship } from "@/lib/friendship/useFriendship";
 import { useFriendshipStatus } from "@/lib/friendship/friendRequests";
 import { ChallengeFriendDialog } from "@/components/ChallengeFriendDialog";
 import { NotificationButton } from "@/components/NotificationButton";
+import { LiveElo } from "@/components/LiveElo";
 
 
 export function PublicProfile() {
@@ -24,13 +25,7 @@ export function PublicProfile() {
     const currentUid = profile?.uid;
     const isOwnProfile = currentUid === uid;
 
-    const {
-        friendStatus,
-        loading: friendStatusLoading,
-    } = useFriendshipStatus(
-        currentUid && uid && !isOwnProfile ? currentUid : "",
-        currentUid && uid && !isOwnProfile ? uid : ""
-    );
+    const { friendStatus, } = useFriendshipStatus( currentUid && uid && !isOwnProfile ? currentUid : "", currentUid && uid && !isOwnProfile ? uid : "" );
 
     const isFriend = friendStatus === "accepted";
     const { friendship, myWins, theirWins, totalMatches, loading: friendshipLoading, error: friendshipError, } = useFriendship( isFriend ? currentUid : undefined, isFriend ? uid : undefined );
@@ -88,33 +83,6 @@ export function PublicProfile() {
     if (loading || profileLoading) { 
         return ( 
             <main className="h-screen flex flex-col items-center justify-center"> 
-                <header className={`
-                    sticky
-                    top-0
-                    z-50
-                    flex
-                    items-center
-                    justify-between
-                    bg-linear-to-r
-                    from-accent-base-start
-                    via-accent-base-middle
-                    to-accent-base-end
-                    border-b-4
-                    border-accent-start
-                    py-6`
-                }>
-                    <div className="flex ml-12">
-                        {isFriend ? <BackButton onClick={() => navPortal('/friends/my_friends')}></BackButton> : <BackButton onClick={() => navPortal('/friends/find_friends')}></BackButton>}
-                        <h1 className="ml-4 text-4xl font-bold text-ink">View Public Profile</h1>
-                    </div>
-
-                    <div className="mr-6">
-                        <ProfileButton
-                            username={profile?.displayName ?? user?.email ?? "…"}
-                            userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
-                        />
-                    </div>
-                </header>
                 <div className="h-12 w-12 rounded-full border-4 border-accent-start border-t-transparent animate-spin"> 
                     <p className="text-xl font-semibold text-ink"> Loading profile... </p> 
                 </div> 
@@ -148,12 +116,13 @@ export function PublicProfile() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">View Public Profile</h1>
                 </div>
 
-                <div className="mr-6 flex items-center gap-4">
-                    <NotificationButton uid={user?.uid ?? ""} />
-
+                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>

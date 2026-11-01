@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth/useAuth'
 import { cancelQueue, getQueueStatus } from '@/lib/schema/types'
 import { PRESET_MESSAGES } from '@/lib/schema/types'
 import { useSession } from '@/lib/multiplayer/useSession'
+import { NotificationButton } from '@/components/NotificationButton'
 
 const button = 'cursor-pointer rounded-xl border-2 border-accent-start px-5 py-3 font-bold focus-visible:outline-3 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50'
 
@@ -102,13 +103,14 @@ export function MultiplayerSession() {
     <main className="min-h-screen flex flex-col text-ink">
       <header className="relative flex flex-wrap items-center justify-between gap-4 border-b-4 border-accent-start bg-linear-to-r from-accent-base-start via-accent-base-middle to-accent-base-end px-4 py-5 sm:px-12">
         <h1 className="text-3xl font-bold">Multiplayer</h1>
-        <div className="flex items-center gap-3">
-          <LiveElo />
-          <ProfileButton
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+            <NotificationButton uid={profile?.uid ?? ""}/>
+            <LiveElo />
+            <ProfileButton
             className="w-36 shrink-0 sm:w-50"
             username={profile?.displayName ?? user?.email ?? '…'}
             userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
-          />
+            />
         </div>
       </header>
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-8">

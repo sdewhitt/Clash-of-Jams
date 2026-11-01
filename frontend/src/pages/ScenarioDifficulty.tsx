@@ -14,6 +14,8 @@ import {
   publishDifficulty,
 } from '@/lib/difficulty/api'
 import type { DifficultyDetail, DifficultyScenario, DifficultySource } from '@/lib/difficulty/types'
+import { NotificationButton } from '@/components/NotificationButton'
+import { LiveElo } from '@/components/LiveElo'
 
 interface Catalog {
   key: string
@@ -136,10 +138,15 @@ export function ScenarioDifficulty() {
           <BackButton onClick={() => navigate('/home')} />
           <h1 className="text-2xl font-bold sm:text-3xl">Scenario Difficulty</h1>
         </div>
-        <ProfileButton
-          username={profile?.displayName ?? user?.email ?? '…'}
-          userAvatar={profile?.avatarUrl ?? '/favicon.svg'}
-        />
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+            <NotificationButton uid={profile?.uid ?? ""}/>
+            <LiveElo />
+            <ProfileButton
+            className="w-36 shrink-0 sm:w-50"
+            username={profile?.displayName ?? user?.email ?? '…'}
+            userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
+            />
+        </div>
       </header>
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-4">

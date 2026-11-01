@@ -408,6 +408,7 @@ service cloud.firestore {
           'uidB',
           'uidBWins',
           'totalFriendlies',
+          'matchHistory',
           'createdAt'
         ]) &&
         request.resource.data.keys().hasOnly([
@@ -418,6 +419,7 @@ service cloud.firestore {
           'uidB',
           'uidBWins',
           'totalFriendlies',
+          'matchHistory',
           'createdAt'
         ]) &&
         request.resource.data.id == friendshipId &&

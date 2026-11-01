@@ -8,6 +8,8 @@ import { useSkillRatings } from "@/lib/ratings/useSkillRatings";
 import type { UserPreferences, /*UserSettings*/ } from '@/lib/schema/types';
 import { EloDisplay } from "@/components/EloDisplay";
 import { getUserPreferences } from "@/lib/profile/userPreferences";
+import { NotificationButton } from "@/components/NotificationButton";
+import { LiveElo } from "@/components/LiveElo";
 
 export function UserProfile() {
     const { user, profile, loading } = useAuth();
@@ -102,10 +104,13 @@ export function UserProfile() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">My Profile</h1>
                 </div>
 
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>

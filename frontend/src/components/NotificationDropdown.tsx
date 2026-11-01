@@ -1,19 +1,16 @@
 import type { AppNotification } from "@/lib/schema/types";
 import { FriendMatchInvitation } from "./FriendMatchInvitation";
+import { FriendRequestNotification } from "./FriendRequestNotification";
 
 interface NotificationDropdownProps {
+    uid: string;
     notifications: AppNotification[];
     loading: boolean;
     error: string | null;
     onClose: () => void;
 }
 
-export function NotificationDropdown({
-    notifications,
-    loading,
-    error,
-    onClose,
-}: NotificationDropdownProps) {
+export function NotificationDropdown({ uid, notifications, loading, error, onClose, }: NotificationDropdownProps) {
 
     return (
         <div
@@ -27,26 +24,31 @@ export function NotificationDropdown({
                 shadow-2xl
             "
         >
-            {/* Header */}
             <header className="
-                flex items-center justify-between
+                flex items-center 
+                justify-between
+                bg-linear-to-b
+                from-contrast-start from-50
+                via-contrast-middle
+                to-contrast-end to-70
                 border-b border-line
-                p-4
+                p-4 
             ">
-                <h2 className="text-lg font-bold text-ink">
+                <h2 
+                    className="text-lg font-bold text-ink"
+                >
                     Notifications
                 </h2>
 
                 <button
                     type="button"
                     onClick={onClose}
-                    className="text-sm text-muted hover:text-ink"
+                    className="text-sm text-ink hover:text-muted"
                 >
                     Close
                 </button>
             </header>
 
-            {/* Notification list */}
             <div className="max-h-96 overflow-y-auto">
 
                 {loading ? (
@@ -72,21 +74,15 @@ export function NotificationDropdown({
                     </div>
                 ) : (
                     notifications.map((notification) => {
-                        const key =
-                            notification.id ?? notification.requestId;
+                        const key = notification.id ?? notification.requestId;
 
-                        if (
-                            notification.notificationType ===
-                            "friend_match_invitation"
-                        ) {
+                        if (notification.notificationType === "friend_match_invitation") {
                             return (
                                 <div
                                     key={key}
-                                    className={
-                                        !notification.read
-                                            ? "bg-accent-start/10"
-                                            : ""
-                                    }
+                                    className={`
+                                        ${!notification.read ? "bg-accent-start/10" : ""}
+                                    `}
                                 >
                                     <FriendMatchInvitation
                                         notification={notification}
@@ -95,34 +91,19 @@ export function NotificationDropdown({
                                 </div>
                             );
                         }
-
-                        return (
-                            <div
-                                key={key}
-                                className={`
-                                    border-b border-line p-4
-                                    ${!notification.read ? "bg-accent-start/10" : ""}
-                                `}
-                            >
-                                <p className="font-semibold text-ink">
-                                    {notification.notificationType}
-                                </p>
-
-                                <p className="mt-1 text-sm text-muted">
-                                    You have a new notification.
-                                </p>
-
-                                {!notification.read && (
-                                    <span className="
-                                        mt-2 inline-block
-                                        text-xs font-semibold
-                                        text-accent-soft
-                                    ">
-                                        Unread
-                                    </span>
-                                )}
-                            </div>
-                        );
+                        if (notification.notificationType.includes("friend_request")) {
+                            return (
+                                <FriendRequestNotification 
+                                    key={key}
+                                    notificationId={notification.id ?? ""}
+                                    notificationType={notification.notificationType}
+                                    notifierUid={notification.notifierUid}
+                                    requestId={notification.requestId} 
+                                    uid={uid} 
+                                    read={notification.read}
+                                />
+                            );
+                        }
                     })
                 )}
             </div>

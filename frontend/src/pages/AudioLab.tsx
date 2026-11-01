@@ -42,6 +42,8 @@ import {
   type PerformedNote,
   type ScoreResult,
 } from '@/scoring/score'
+import { NotificationButton } from '@/components/NotificationButton'
+import { LiveElo } from '@/components/LiveElo'
 
 const primary =
   'rounded-xl border-3 border-accent-start bg-accent-start px-4 py-2 font-bold text-ink hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50'
@@ -90,11 +92,14 @@ export function AudioLab() {
           <h1 className="ml-4 text-4xl font-bold text-ink">Audio Lab</h1>
         </div>
 
-        <div className="mr-6">
-          <ProfileButton
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+            <NotificationButton uid={profile?.uid ?? ""}/>
+            <LiveElo />
+            <ProfileButton
+            className="w-36 shrink-0 sm:w-50"
             username={profile?.displayName ?? user?.email ?? '…'}
             userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
-          />
+            />
         </div>
       </header>
 

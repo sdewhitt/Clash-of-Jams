@@ -3,6 +3,8 @@ import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "../components/ProfileButton"
 import { InputLatencySetting } from "@/pages/settings/InputLatencySetting"
+import { NotificationButton } from "@/components/NotificationButton"
+import { LiveElo } from "@/components/LiveElo"
 
 export function Settings() {
     const { user, profile } = useAuth()
@@ -33,10 +35,13 @@ export function Settings() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">Settings</h1>
                 </div>
 
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>

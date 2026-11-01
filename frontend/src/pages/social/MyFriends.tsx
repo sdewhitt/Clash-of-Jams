@@ -6,14 +6,12 @@ import { ProfileButton } from "@/components/ProfileButton"
 import { searchPublicUsers } from "@/lib/profile/userProfileSearch"
 import type { SearchProfile } from "@/lib/schema/types"
 import UserSearchResult from "@/components/UserSearchResult"
+import { NotificationButton } from "@/components/NotificationButton"
+import { LiveElo } from "@/components/LiveElo"
 
 export function MyFriends() {
     const { user, profile } = useAuth();
     const navigate = useNavigate();
-
-    function navPortal(location: string) {
-        navigate(location)
-    }
 
     const [ searchTerm, setSearchTerm ] = useState("");
     const [ results, setResults ] = useState<SearchProfile[]>([]);
@@ -85,57 +83,81 @@ export function MyFriends() {
                 pt-6 pb-5
             `}>
                 <div className="flex ml-12">
-                    <BackButton onClick={() => navPortal('/home')}></BackButton>
+                    <BackButton onClick={() => navigate('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">My Friends</h1>
                 </div>
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>
             <div className="flex flex-1 min-h-0 flex-col p-6">
-                <div className={`
-                    shrink-0
-                    relative
-                    rounded-lg
-                    bg-linear-to-b
-                    from-accent-start
-                    via-accent-middle
-                    to-accent-end
-                    border-4
-                    border-accent-start
-                    p-4
-                `}>
-                    <label
-                        htmlFor="user-search"
-                        className="mb-2 block text-lg font-medium text-ink"
-                    >
-                        Search For Friends:
-                    </label>
-
-                    <input
-                        id="user-search"
-                        type="search"
-                        value={searchTerm}
-                        onChange={(event) => setSearchTerm(event.target.value)}
-                        placeholder="Enter at least 3 characters..."
-                        autoComplete="off"
-                        className={`
-                            w-full 
-                            px-2 py-2 
-                            rounded-lg 
-                            bg-contrast-middle 
-                            text-inverse-ink
-                            outline-2 
-                            outline-contrast-start 
-                            focus:outline-none 
-                            focus:ring-3 
-                            focus:ring-accent-end 
-                            transition-all`
-                        }
-                    />
+                <div className="shrink-0 relative px-6 py-6">
+                    <div className={`
+                        flex flex-col
+                        w-fill
+                        rounded-lg
+                        bg-linear-to-b
+                        from-accent-start
+                        via-accent-middle
+                        to-accent-end
+                        border-4
+                        border-accent-start
+                    `}>
+                        <div className={`
+                            flex flex-row
+                            justify-between
+                            px-6
+                            py-4`
+                        }>
+                            <h1 className="text-2xl font-bold mt-2">Your Friends</h1>
+                            <button 
+                                className={`
+                                    rounded-lg
+                                    bg-linear-to-b 
+                                    from-contrast-start
+                                    via-contrast-middle 
+                                    to-contrast-end
+                                    outline-3
+                                    outline-contrast-middle
+                                    text-ink
+                                    hover:brightness-125
+                                    active:scale-95 
+                                    px-3 
+                                    py-3`
+                                } 
+                                onClick={() => navigate("/friends/find_friends")}
+                            >
+                                Add a Friend
+                            </button>
+                        </div>
+                        <input
+                            id="user-search"
+                            type="search"
+                            value={searchTerm}
+                            onChange={(event) => setSearchTerm(event.target.value)}
+                            placeholder="Search by Username..."
+                            autoComplete="off"
+                            className={`
+                                m-4
+                                px-2 py-2 
+                                rounded-lg 
+                                bg-contrast-middle 
+                                text-inverse-ink
+                                outline-2 
+                                outline-contrast-start 
+                                focus:outline-none 
+                                focus:ring-3 
+                                focus:ring-accent-end 
+                                transition-all`
+                            }
+                        />
+                    </div>
                 </div>
 
                 {searchTerm.trim().length != 0 && searchTerm.trim().length < 3 && (
@@ -147,6 +169,8 @@ export function MyFriends() {
                         from-accent-start
                         via-accent-middle
                         to-accent-end
+                        
+                        mx-12
                     `}>
                         <p className="text-center text-md text-muted">
                             Type at least 3 characters to search.
@@ -163,6 +187,7 @@ export function MyFriends() {
                         from-accent-start
                         via-accent-middle
                         to-accent-end
+                        mx-12
                     `}>
                         <p className="text-center text-md text-muted">
                             Searching friends...
@@ -179,6 +204,7 @@ export function MyFriends() {
                         from-accent-start
                         via-accent-middle
                         to-accent-end
+                        mx-12
                     `}>
                         <p className="text-center text-md text-muted">
                             {error}
@@ -195,6 +221,7 @@ export function MyFriends() {
                         from-accent-start
                         via-accent-middle
                         to-accent-end
+                        mx-12
                     `}>
                         <p className="text-center text-md text-muted">
                             No friends found. Try another username.
@@ -207,9 +234,10 @@ export function MyFriends() {
                     min-h-0
                     overflow-y-auto
                     overscroll-contain
+                    mx-12
                 `}>
                     {!loading && (
-                        <div className="py-4">
+                        <div>
                             {results.length > 0 && (
                                 <div className="space-y-2 p-4">
                                     {results.map((profile) => (

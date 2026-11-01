@@ -8,6 +8,8 @@ import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
 import type { LeaderboardResponse } from "@/lib/leaderboards"
 import { INSTRUMENTS, type Instrument } from "@/lib/schema/types"
+import { NotificationButton } from "@/components/NotificationButton"
+import { LiveElo } from "@/components/LiveElo"
 
 const controlClass =
     "rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black"
@@ -66,10 +68,13 @@ export function EloLeaderboard() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">Leaderboards</h1>
                 </div>
 
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>

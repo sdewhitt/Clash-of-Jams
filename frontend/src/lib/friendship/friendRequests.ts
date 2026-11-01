@@ -1,10 +1,36 @@
-import { collection, doc, onSnapshot, runTransaction, arrayUnion } from 'firebase/firestore'
+import { collection, doc, onSnapshot, runTransaction, arrayUnion, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useEffect, useState } from 'react';
 import { newAppNotification, newFriendRequests, newFriendship } from '../schema/collections';
   
 function friendshipId(uidA: string, uidB: string) {
     return [uidA, uidB].sort().join('_')
+}
+
+export async function getFriendName (userUid: string, ) {
+    const requestRef = doc(db, 'publicProfile', userUid);
+
+    const snapshot = await getDoc(requestRef);
+    if (!snapshot.exists()) {
+        throw new Error("No public profile associated with that Uid.");
+    }   
+
+    return {
+        displayName: snapshot.data().displayName as string
+    };
+}
+
+export async function getFriendRequest (requestId: string, ) {
+    const requestRef = doc(db, 'friendRequests', requestId);
+
+    const snapshot = await getDoc(requestRef);
+    if (!snapshot.exists()) {
+        throw new Error("No friend request with that requestId found.");
+    }
+
+    return {
+        uids: snapshot.data().potentialFriends as string[]
+    };
 }
 
 export function useFriendshipStatus ( actorUid: string, friendUid: string ) {
@@ -111,6 +137,11 @@ export async function sendFriendRequest( actorUid: string, toUid: string, ) {
                 throw new Error(
                     'This user has already requested you. Accept their request instead.',
                 )
+            }
+            else if (request.data().status === 'declined') {
+                tx.update(requestRef, ({ initiatorUid: actorUid, status: 'pending', }));
+                tx.set(notificationRef, newAppNotification({ notifiedUid: toUid, notifierUid: actorUid, notificationType: 'friend_request_sent', requestId: requestRef.id, }))
+                return;
             }
         }
 

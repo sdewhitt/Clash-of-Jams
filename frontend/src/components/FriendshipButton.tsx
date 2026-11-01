@@ -109,7 +109,7 @@ export default function FriendRequestButton({ currentUid, profileUid, }: FriendR
     return (
         <div className="flex flex-row gap-2">
 
-            {!friendStatus && (
+            {(!friendStatus || friendStatus === 'declined') && (
                 <button
                     disabled={disabled}
                     onClick={() =>

@@ -31,6 +31,7 @@ export function useNotifications(uid: string) {
       (snapshot) => {
         setNotifications(
           snapshot.docs.map((item) => ({
+            id:item.id,
             ...item.data(),
           }) as AppNotification),
         )

@@ -16,6 +16,8 @@ import { UsernameEditor } from "@/components/UsernameEditor";
 import { BioEditor } from "@/components/BioEditor";
 import { getUserPreferences, updatePreferredGenres, updatePreferredInstrument } from "@/lib/profile/userPreferences"; <s></s>
 import { getPublicProfile, getUserStatus, updateDoNotDistrub, updateEloPublicity, updatePublicProfile } from "@/lib/profile/publicProfile";
+import { NotificationButton } from "@/components/NotificationButton";
+import { LiveElo } from "@/components/LiveElo";
 
 type ProfileSection =
     | "profile"
@@ -1677,10 +1679,13 @@ export function EditProfile() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">Edit Profile</h1>
                 </div>
 
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={draftUsername}
-                        userAvatar={draftAvatar}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>

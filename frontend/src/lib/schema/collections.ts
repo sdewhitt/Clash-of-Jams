@@ -4,7 +4,7 @@
  * Nothing here touches the Firebase app instance, so this module is safe to
  * import from both the browser app and the Node init script.
  */
-import { serverTimestamp, Timestamp, type WithFieldValue } from 'firebase/firestore'
+import { serverTimestamp, type WithFieldValue } from 'firebase/firestore'
 
 import type {
   ChartPart,
@@ -14,7 +14,6 @@ import type {
   GameMatch,
   ImportJob,
   Instrument,
-  MatchInvitation,
   MatchParticipant,
   MediaAsset,
   ModerationAction,

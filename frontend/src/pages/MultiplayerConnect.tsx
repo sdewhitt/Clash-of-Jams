@@ -7,6 +7,7 @@ import { ProfileButton } from '@/components/ProfileButton'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useMatchmaking } from '@/lib/matchmaking/useMatchmaking'
 import { navigateToMatch } from '@/lib/matchmaking/navigation'
+import { NotificationButton } from '@/components/NotificationButton'
 
 export function MultiplayerConnect() {
   const { user, profile } = useAuth()
@@ -52,13 +53,14 @@ export function MultiplayerConnect() {
           />
           <h1 className="text-3xl font-bold text-ink">Multiplayer</h1>
         </div>
-        <div className="flex items-center gap-3">
-          <LiveElo />
-          <ProfileButton
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+            <NotificationButton uid={profile?.uid ?? ""}/>
+            <LiveElo />
+            <ProfileButton
             className="w-36 shrink-0 sm:w-50"
             username={profile?.displayName ?? user?.email ?? '…'}
             userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
-          />
+            />
         </div>
       </header>
       <div className="flex flex-1 items-center justify-center px-4 py-12">
