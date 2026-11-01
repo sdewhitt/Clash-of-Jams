@@ -12,6 +12,7 @@ import { useOnlineStatus } from "@/lib/onlineStatus/useOnlineStatus";
 import { useFriendship } from "@/lib/friendship/useFriendship";
 import { useFriendshipStatus } from "@/lib/friendship/friendRequests";
 import { ChallengeFriendDialog } from "@/components/ChallengeFriendDialog";
+import { NotificationButton } from "@/components/NotificationButton";
 
 
 export function PublicProfile() {
@@ -86,7 +87,7 @@ export function PublicProfile() {
 
     if (loading || profileLoading) { 
         return ( 
-            <main className="h-screen flex items-center justify-center"> 
+            <main className="h-screen flex flex-col items-center justify-center"> 
                 <header className={`
                     sticky
                     top-0
@@ -147,7 +148,9 @@ export function PublicProfile() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">View Public Profile</h1>
                 </div>
 
-                <div className="mr-6">
+                <div className="mr-6 flex items-center gap-4">
+                    <NotificationButton uid={user?.uid ?? ""} />
+
                     <ProfileButton
                         username={profile?.displayName ?? user?.email ?? "…"}
                         userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
@@ -408,6 +411,7 @@ export function PublicProfile() {
                         </button>
                         {challengeOpen && uid && (
                             <ChallengeFriendDialog
+                                mode="challenge"
                                 friendUid={uid}
                                 onClose={() => setChallengeOpen(false)}
                             />

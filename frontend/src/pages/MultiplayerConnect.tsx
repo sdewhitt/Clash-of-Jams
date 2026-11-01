@@ -6,6 +6,7 @@ import { LiveElo } from '@/components/LiveElo'
 import { ProfileButton } from '@/components/ProfileButton'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useMatchmaking } from '@/lib/matchmaking/useMatchmaking'
+import { navigateToMatch } from '@/lib/matchmaking/navigation'
 
 export function MultiplayerConnect() {
   const { user, profile } = useAuth()
@@ -26,8 +27,10 @@ export function MultiplayerConnect() {
   }, [queued])
 
   useEffect(() => {
-    if (match) navigate('/multiplayer/' + encodeURIComponent(match.id), { replace: true })
-  }, [match, navigate])
+    if (match) {
+      navigateToMatch(navigate, match.id);
+    }
+  }, [match, navigate]);
 
   async function leave() {
     try {

@@ -23,7 +23,8 @@ import { PlayScenario } from '@/pages/PlayScenario'
 import { EloLeaderboard } from '@/pages/EloLeaderboard'
 import { RatingHistory } from '@/pages/RatingHistory'
 import OnlineStatusManager from '@/context/StatusManager'
-import { PublicProfile } from './pages/user-profiles/PublicProfile'
+import { PublicProfile } from '@/pages/user-profiles/PublicProfile'
+import { FriendMatchWaiting } from '@/pages/FriendMatchWaiting'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
@@ -41,6 +42,7 @@ const PROTECTED_ROUTES = [
   { path: '/scenario_search', element: <ScenarioSearch /> },
   { path: '/scenario_difficulty', element: <ScenarioDifficulty /> },
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
+  { path: '/multiplayer/friend-invitations/:invitationId', element: <FriendMatchWaiting /> },
   { path: '/multiplayer/:matchId', element: <MultiplayerSession /> },
   { path: '/audio_lab', element: <AudioLab /> },
   { path: '/play/:scenarioId', element: <PlayScenario /> },
