@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { apiFetch } from "@/lib/api";
+import { createPortal } from "react-dom";
 import type { Scenario } from "@/lib/schema/types";
 import { acceptFriendMatchInvitation, createFriendMatchInvitation } from "@/lib/matchmaking/gameInvitations";
 
@@ -104,16 +105,11 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
             });
 
             if (!response.matchId) {
-                setError(
-                    "The invitation was processed, but no match was returned. Please check your notifications."
-                );
+                setError("The invitation was processed, but no match was returned. Please check your notifications.");
                 return;
             }
 
-            navigate(
-                `/multiplayer/${encodeURIComponent(response.matchId)}`,
-                { replace: true }
-            );
+            navigate(`/multiplayer/${encodeURIComponent(response.matchId)}`, { replace: true });
         } catch (err) {
             console.error(
                 isAccepting
@@ -136,7 +132,7 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
 
     const title = isAccepting ? "Accept Friend Challenge" : "Challenge Friend";
 
-    return (
+    return createPortal(
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
             onMouseDown={(e) => {
@@ -318,6 +314,7 @@ export function ChallengeFriendDialog(props: ChallengeFriendDialogProps) {
                     </button>
                 </footer>
             </section>
-        </div>
+        </div>,
+        document.body
     );
 }

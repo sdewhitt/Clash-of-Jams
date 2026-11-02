@@ -7,8 +7,9 @@ import { NotificationButton } from "@/components/NotificationButton";
 import { LiveElo } from "@/components/LiveElo";
 import { ProfileButton } from "@/components/ProfileButton";
 import { useAuth } from "@/lib/auth/useAuth";
+import { cancelFriendMatchInvitation } from "@/lib/matchmaking/gameInvitations";
 
-type InvitationState = "pending" | "accepted" | "declined" | "expired";
+type InvitationState = "pending" | "accepted" | "declined" | "expired" | "cancelled";
 
 interface FriendInvitation {
     state: InvitationState;
@@ -25,6 +26,29 @@ export function FriendMatchWaiting() {
     const [state, setState] = useState<InvitationState>("pending");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const [cancelling, setCancelling] = useState(false);
+    const [cancelError, setCancelError] = useState<string | null>(null);
+
+    const handleCancelChallenge = async () => {
+        if (!invitationId || cancelling) return;
+
+        setCancelling(true);
+        setCancelError(null);
+
+        try {
+            await cancelFriendMatchInvitation({ invitationId });
+        } catch (error) {
+            console.error("Failed to cancel challenge:", error);
+            setCancelError(
+            error instanceof Error
+                ? error.message
+                : "Unable to cancel your challenge."
+            );
+        } finally {
+            setCancelling(false);
+        }
+    };
 
     useEffect(() => {
         if (!invitationId) {
@@ -200,6 +224,65 @@ export function FriendMatchWaiting() {
         );
     }
 
+    if (state === "cancelled") {
+        return (
+            <div className="flex flex-col gap-8">
+                <header className={`
+                    sticky
+                    top-0
+                    z-50
+                    flex
+                    items-center
+                    justify-between
+                    bg-linear-to-r
+                    from-accent-base-start
+                    via-accent-base-middle
+                    to-accent-base-end
+                    border-b-4
+                    border-accent-start
+                    py-6`
+                }>
+                    <div className="flex ml-12">
+                        <BackButton onClick={() => navigate(-1)}/>
+                        <h1 className="ml-4 text-4xl font-bold text-ink">Friendly Competition</h1>
+                    </div>
+    
+                    <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
+                        <NotificationButton uid={profile?.uid ?? ""}/>
+                        <LiveElo />
+                        <ProfileButton
+                            className="w-36 shrink-0 sm:w-50"
+                            username={profile?.displayName ?? user?.email ?? '…'}
+                            userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
+                        />
+                    </div>
+                </header>
+                <div
+                    className={`
+                        flex flex-col
+                        items-centers
+                        w-full
+                    `}
+                >
+                    <h1 className={`
+                        bg-linear-to-b
+                        from-accent-base-start
+                        via-accent-base-middle
+                        to-accent-base-end
+                        text-5xl text-center
+                        border-4
+                        border-accent-start
+                        rounded-2xl
+                        m-24
+                        p-12
+                    `}>
+                        Your challenge has been canceled.
+                    </h1>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <main className="flex min-h-screen flex-col items-center justify-center gap-4">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-accent-start border-t-transparent" />
@@ -212,6 +295,41 @@ export function FriendMatchWaiting() {
                 Your challenge has been sent. You'll automatically enter
                 the lobby when your friend accepts.
             </p>
+            <button
+                type="button"
+                onClick={handleCancelChallenge}
+                disabled={cancelling}
+                className={`
+                    rounded-lg
+                    bg-linear-to-b
+                    from-accent-base-start
+                    via-accent-base-middle
+                    to-accent-base-end
+                    border-4 border-accent-start
+                    text-lg
+                    px-8 py-4
+                    hover:brightness-110
+                    hover:scale-105
+                    active:scale-95
+
+                `}
+            >
+                {cancelling ? "Cancelling..." : "Exit Challenge"}
+            </button>
+
+            {cancelError && (
+            <p className={`
+                rounded-lg
+                bg-linear-to-b
+                from-accent-base-start
+                via-accent-base-middle
+                to-accent-base-end
+                text-ink text-md
+                px-8 py-4
+            `}>
+                {cancelError}
+            </p>
+            )}
         </main>
     );
 }
