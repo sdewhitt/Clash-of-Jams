@@ -14,7 +14,7 @@ export function useInstrumentPreference(uid: string | undefined, preferred: Inst
     setPending({ uid, instrument })
     setFailure(null)
     try {
-      await updatePreferredInstrument(uid, instrument)
+      await updatePreferredInstrument(uid, true, instrument)
     } catch {
       setFailure({ uid, message: 'Could not save your instrument. Please try again.' })
     } finally {
