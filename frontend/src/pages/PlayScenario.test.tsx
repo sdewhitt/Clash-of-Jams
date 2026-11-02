@@ -25,7 +25,7 @@ vi.mock('@/lib/api', async (importOriginal) => ({
 }))
 vi.mock('@/lib/scenarios/store', () => ({ loadScenario: vi.fn() }))
 vi.mock('@/lib/runs/store', () => ({ submitRun: vi.fn() }))
-vi.mock('@/lib/profile/UserSettings', () => ({ getUserSettings: vi.fn() }))
+vi.mock('@/lib/profile/userSettings', () => ({ getUserSettings: vi.fn() }))
 
 const NOTES: ExpectedNote[] = [60, 62, 64].map((midiPitch, index) => ({
   index,
