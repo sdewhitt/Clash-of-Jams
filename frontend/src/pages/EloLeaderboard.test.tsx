@@ -19,13 +19,9 @@ vi.mock('@/components/NotificationButton', () => ({
     ),
 }))
 
-// vi.mock('@/components/LiveElo', () => ({
-//     LiveElo: () => (
-//         <div data-testid="live-elo">
-//             Live ELO
-//         </div>
-//     ),
-// }))
+vi.mock('@/components/LiveElo', () => ({
+  LiveElo: () => null,
+}))
 
 const PATH = '/leaderboards/elo'
 
@@ -46,7 +42,7 @@ describe('EloLeaderboard API responses', () => {
         expect(await screen.findByTestId('notification-button'))
             .toHaveTextContent('Notifications: me')
 
-        // expect(screen.getByTestId('live-elo')).toBeInTheDocument()
+        expect(screen.getByTestId('live-elo')).toBeInTheDocument()
 
         expect(screen.getByRole('heading', { name: 'Leaderboards' }))
             .toBeInTheDocument()

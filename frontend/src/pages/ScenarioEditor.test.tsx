@@ -23,8 +23,9 @@ vi.mock('@/lib/scenarios/store', () => ({
   saveScenarioDraft: vi.fn(),
 }))
 
-// This navigation test does not exercise rating subscriptions.
-vi.mock('@/components/LiveElo', () => ({ LiveElo: () => null }))
+vi.mock('@/components/LiveElo', () => ({
+  LiveElo: () => null,
+}))
 
 beforeEach(() => {
   vi.mocked(listMyScenarios).mockReset().mockResolvedValue([])
