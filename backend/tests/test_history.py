@@ -6,6 +6,7 @@ Runs against the in-memory Firestore from conftest's fake_db.
 
 from datetime import UTC, datetime
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.fake_firestore import FakeFirestore
@@ -25,14 +26,23 @@ def add_scenario(db: FakeFirestore, scenario_id: str = "scn", *, version: str = 
     })
 
 
+def subscores(pitch: float = 80, rhythm: float = 70, completeness: float = 90) -> dict:
+    return {
+        "pitchAccuracy": pitch, "rhythmAccuracy": rhythm, "completeness": completeness,
+        "notesHit": 9, "notesMissed": 1, "extraNotes": 2, "noteResults": [],
+    }
+
+
 def add_run(db: FakeFirestore, uid: str, *, played: int = 10, scenario_id: str = "scn",
             version: str = "v2", score: float = 80_000, instrument: str = "piano",
-            validation: str = "accepted", match_id: str | None = None) -> str:
+            validation: str = "accepted", match_id: str | None = None,
+            breakdown: dict | None = None) -> str:
     run_id = f"run{len(db.docs)}"
     db.put(f"runs/{run_id}", {
         "userUid": uid, "scenarioId": scenario_id, "scenarioVersionId": version,
         "instrument": instrument, "finalScore": score, "validation": validation,
         "matchId": match_id, "playedAt": day(played),
+        "breakdown": breakdown or subscores(),
     })
     return run_id
 
@@ -134,3 +144,112 @@ def test_history_pages_through_every_run(client, fake_db, me) -> None:
 def test_limit_is_bounded(client, fake_db, me) -> None:
     assert client.get(HISTORY, params={"limit": 0}).status_code == 422
     assert client.get(HISTORY, params={"limit": 101}).status_code == 422
+
+
+# ------------------------------------------- score history for one scenario (#35)
+
+SCENARIO_HISTORY = "/api/v1/history/scenarios/scn"
+
+
+def scenario_history(client: TestClient, **params) -> dict:
+    response = client.get(SCENARIO_HISTORY, params=params)
+    assert response.status_code == 200
+    return response.json()
+
+
+def attempt_ids(body: dict) -> list[str]:
+    return [attempt["runId"] for attempt in body["attempts"]]
+
+
+def test_unknown_scenario_is_404(client, fake_db, me) -> None:
+    assert client.get(SCENARIO_HISTORY).status_code == 404
+
+
+def test_someone_elses_private_scenario_is_404(client, fake_db, me) -> None:
+    add_scenario(fake_db, visibility="private")
+    add_run(fake_db, me)
+
+    assert client.get(SCENARIO_HISTORY).status_code == 404
+
+
+def test_no_attempts_yet(client, fake_db, me) -> None:
+    add_scenario(fake_db)
+
+    assert scenario_history(client) == {"scenarioId": "scn", "stats": None, "attempts": []}
+
+
+def test_only_the_callers_attempts_on_that_scenario(client, fake_db, me) -> None:
+    add_scenario(fake_db)
+    mine = add_run(fake_db, me)
+    add_run(fake_db, me, scenario_id="other")
+    add_run(fake_db, "someone-else")
+
+    assert attempt_ids(scenario_history(client)) == [mine]
+
+
+def test_each_attempt_carries_its_subscores(client, fake_db, me) -> None:
+    add_scenario(fake_db)
+    add_run(fake_db, me, breakdown=subscores(pitch=91.5, rhythm=72.25, completeness=100))
+
+    attempt = scenario_history(client)["attempts"][0]
+
+    assert attempt["breakdown"] == {
+        "pitchAccuracy": 91.5, "rhythmAccuracy": 72.25, "completeness": 100,
+        "notesHit": 9, "notesMissed": 1, "extraNotes": 2,
+    }
+
+
+def test_stats_match_hand_calculated_values(client, fake_db, me) -> None:
+    add_scenario(fake_db)
+    add_run(fake_db, me, played=1, score=60_000)
+    add_run(fake_db, me, played=2, score=90_000)
+    add_run(fake_db, me, played=3, score=80_000)
+    add_run(fake_db, me, played=4, score=99_999, validation="rejected")  # listed, not counted
+
+    body = scenario_history(client)
+
+    assert len(body["attempts"]) == 4
+    assert body["stats"] == {
+        "attemptCount": 3,
+        "bestScore": 90_000,
+        "averageScore": 76_666.67,  # (60,000 + 90,000 + 80,000) / 3
+        "mostRecentScore": 80_000,
+        "firstScore": 60_000,
+        "improvement": 20_000,  # 80,000 - 60,000
+    }
+
+
+def test_one_attempt_has_stats_but_no_improvement(client, fake_db, me) -> None:
+    add_scenario(fake_db)
+    add_run(fake_db, me, score=55_000)
+
+    stats = scenario_history(client)["stats"]
+
+    assert stats["attemptCount"] == 1
+    assert stats["bestScore"] == stats["averageScore"] == stats["mostRecentScore"] == 55_000
+    assert stats["improvement"] is None
+
+
+@pytest.mark.parametrize(("sort", "order", "expected"), [
+    ("date", "desc", ["c", "b", "a"]),
+    ("date", "asc", ["a", "b", "c"]),
+    ("score", "desc", ["b", "c", "a"]),
+    ("score", "asc", ["a", "c", "b"]),
+])
+def test_sorting_by_date_and_score(client, fake_db, me, sort, order, expected) -> None:
+    add_scenario(fake_db)
+    ids = {
+        "a": add_run(fake_db, me, played=1, score=70_000),
+        "b": add_run(fake_db, me, played=2, score=90_000),
+        "c": add_run(fake_db, me, played=3, score=80_000),
+    }
+
+    body = scenario_history(client, sort=sort, order=order)
+
+    assert attempt_ids(body) == [ids[name] for name in expected]
+
+
+def test_unknown_sort_is_rejected(client, fake_db, me) -> None:
+    add_scenario(fake_db)
+
+    assert client.get(SCENARIO_HISTORY, params={"sort": "instrument"}).status_code == 422

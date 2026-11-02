@@ -127,4 +127,17 @@ describe('ScenarioSearch links', () => {
     expect(screen.getAllByText('CCCCC')).toHaveLength(2)
     expect(screen.getAllByRole('button', { name: 'Select' })).toHaveLength(2)
   })
+
+  it("shows the user's own scores in the My Scores tab", async () => {
+    stubApi({
+      '/scenarios/scenario_with_author': { body: SCENARIOS },
+      '/scenarios/filter_items': { body: FILTER_BOUNDS },
+      '/history/scenarios/c': { body: { scenarioId: 'c', stats: null, attempts: [] } },
+    })
+    renderWithAuth(<ScenarioSearch />, { auth: signedIn(), route: '/scenario_search?scenario=c' })
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'My Scores' }))
+
+    expect(await screen.findByText('No attempts yet.')).toBeInTheDocument()
+  })
 })

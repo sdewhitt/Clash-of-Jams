@@ -38,3 +38,58 @@ export function fetchPlayHistory(before?: string | null): Promise<PlayHistoryPag
   const query = params.toString()
   return apiFetch<PlayHistoryPage>(`/history${query ? `?${query}` : ''}`)
 }
+
+/** Mirrors backend/app/schemas.py's ScoreSummary: a run's subscores, without per-note results. */
+export interface ScoreSummary {
+  pitchAccuracy: number
+  rhythmAccuracy: number
+  completeness: number
+  notesHit: number
+  notesMissed: number
+  extraNotes: number
+}
+
+/** Mirrors ScenarioAttempt: one of the caller's runs on a single scenario. */
+export interface ScenarioAttempt {
+  runId: string
+  scenarioVersionId: string
+  instrument: Instrument
+  finalScore: number
+  playedAt: string
+  validation: RunValidation
+  matchId: string | null
+  breakdown: ScoreSummary
+}
+
+/** Mirrors ScenarioScoreStats: computed over every attempt except rejected runs. */
+export interface ScenarioScoreStats {
+  attemptCount: number
+  bestScore: number
+  averageScore: number
+  mostRecentScore: number
+  firstScore: number
+  /** Most recent minus first; null with only one attempt. */
+  improvement: number | null
+}
+
+export interface ScenarioScoreHistory {
+  scenarioId: string
+  /** null until there is an attempt that counts. */
+  stats: ScenarioScoreStats | null
+  attempts: ScenarioAttempt[]
+}
+
+export type ScoreSort = 'date' | 'score'
+export type SortOrder = 'asc' | 'desc'
+
+/** Every attempt the caller has made on one scenario, sorted by the API, with summary stats. */
+export function fetchScenarioScoreHistory(
+  scenarioId: string,
+  sort: ScoreSort = 'date',
+  order: SortOrder = 'desc',
+): Promise<ScenarioScoreHistory> {
+  const params = new URLSearchParams({ sort, order })
+  return apiFetch<ScenarioScoreHistory>(
+    `/history/scenarios/${encodeURIComponent(scenarioId)}?${params}`,
+  )
+}

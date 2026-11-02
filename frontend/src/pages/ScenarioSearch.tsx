@@ -4,6 +4,7 @@ import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { RangeSlider } from "@/components/RangeSlider"
 import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
+import { ScoreHistoryPanel } from "@/components/ScoreHistoryPanel"
 import { StarDisplay } from "@/components/StarRating"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
@@ -46,6 +47,7 @@ type SortKey = (typeof SORT_OPTIONS)[number]["value"]
 const DETAILS_TABS = [
     { value: "leaderboard", label: "Leaderboard" },
     { value: "reviews", label: "Reviews" },
+    { value: "scores", label: "My Scores" },
 ] as const
 
 type DetailsTab = (typeof DETAILS_TABS)[number]["value"]
@@ -527,6 +529,11 @@ export function ScenarioSearch() {
                                             key={selected.scenario.id}
                                             scenarioId={selected.scenario.id}
                                             versionId={selected.scenario.currentVersionId}
+                                        />
+                                    ) : detailsTab === "scores" ? (
+                                        <ScoreHistoryPanel
+                                            key={selected.scenario.id}
+                                            scenarioId={selected.scenario.id}
                                         />
                                     ) : selectedReviews === null ? (
                                         <p className="text-sm text-muted">Loading reviews…</p>
