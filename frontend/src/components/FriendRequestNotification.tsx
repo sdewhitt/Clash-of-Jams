@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getFriendName } from "@/lib/friendship/friendRequests";
 import { useNavigate } from "react-router";
 import { markNotificationRead } from "@/lib/notifications/readNotifications";
+import { deleteNotification } from "@/lib/notifications/readNotifications";
 
 interface FriendRequestNotificationProps {
     notificationId: string;
@@ -62,11 +63,8 @@ export function FriendRequestNotification({ notificationId, notificationType, no
     }
 
     return (
-        <button 
-            type="button"
-            onClick={() => handleNotificationClick()}
+        <div
             className={`
-                group
                 w-full
                 flex flex-row
                 justify-between
@@ -81,41 +79,60 @@ export function FriendRequestNotification({ notificationId, notificationType, no
                 hover:brightness-110
             `}
         >
-            <div className="flex flex-col">
-                {notificationType === 'friend_request_sent' && (
-                    <p className="font-semibold text-ink">
-                        {friendName} sent you a friend request
-                    </p>
-                )}
+            <button
+                id="delete_notification"
+                type="button"
+                onClick={() => deleteNotification(notificationId)}
+                className={`
+                    text-2xl text-inverse-ink 
+                    group-hover:text-muted
+                `}
+            >
+                X
+            </button>
+            <button 
+                type="button"
+                onClick={() => handleNotificationClick()}
+            >
+                <div className="flex flex-col">
+                    {notificationType === 'friend_request_sent' && (
+                        <p className="font-semibold text-ink">
+                            {friendName} sent you a friend request
+                        </p>
+                    )}
 
-                {notificationType === 'friend_request_accepted' && (
-                    <p className="font-semibold text-ink">
-                        {friendName} accepted your friend request
-                    </p>
-                )}
+                    {notificationType === 'friend_request_accepted' && (
+                        <p className="font-semibold text-ink">
+                            {friendName} accepted your friend request
+                        </p>
+                    )}
 
-                {notificationType === 'friend_request_canceled' && (
-                    <p className="font-semibold text-ink">
-                        {friendName} canceled their friend request
-                    </p>
-                )}
+                    {notificationType === 'friend_request_canceled' && (
+                        <p className="font-semibold text-ink">
+                            {friendName} canceled their friend request
+                        </p>
+                    )}
 
-                {notificationType === 'friend_request_declined' && (
-                    <p className="font-semibold text-ink">
-                        {friendName} declined your friend request
-                    </p>
-                )}
+                    {notificationType === 'friend_request_declined' && (
+                        <p className="font-semibold text-ink">
+                            {friendName} declined your friend request
+                        </p>
+                    )}
 
-                {!read && (
-                    <span className="mt-2 inline-block text-xs font-semibold text-accent-soft">
-                        Unread
-                    </span>
-                )}
-            </div>
+                    {!read && (
+                        <span className="mt-2 inline-block text-xs font-semibold text-accent-soft">
+                            Unread
+                        </span>
+                    )}
+                </div>
 
-            <span className="text-2xl text-inverse-ink group-hover:text-muted" aria-hidden="true">
-                →
-            </span>
-        </button>
+                <span 
+                    id="navigate_to_user"
+                    className="text-2xl text-inverse-ink"
+                >
+                    →
+                </span>
+            </button>
+        </div>
     );
 }

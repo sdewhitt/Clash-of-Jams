@@ -3,6 +3,7 @@ import type { AppNotification } from "@/lib/schema/types";
 import { declineFriendMatchInvitation } from "@/lib/matchmaking/gameInvitation";
 import { ChallengeFriendDialog } from "./ChallengeFriendDialog";
 import { getFriendName } from "@/lib/friendship/friendRequests";
+import { deleteNotification } from "@/lib/notifications/readNotifications";
 
 interface FriendMatchInvitationProps {
     notification: AppNotification;
@@ -87,25 +88,40 @@ export function FriendMatchInvitation({ notification, }: FriendMatchInvitationPr
     }
 
     return (
-        <div>
-            <div className={`
-                flex flex-col 
-                gap-3
+        <div
+            className={`
+                w-full
+                flex flex-row
                 bg-linear-to-b
                 from-contrast-start from-50
                 via-contrast-middle
                 to-contrast-end to-70
                 brightness-80
                 border-b border-line 
+                gap-3
                 p-4
-            `}>
+                hover:brightness-110
+            `}
+        >
+            <button
+                id="delete_notification"
+                type="button"
+                onClick={() => deleteNotification(notification.id ?? "")}
+                className={`
+                    text-2xl text-inverse-ink 
+                    text-muted
+                `}
+            >
+                X
+            </button>
+            <div className="flex flex-col">
                 <div>
                     <p className="font-semibold text-ink">
                         {friendName} challenged you!
                     </p>
 
                     {!notification.read && (
-                        <p className="mt-1 text-sm text-muted">
+                        <p className="mt-1 text-sm text-inverse-ink">
                             Choose whether you want to play a match.
                         </p>
                     )}

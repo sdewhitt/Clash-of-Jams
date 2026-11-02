@@ -63,12 +63,21 @@ export function NotificationDropdown({ uid, notifications, loading, error, onClo
                         {error}
                     </p>
                 ) : notifications.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 p-8">
+                    <div className={`
+                        flex flex-col 
+                        items-center
+                        bg-linear-to-b
+                        from-contrast-start from-50
+                        via-contrast-middle
+                        to-contrast-end to-70
+                        brightness-80
+                        gap-2 p-8
+                    `}>
                         <p className="text-2xl">🔔</p>
                         <p className="font-semibold text-ink">
                             You're all caught up!
                         </p>
-                        <p className="text-sm text-muted">
+                        <p className="text-sm text-inverse-ink">
                             You don't have any notifications.
                         </p>
                     </div>
