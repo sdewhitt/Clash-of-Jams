@@ -162,3 +162,46 @@ class MatchmakingService:
                 for player in decision.players:
                     self._queue.pop(player.uid, None)
                 self.decisions.append({"matchId": match_id, **decision.record(self.policy)})
+    
+    def create_friend_invitation(
+        self,
+        from_uid: str,
+        to_uid: str,
+        scenario_id: str,
+        scenario_version_id: str,
+    ) -> str:
+        """Challenge an existing friend to a match."""
+        return self.store.create_friend_invitation(
+            from_uid=from_uid,
+            to_uid=to_uid,
+            scenario_id=scenario_id,
+            scenario_version_id=scenario_version_id,
+        )
+
+    def accept_friend_invitation(
+        self,
+        accepting_uid: str,
+        invitation_id: str,
+        scenario_id: str,
+        scenario_version_id: str,
+    ) -> str | None:
+        """Accept a friend challenge and create the shared lobby."""
+        return self.store.accept_friend_invitation(
+            invitation_id=invitation_id,
+            accepting_uid=accepting_uid,
+            scenario_id=scenario_id,
+            scenario_version_id=scenario_version_id,
+        )
+    
+    def decline_friend_invitation(
+        self,
+        declining_uid: str,
+        invitation_id: str,
+    ) -> str:
+        return self.store.decline_friend_invitation(
+            invitation_id,
+            declining_uid,
+        )
+    
+    def expire_friend_invitations(self) -> int:
+        return self.store.expire_friend_invitations()

@@ -3,14 +3,16 @@ import { useNavigate } from "react-router"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { getUserSettings } from "@/lib/profile/UserSettings";
 import { useSkillRatings } from "@/lib/ratings/useSkillRatings";
-import type { UserSettings } from '@/lib/schema/types';
+import type { UserPreferences, } from '@/lib/schema/types';
 import { EloDisplay } from "@/components/EloDisplay";
+import { getUserPreferences } from "@/lib/profile/userPreferences";
+import { NotificationButton } from "@/components/NotificationButton";
+import { LiveElo } from "@/components/LiveElo";
 
 export function UserProfile() {
     const { user, profile, loading } = useAuth();
-    const [userSettings, setUserSettings] = useState<UserSettings>();
+    const [ userPreferences, setUserPreferences] = useState<UserPreferences>();
     const [ preferredInstrument, setPreferredInstrument ] = useState("");
     const { ratings: eloRatings } = useSkillRatings(user?.uid);
     const navigate = useNavigate();
@@ -21,31 +23,31 @@ export function UserProfile() {
             .replace(/\b\w/g, (char) => char.toUpperCase());
     }
     
-    async function loadUserSettings() {
+    async function loadUserPreferences() {
         try {
             if (!user) {
                 return;
             }
-            const settings = await getUserSettings(user.uid);
-            setUserSettings(settings)
+            const preferences = await getUserPreferences(user.uid);
+            setUserPreferences(preferences)
 
         } catch (error) {
-            console.error("Failed to load user settings:", error);
+            console.error("Failed to load user preferences:", error);
         }
     }
 
     useEffect(
         () => { 
             if (loading) return; 
-            loadUserSettings();
-            }, [loading, profile, user]
+            loadUserPreferences();
+        }, [loading, profile, user]
     );
 
     useEffect(
         () => { 
-            if (!userSettings) return;
-            setPreferredInstrument( userSettings?.preferredInstrument ?? "" );
-            }, [userSettings]
+            if (!userPreferences) return;
+            setPreferredInstrument( userPreferences?.preferredInstrument ?? "" );
+            }, [userPreferences]
     );
 
     if (loading) { 
@@ -86,10 +88,13 @@ export function UserProfile() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">My Profile</h1>
                 </div>
 
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>
@@ -157,7 +162,7 @@ export function UserProfile() {
                                         Preferred Genres:
                                     </label>
                                     <div id="preferredGenres" className="flex flex-row overscroll-x-contain gap-4 mx-2">
-                                        {userSettings?.preferredGenres.map((genre) => (
+                                        {userPreferences?.preferredGenres.map((genre) => (
                                             <div 
                                                 key={genre}
                                                 className={`

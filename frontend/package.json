@@ -31,6 +31,7 @@
     "@tonejs/midi": "^2.0.28",
     "fflate": "^0.8.3",
     "firebase": "^12.19.0",
+    "lucide-react": "^1.66.0",
     "pitchy": "^4.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

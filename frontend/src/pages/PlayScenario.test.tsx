@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FinishedRun, PlayerSetup } from '@/components/ScenarioPlayer'
 import { apiFetch } from '@/lib/api'
-import { getUserSettings } from '@/lib/profile/UserSettings'
+import { getUserSettings } from '@/lib/profile/userSettings'
 import { submitRun } from '@/lib/runs/store'
 import { loadScenario } from '@/lib/scenarios/store'
 import { DEFAULT_SCORING_RULES } from '@/lib/schema/collections'
@@ -25,7 +25,20 @@ vi.mock('@/lib/api', async (importOriginal) => ({
 }))
 vi.mock('@/lib/scenarios/store', () => ({ loadScenario: vi.fn() }))
 vi.mock('@/lib/runs/store', () => ({ submitRun: vi.fn() }))
-vi.mock('@/lib/profile/UserSettings', () => ({ getUserSettings: vi.fn() }))
+vi.mock('@/lib/profile/userSettings', () => ({ getUserSettings: vi.fn() }))
+
+vi.mock('@/components/LiveElo', () => ({ LiveElo: () => <span>400 Elo</span> }))
+vi.mock('@/components/NotificationButton', () => ({
+  NotificationButton: ({ uid }: { uid: string }) => (
+    <button
+      type="button"
+      aria-label="Notifications"
+      data-testid="notification-button"
+    >
+      Notifications: {uid}
+    </button>
+  ),
+}))
 
 const NOTES: ExpectedNote[] = [60, 62, 64].map((midiPitch, index) => ({
   index,

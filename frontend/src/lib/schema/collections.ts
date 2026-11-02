@@ -4,7 +4,7 @@
  * Nothing here touches the Firebase app instance, so this module is safe to
  * import from both the browser app and the Node init script.
  */
-import { serverTimestamp, type WithFieldValue } from 'firebase/firestore'
+import { serverTimestamp, Timestamp, type WithFieldValue } from 'firebase/firestore'
 
 import type {
   ChartPart,
@@ -14,7 +14,6 @@ import type {
   GameMatch,
   ImportJob,
   Instrument,
-  MatchInvitation,
   MatchParticipant,
   MediaAsset,
   ModerationAction,
@@ -32,7 +31,14 @@ import type {
   UserProfile,
   UserReport,
   UserSettings,
+  UserPreferences,
+  UserStatus,
   UsernameReservation,
+  PublicProfile,
+  AppNotification,
+  FriendRequest,
+  FriendshipState,
+  MatchInvitation,
 } from './types.ts'
 
 /** Bumped whenever a document shape changes in a way that needs a migration. */
@@ -43,17 +49,22 @@ export const COLLECTIONS = {
   users: 'users',
   usernames: 'usernames',
   userSettings: 'userSettings',
+  userPreferences: 'userPreferences',
+  userStatus: 'userStatus',
+  publicProfile: 'publicProfile',
   scenarios: 'scenarios',
   mediaAssets: 'mediaAssets',
   runs: 'runs',
   matches: 'matches',
   friendships: 'friendships',
+  friendRequests: 'friendRequests',
   communities: 'communities',
   playlists: 'playlists',
   scenarioReviews: 'scenarioReviews',
   userReports: 'userReports',
   moderationActions: 'moderationActions',
   matchInvitations: 'matchInvitations',
+  friendMatchInvitationLocks: 'friendMatchInvitationLocks',
   recordingShares: 'recordingShares',
   importJobs: 'importJobs',
 } as const
@@ -151,7 +162,33 @@ export function newUserProfile(args: {
     isBanned: false,
     isSocialRestricted: false,
     isProfilePublic: true,
+    friends: [],
+    communities: [],
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }
+}
+
+export function newPublicProfile(args: {
+  uid: string
+  username: string
+  displayName: string
+  acceptingFriends: boolean
+}): WithFieldValue<PublicProfile> {
+  return {
+    uid: args.uid,
+    username: args.username,
+    usernameLower: usernameKey(args.username),
+    displayName: args.displayName ?? args.username,
+    avatarUrl: null,
+    bio: null,
+    preferredInstrument: null,
+    preferredGenres: [],
+    elos: [],
+    acceptingFriends: args.acceptingFriends,
+    friends: [],
+    communities: [],
+    publicHistory: true,
     updatedAt: serverTimestamp(),
   }
 }
@@ -169,23 +206,52 @@ export function newUsernameReservation(args: {
 
 export function newUserSettings(args: {
   uid: string
-  preferredInstrument?: Instrument
 }): WithFieldValue<UserSettings> {
   return {
     uid: args.uid,
     scenarioTheme: "default",
     theme: 'default',
     reduceFlashing: false,
+    acceptingFriends: true,
     publicBio: true,
-    preferredInstrument: args.preferredInstrument ?? 'piano',
     publicInstrument: true,
-    preferredGenres: [],
-    publicGenres: [],
+    publicGenres: true,
     publicElos: [],
     inputLatencyOffsetMs: 0,
     masterVolume: 0.8,
     metronomeEnabled: true,
     updatedAt: serverTimestamp(),
+  }
+}
+
+export function newUserPreferences(): WithFieldValue<UserPreferences> {
+  return {
+    preferredInstrument: 'piano',
+    preferredGenres: [],
+    updatedAt: serverTimestamp(),
+  }
+}
+
+export function newUserStatus(): WithFieldValue<UserStatus> {
+  return {
+    dnd: false,
+    lastHeartbeat: serverTimestamp(),
+  }
+}
+
+export function newAppNotification( args: {
+  notifiedUid: string
+  notifierUid: string
+  notificationType: string
+  requestId: string
+}): WithFieldValue<AppNotification> {
+  return {
+    notifiedUid: args.notifiedUid,
+    notifierUid: args.notifierUid,
+    notificationType: args.notificationType,
+    requestId: args.requestId,
+    read: false,
+    createdAt: serverTimestamp(),
   }
 }
 
@@ -374,28 +440,43 @@ export function newScenarioTheme(args: {
   }
 }
 
+export function newFriendRequests(args: {
+  uidOne: string
+  uidTwo: string
+  initiatorUid: string
+  state: FriendshipState
+}): WithFieldValue<FriendRequest> {
+  const [idA, idB] = args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
+  return {
+    potentialFriends: [idA, idB],
+    initiatorUid: args.initiatorUid,
+    status: args.state,
+    createdAt: serverTimestamp(),
+  }
+}
+
 export function newFriendship(args: {
   uidOne: string
   uidTwo: string
-  requestedByUid: string
-  state?: Friendship['state']
 }): WithFieldValue<Friendship> {
-  const [idA, idB] =
-    args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
+  const [idA, idB] = args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
   return {
     id: friendshipId(idA, idB),
-    idA,
-    idB,
-    requestedByUid: args.requestedByUid,
-    state: args.state ?? 'pending',
+    friends: [idA, idB],
+    totalFriendlies: 0,
+    matchHistory: [],
+    uidA: idA,
+    uidAWins: 0, 
+    uidB: idB,
+    uidBWins: 0,
     createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
   }
 }
 
 export function newCommunity(args: {
   id: string
   name: string
+  communityIcon: string | null
   ownerUid: string
   description?: string
   isPublic?: boolean
@@ -403,10 +484,12 @@ export function newCommunity(args: {
   return {
     id: args.id,
     name: args.name,
+    communityIcon: args.communityIcon,
     description: args.description ?? '',
     ownerUid: args.ownerUid,
+    members: [args.ownerUid],
+    announcements: [],
     isPublic: args.isPublic ?? true,
-    memberCount: 1,
     createdAt: serverTimestamp(),
   }
 }
@@ -522,16 +605,28 @@ export function newMatchInvitation(args: {
   matchId: string
   fromUid: string
   toUid: string
-  expiresAt: MatchInvitation['expiresAt']
+  fromScenarioId: string
+  fromScenarioVersion: string
 }): WithFieldValue<MatchInvitation> {
   return {
     id: args.id,
+
     matchId: args.matchId,
+
     fromUid: args.fromUid,
     toUid: args.toUid,
+
+    fromScenarioId: args.fromScenarioId,
+    fromScenarioVersionId: args.fromScenarioVersion,
+
+    toScenarioId: null,
+    toScenarioVersionId: null,
+
     state: 'pending',
+
     createdAt: serverTimestamp(),
-    expiresAt: args.expiresAt,
+    updatedAt: serverTimestamp(),
+    expiresAt: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000)
   }
 }
 
