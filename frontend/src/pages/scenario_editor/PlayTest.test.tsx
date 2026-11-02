@@ -24,6 +24,22 @@ vi.mock('@/lib/scenarios/store', () => ({
 vi.mock('@/lib/runs/store', () => ({ submitRun: vi.fn() }))
 vi.mock('@/lib/profile/userSettings', () => ({ getUserSettings: vi.fn() }))
 
+vi.mock('@/components/NotificationButton', () => ({
+  NotificationButton: ({ uid }: { uid: string }) => (
+    <button
+      type="button"
+      aria-label="Notifications"
+      data-testid="notification-button"
+    >
+      Notifications: {uid}
+    </button>
+  ),
+}))
+
+vi.mock('@/components/LiveElo', () => ({
+  LiveElo: () => null,
+}))
+
 const RESULT: ScoreResult = {
   finalScore: 80,
   breakdown: {
