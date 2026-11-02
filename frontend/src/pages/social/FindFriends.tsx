@@ -21,7 +21,9 @@ export function FindFriends() {
     const [ results, setResults ] = useState<SearchProfile[]>([]);
     const [ loading, setLoading ] = useState(false);
     const [ error, setError ] = useState<string | null>(null);
-    const [ onlyRecommended, setOnlyRecommended ] = useState(false)
+    const [ onlyRecommended, setOnlyRecommended ] = useState(false);
+
+    const [instrumentFilter, setInstrumentFilter] = useState("all");
 
     useEffect(() => {
         if (!user) {
@@ -35,7 +37,6 @@ export function FindFriends() {
             override = true;
         }
         else if (term.length < 3) {
-            setResults([]);
             setLoading(false);
             setError(null);
             return;
@@ -48,7 +49,7 @@ export function FindFriends() {
             setError(null);
 
             try {
-                const users = await searchPublicUsers(user?.uid, term, false, override);
+                const users = await searchPublicUsers(user?.uid, term, override, instrumentFilter);
 
                 if (!cancelled) {
                     setResults( users );
@@ -57,12 +58,12 @@ export function FindFriends() {
                 console.error("Failed to search users:", err);
 
                 if (!cancelled) {
-                setError("Unable to search users. Please try again.");
-                setResults([]);
+                    setError("Unable to search users. Please try again.");
+                    setResults([]);
                 }
             } finally {
                 if (!cancelled) {
-                setLoading(false);
+                    setLoading(false);
                 }
             }
         }, 300);
@@ -73,6 +74,50 @@ export function FindFriends() {
         window.clearTimeout(timer);
         };
     }, [searchTerm, user?.uid]);
+
+    async function modifySearchParameters(instrument: string) {
+        if (!user) {
+            return;
+        }
+
+        setInstrumentFilter(instrument);
+
+        setLoading(true);
+        setError(null);
+
+        const term = searchTerm.trim();
+
+        let override = false;
+        if (term.length == 0) {
+            override = true;
+        }
+        else if (term.length < 3) {
+            setLoading(false);
+            setError(null);
+            return;
+        }
+
+        let cancelled = false;
+
+        try {
+            const users = await searchPublicUsers(user?.uid, term, override, instrument);
+
+            if (!cancelled) {
+                setResults( users );
+            }
+        } catch (err) {
+            console.error("Failed to search users:", err);
+
+            if (!cancelled) {
+                setError("Unable to search users. Please try again.");
+                setResults([]);
+            }
+        } finally {
+            if (!cancelled) {
+                setLoading(false);
+            }
+        }
+    }
 
     const potentialFriends = [...results]
         .filter((profile) => profile.relationship !== "friend" )
@@ -128,28 +173,59 @@ export function FindFriends() {
                     >
                         Search For Users:
                     </label>
-
-                    <input
-                        id="user-search"
-                        type="search"
-                        value={searchTerm}
-                        onChange={(event) => setSearchTerm(event.target.value)}
-                        placeholder="Enter at least 3 characters..."
-                        autoComplete="off"
-                        className={`
-                            w-full 
-                            px-2 py-2 
-                            rounded-lg 
-                            bg-contrast-middle 
-                            text-inverse-ink
-                            outline-2 
-                            outline-contrast-start 
-                            focus:outline-none 
-                            focus:ring-3 
-                            focus:ring-accent-end 
-                            transition-all`
-                        }
-                    />
+                    <div
+                        className="flex flex-row"
+                    >
+                        <input
+                            id="user-search"
+                            type="search"
+                            value={searchTerm}
+                            onChange={(event) => setSearchTerm(event.target.value)}
+                            placeholder="Enter at least 3 characters..."
+                            autoComplete="off"
+                            className={`
+                                w-full 
+                                px-2 py-2 
+                                rounded-lg 
+                                bg-contrast-middle 
+                                text-inverse-ink
+                                outline-2 
+                                outline-contrast-start 
+                                focus:outline-none 
+                                focus:ring-3 
+                                focus:ring-accent-end 
+                                transition-all`
+                            }
+                        />
+                        <select
+                            id="preferredInstrument"
+                            name="instrument"
+                            value={instrumentFilter}
+                            onChange={(e) => modifySearchParameters(e.target.value)}
+                            required
+                            className={`
+                                m-4
+                                px-2 py-4
+                                w-1/6
+                                rounded-lg
+                                bg-contrast-middle
+                                text-inverse-ink
+                                outline-2
+                                outline-contrast-start
+                                focus:outline-none
+                                focus:ring-3
+                                focus:ring-accent-end
+                                transition-all
+                            `}
+                        >
+                            <option className="text-md text-black" value="all">All Instruments</option>
+                            <option className="text-md text-black" value="piano">Piano</option>
+                            <option className="text-md text-black" value="guitar">Guitar</option>
+                            <option className="text-md text-black" value="woodwind">Woodwind</option>
+                            <option className="text-md text-black" value="vocals">Vocals</option>
+                            <option className="text-md text-black" value="midi">Midi</option>
+                        </select>
+                    </div>
                 </div>
                 <button
                     type="button"

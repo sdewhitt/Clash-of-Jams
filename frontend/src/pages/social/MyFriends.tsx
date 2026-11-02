@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { searchPublicUsers } from "@/lib/profile/userProfileSearch"
+import { getFriendProfiles } from "@/lib/profile/userProfileSearch"
 import type { SearchProfile } from "@/lib/schema/types"
 import UserSearchResult from "@/components/UserSearchResult"
 import { NotificationButton } from "@/components/NotificationButton"
@@ -12,62 +12,67 @@ import { LiveElo } from "@/components/LiveElo"
 export function MyFriends() {
     const { user, profile } = useAuth();
     const navigate = useNavigate();
+    
+    const [searchTerm, setSearchTerm] = useState("");
+    const [friends, setFriends] = useState<SearchProfile[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const [ searchTerm, setSearchTerm ] = useState("");
-    const [ results, setResults ] = useState<SearchProfile[]>([]);
-    const [ loading, setLoading ] = useState(false);
-    const [ error, setError ] = useState<string | null>(null);
+    const [instrumentFilter, setInstrumentFilter] = useState("all");
 
     useEffect(() => {
-        if (!user) {
-            return;
-        }
-
-        const term = searchTerm.trim();
-
-        let override = false;
-        if (term.length == 0) {
-            override = true;
-        }
-        else if (term.length < 3) {
-            setResults([]);
-            setLoading(false);
-            setError(null);
+        if (!user || !profile) {
+            setFriends([]);
             return;
         }
 
         let cancelled = false;
 
-        const timer = window.setTimeout(async () => {
+        async function loadFriends() {
             setLoading(true);
             setError(null);
 
             try {
-                const users = await searchPublicUsers(user?.uid, term, true, override);
+                const friendProfiles = await getFriendProfiles(
+                    user!.uid,
+                    profile!.friends ?? []
+                );
 
                 if (!cancelled) {
-                    setResults( users );
+                    setFriends(friendProfiles);
                 }
             } catch (err) {
-                console.error("Failed to search friends:", err);
+                console.error("Failed to load friends:", err);
 
                 if (!cancelled) {
-                    setError("Unable to search friends. Please try again.");
-                    setResults([]);
+                    setError("Unable to load friends. Please try again.");
+                    setFriends([]);
                 }
             } finally {
                 if (!cancelled) {
                     setLoading(false);
                 }
             }
-        }, 300);
+        }
+
+        loadFriends();
 
         return () => {
-        cancelled = true;
-        override = false;
-        window.clearTimeout(timer);
+            cancelled = true;
         };
-    }, [searchTerm, user?.uid]);
+    }, [user?.uid, profile?.friends]);
+
+    const filteredFriends = friends.filter(friend => {
+        const matchesUsername = friend.usernameLower?.includes(
+            searchTerm.trim().toLowerCase()
+        ) ?? false;
+    
+        const matchesInstrument =
+            instrumentFilter === "all" ||
+            friend.preferredInstrument?.includes(instrumentFilter);
+    
+        return matchesUsername && matchesInstrument;
+    });
 
     return (
         <main className="h-dvh flex flex-col overflow-hidden">
@@ -136,118 +141,107 @@ export function MyFriends() {
                                 Add a Friend
                             </button>
                         </div>
-                        <input
-                            id="user-search"
-                            type="search"
-                            value={searchTerm}
-                            onChange={(event) => setSearchTerm(event.target.value)}
-                            placeholder="Search by Username..."
-                            autoComplete="off"
+                        <div
                             className={`
-                                m-4
-                                px-2 py-2 
-                                rounded-lg 
-                                bg-contrast-middle 
-                                text-inverse-ink
-                                outline-2 
-                                outline-contrast-start 
-                                focus:outline-none 
-                                focus:ring-3 
-                                focus:ring-accent-end 
-                                transition-all`
-                            }
-                        />
+                                flex flex-row
+                            `}
+                        >
+                            <input
+                                id="user-search"
+                                type="search"
+                                value={searchTerm}
+                                onChange={(event) => setSearchTerm(event.target.value)}
+                                placeholder="Search by Username..."
+                                autoComplete="off"
+                                className={`
+                                    m-4
+                                    px-2 py-2
+                                    w-5/6
+                                    rounded-lg
+                                    bg-contrast-middle
+                                    text-inverse-ink
+                                    outline-2
+                                    outline-contrast-start
+                                    focus:outline-none
+                                    focus:ring-3
+                                    focus:ring-accent-end
+                                    transition-all
+                                `}
+                            />
+                            <select
+                                id="preferredInstrument"
+                                name="instrument"
+                                value={instrumentFilter}
+                                onChange={(e) => setInstrumentFilter(e.target.value)}
+                                required
+                                className={`
+                                    m-4
+                                    px-2 py-2
+                                    w-1/6
+                                    rounded-lg
+                                    bg-contrast-middle
+                                    text-inverse-ink
+                                    outline-2
+                                    outline-contrast-start
+                                    focus:outline-none
+                                    focus:ring-3
+                                    focus:ring-accent-end
+                                    transition-all
+                                `}
+                            >
+                                <option className="text-md text-black" value="all">All Instruments</option>
+                                <option className="text-md text-black" value="piano">Piano</option>
+                                <option className="text-md text-black" value="guitar">Guitar</option>
+                                <option className="text-md text-black" value="woodwind">Woodwind</option>
+                                <option className="text-md text-black" value="vocals">Vocals</option>
+                                <option className="text-md text-black" value="midi">Midi</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                {searchTerm.trim().length != 0 && searchTerm.trim().length < 3 && (
-                    <div className={`
-                        flex items-center justify-center
-                        rounded-lg
-                        py-4
-                        bg-linear-to-b
-                        from-accent-start
-                        via-accent-middle
-                        to-accent-end
-                        
-                        mx-12
-                    `}>
-                        <p className="text-center text-md text-muted">
-                            Type at least 3 characters to search.
-                        </p>
-                    </div>
-                )}
-
                 {loading && (
-                    <div className={`
-                        flex items-center justify-center
-                        rounded-lg
-                        py-4
-                        bg-linear-to-b
-                        from-accent-start
-                        via-accent-middle
-                        to-accent-end
-                        mx-12
-                    `}>
-                        <p className="text-center text-md text-muted">
-                            Searching friends...
-                        </p>
-                    </div>
+                    <p className="text-center py-4">
+                        Loading friends...
+                    </p>
                 )}
 
                 {error && (
-                    <div className={`
-                        flex items-center justify-center
-                        rounded-lg
-                        py-4
-                        bg-linear-to-b
-                        from-accent-start
-                        via-accent-middle
-                        to-accent-end
-                        mx-12
-                    `}>
-                        <p className="text-center text-md text-muted">
-                            {error}
-                        </p>
-                    </div>
+                    <p className="text-center py-4">
+                        {error}
+                    </p>
                 )}
 
-                {!loading && !error && searchTerm.trim().length >= 3 && results.length === 0 && (
-                    <div className={`
-                        flex items-center justify-center
-                        rounded-lg
-                        py-4
-                        bg-linear-to-b
-                        from-accent-start
-                        via-accent-middle
-                        to-accent-end
-                        mx-12
-                    `}>
-                        <p className="text-center text-md text-muted">
+                {!loading && !error && friends.length === 0 && (
+                    <p className="text-center py-4">
+                        You don't have any friends yet!
+                    </p>
+                )}
+
+                {!loading && !error &&
+                    friends.length > 0 &&
+                    filteredFriends.length === 0 && (
+                        <p className="text-center py-4">
                             No friends found. Try another username.
                         </p>
-                    </div>
-                )}
+                    )
+                }
 
-                <div className={`
-                    flex-1 
+                <div className="
+                    flex-1
                     min-h-0
                     overflow-y-auto
                     overscroll-contain
                     mx-12
-                `}>
-                    {!loading && (
-                        <div>
-                            {results.length > 0 && (
-                                <div className="space-y-2 p-4">
-                                    {results.map((profile) => (
-                                        <UserSearchResult
-                                            key={profile.uid}
-                                            profile={profile}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                ">
+                    {!loading && !error && filteredFriends.length > 0 && (
+                        <div className="space-y-2 p-4">
+                            {filteredFriends.map(friend => (
+                                <UserSearchResult
+                                    key={friend.uid}
+                                    profile={friend}
+                                />
+                            ))}
                         </div>
                     )}
                 </div>

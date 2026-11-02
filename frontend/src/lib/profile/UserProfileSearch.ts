@@ -2,7 +2,7 @@ import { collection, doc, endAt, getDoc, getDocs, limit, orderBy, query, startAt
 import { db } from "@/lib/firebase";
 import type { PublicProfile, RelationshipStatus, SearchProfile, } from "@/lib/schema/types";
 
-export async function searchPublicUsers( activeUid: string, queryUsername: string, friend: boolean, limitOverride: boolean): Promise<SearchProfile[]> {
+export async function searchPublicUsers( activeUid: string, queryUsername: string, limitOverride: boolean, instrumentFilter: string): Promise<SearchProfile[]> {
     const term = queryUsername.trim().toLowerCase();
 
     if (!limitOverride && term.length < 3) {
@@ -28,9 +28,9 @@ export async function searchPublicUsers( activeUid: string, queryUsername: strin
         constraints.push(startAt(term));
         constraints.push(endAt(term + "\uf8ff"));
     }
-    
-    if (friend) {
-        constraints.push(where("friends", "array-contains", activeUid));
+
+    if (instrumentFilter !== 'all') {
+        constraints.push(where('preferredInstrument', '==', instrumentFilter));
     }
     
     const profilesQuery = query(
@@ -78,4 +78,40 @@ export async function searchPublicUsers( activeUid: string, queryUsername: strin
         .filter(
             (profile): profile is SearchProfile => profile !== null
         );
+}
+
+
+export async function getFriendProfiles( activeUid: string, friendUids: string[] ): Promise<SearchProfile[]> {
+    const uniqueFriendUids = [ ...new Set(friendUids) ].filter(uid => uid !== activeUid);
+
+    if (uniqueFriendUids.length === 0) {
+        return [];
+    }
+
+    const activeFriendIds = new Set(uniqueFriendUids);
+
+    const snapshots = await Promise.all(
+        uniqueFriendUids.map(uid => getDoc(doc(db, "publicProfile", uid)))
+    );
+
+    return snapshots
+        .filter(snapshot => snapshot.exists())
+        .map(snapshot => {
+            const profile = snapshot.data() as PublicProfile;
+            const candidateFriendIds = new Set(profile.friends ?? []);
+
+            let mutualFriendCount = 0;
+
+            for (const friendUid of candidateFriendIds) {
+                if (activeFriendIds.has(friendUid)) {
+                    mutualFriendCount++;
+                }
+            }
+
+            return {
+                ...profile,
+                relationship: "friend" as RelationshipStatus,
+                mutualFriendCount,
+            };
+        });
 }
