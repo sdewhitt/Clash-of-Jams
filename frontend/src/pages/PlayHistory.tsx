@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router'
 
 import { BackButton } from '@/components/BackButton'
 import { ProfileButton } from '@/components/ProfileButton'
+import { ScoreTrendsChart } from '@/components/ScoreTrendsChart'
 import { useAuth } from '@/lib/auth/useAuth'
 import { fetchPlayHistory, type PlayHistoryEntry } from '@/lib/runs/history'
 import { MAX_SCORE } from '@/scoring/score'
@@ -91,16 +92,21 @@ export function PlayHistory() {
             </button>
           </div>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {entries.map((entry) => (
-              <HistoryRow
-                key={entry.runId}
-                entry={entry}
-                onOpen={() => navigate(`/scenario_search?scenario=${entry.scenarioId}`)}
-                onPlay={() => navigate(`/play/${entry.scenarioId}`)}
-              />
-            ))}
-          </ul>
+          <>
+            {/* Only once there is history: a new player has nothing to chart yet. */}
+            {entries.length > 0 && <ScoreTrendsChart />}
+            <h2 className="text-xl font-bold">Recently played</h2>
+            <ul className="flex flex-col gap-3">
+              {entries.map((entry) => (
+                <HistoryRow
+                  key={entry.runId}
+                  entry={entry}
+                  onOpen={() => navigate(`/scenario_search?scenario=${entry.scenarioId}`)}
+                  onPlay={() => navigate(`/play/${entry.scenarioId}`)}
+                />
+              ))}
+            </ul>
+          </>
         )}
 
         {error && <p role="alert">{error}</p>}

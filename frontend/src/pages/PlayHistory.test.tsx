@@ -14,6 +14,8 @@ import { renderAtRoute, signedIn } from '@/test/render'
 vi.mock('@/lib/runs/history', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/runs/history')>()),
   fetchPlayHistory: vi.fn(),
+  // The chart is covered by ScoreTrendsChart.test.tsx; here it just has nothing to show.
+  fetchScoreTrends: vi.fn(async () => ({ scenarios: [], points: [] })),
 }))
 
 function entry(overrides: Partial<PlayHistoryEntry> = {}): PlayHistoryEntry {
