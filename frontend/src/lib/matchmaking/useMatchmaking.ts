@@ -43,6 +43,7 @@ export function useMatchmaking(uid: string | undefined) {
       state.ticket = status.queueId
       setEntry({ uid: uid!, status, error: null, receivedAt: performance.now() })
     }
+
     async function poll() {
       if (!active || state.cancelling) return
       try {
@@ -65,6 +66,7 @@ export function useMatchmaking(uid: string | undefined) {
         if (active && !state.cancelling) pollTimer = setTimeout(poll, 1500)
       }
     }
+
     const joining = joinQueue()
     state.joining = joining
     void joining
@@ -94,9 +96,12 @@ export function useMatchmaking(uid: string | undefined) {
           /* The server lease also expires without heartbeats. */
         })
     }
+
     const resume = () => setAttempt((value) => value + 1)
+
     window.addEventListener('pagehide', release)
     window.addEventListener('pageshow', resume)
+    
     return () => {
       active = false
       if (pollTimer) clearTimeout(pollTimer)

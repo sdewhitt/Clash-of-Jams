@@ -15,6 +15,7 @@
  *    separate documents, as the design document requires.
  */
 import type { Timestamp } from 'firebase/firestore'
+import type { PRESET_MESSAGES } from '../multiplayer/types'
 
 /* ------------------------------------------------------------------ enums */
 
@@ -72,7 +73,7 @@ export type ReportState = (typeof REPORT_STATES)[number]
 export const INVITATION_STATES = ['pending', 'accepted', 'declined', 'expired'] as const
 export type InvitationState = (typeof INVITATION_STATES)[number]
 
-export const FRIENDSHIP_STATES = ['pending', 'accepted', 'blocked'] as const
+export const FRIENDSHIP_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
 export type FriendshipState = (typeof FRIENDSHIP_STATES)[number]
 
 export const COMMUNITY_ROLES = ['owner', 'moderator', 'member'] as const
@@ -82,6 +83,8 @@ export const HIT_VERDICTS = ['hit', 'missed', 'early', 'late', 'wrong_pitch', 'e
 export type HitVerdict = (typeof HIT_VERDICTS)[number]
 
 export type ModerationTargetType = 'user' | 'scenario' | 'recording'
+
+export type RelationshipStatus = "friend" | "friendOfFriend" | "none";
 
 /* ------------------------------------------------------- primary database */
 
@@ -95,44 +98,93 @@ export type ModerationTargetType = 'user' | 'scenario' | 'recording'
 export interface UserProfile {
   uid: string
   username: string
-  /** Lowercased username, mirrored into usernames/{usernameLower}. */
+  /** Lowercased username, mirrored into usernames/{usernameLower}. **/
   usernameLower: string
   displayName: string
   avatarUrl: string | null
   bio: string
   role: Role
-  /** Moderation state — set by the admin module, never by the user. */
+  /** Moderation state — set by the admin module, never by the user. **/
   isBanned: boolean
   isSocialRestricted: boolean
   isProfilePublic: boolean
+  friends: string[]
+  communities: string[]
   createdAt: Timestamp
   updatedAt: Timestamp
 }
 
-/** usernames/{usernameLower} — reservation document enforcing invariant 1. */
+/** publicProfile/{uid} — outward facing use profiles for public queries. **/
+export interface PublicProfile {
+  uid: string
+  username: string
+  usernameLower: string
+  displayName: string
+  avatarUrl: string | null
+  bio: string | null
+  preferredInstrument: Instrument | null
+  preferredGenres: Genre[]
+  elos: Instrument[]
+  acceptingFriends: boolean
+  friends: string[]
+  communities: string[]
+  publicHistory: boolean
+  updatedAt: Timestamp
+}
+
+/** Interface used to query public users for friend-of-friends **/
+export interface SearchProfile extends PublicProfile {
+  relationship: RelationshipStatus;
+  mutualFriendCount: number;
+}
+
+/** usernames/{usernameLower} — reservation document enforcing invariant 1. **/
 export interface UsernameReservation {
   uid: string
   username: string
   createdAt: Timestamp
 }
 
-/** userSettings/{uid} — themes, accessibility options, instrument preferences. */
+/** userSettings/{uid} — themes, accessibility options, instrument preferences. **/
 export interface UserSettings {
   uid: string
   scenarioTheme: string
   theme: string
   reduceFlashing: boolean
+  acceptingFriends: boolean
   publicBio: boolean
-  preferredInstrument: Instrument
   publicInstrument: boolean
-  preferredGenres: Genre[]
-  publicGenres: Genre[]
+  publicGenres: boolean
   publicElos: Instrument[]
-  /** Milliseconds of input latency the gameplay engine compensates for. */
+  /** Milliseconds of input latency the gameplay engine compensates for. **/
   inputLatencyOffsetMs: number
   masterVolume: number
   metronomeEnabled: boolean
   updatedAt: Timestamp
+}
+
+/** userPreference/{uid} — tracking user preferences of features/tools. **/
+export interface UserPreferences {
+  preferredInstrument: Instrument
+  preferredGenres: Genre[]
+  updatedAt: Timestamp
+}
+
+/** userStatus/{uid} — tracking online presence of users within firestore. **/
+export interface UserStatus {
+  dnd: boolean
+  lastHeartbeat: Timestamp
+}
+
+/** notifications/{notificationId} — tracking online presence of users within firestore. **/
+export interface AppNotification {
+  id?: string
+  notifiedUid: string
+  notifierUid: string
+  notificationType: string
+  requestId: string
+  read: boolean
+  createdAt: Timestamp | null
 }
 
 /**
@@ -418,23 +470,34 @@ export interface RatingEvent {
  * That ordering is what keeps the pair unique regardless of who initiated.
  */
 export interface Friendship {
+  friends: string[]
   id: string
-  idA: string
-  idB: string
-  requestedByUid: string
-  state: FriendshipState
+  uidA: string
+  uidAWins: number
+  uidB: string
+  uidBWins: number
+  totalFriendlies: number
+  matchHistory: string[]
   createdAt: Timestamp
-  updatedAt: Timestamp
+}
+
+export interface FriendRequest {
+  potentialFriends: string[]
+  initiatorUid: string
+  status: FriendshipState
+  createdAt: Timestamp
 }
 
 /** communities/{communityId} */
 export interface Community {
   id: string
   name: string
+  communityIcon: string
   description: string
   ownerUid: string
+  members: string[]
+  announcements: string[]
   isPublic: boolean
-  memberCount: number
   createdAt: Timestamp
 }
 
@@ -512,12 +575,48 @@ export interface ModerationAction {
 /** matchInvitations/{invitationId} */
 export interface MatchInvitation {
   id: string
-  matchId: string
+
+  // Null until both players have selected a scenario.
+  matchId: string | null
+
   fromUid: string
   toUid: string
+
+  // Scenario selected by the challenger.
+  fromScenarioId: string
+  fromScenarioVersionId: string
+
+  // Scenario selected by the recipient.
+  toScenarioId: string | null
+  toScenarioVersionId: string | null
+
   state: InvitationState
+
   createdAt: Timestamp
   expiresAt: Timestamp
+  updatedAt: Timestamp
+}
+
+export interface CreateFriendMatchRequest {
+  toUid: string
+  scenarioId: string
+  scenarioVersionId: string
+}
+
+export interface AcceptFriendMatchRequest {
+  invitationId: string
+  scenarioId: string
+  scenarioVersionId: string
+}
+
+export interface FriendMatchInvitationResponse {
+  invitationId: string
+  matchId: string | null
+  state: InvitationState
+}
+
+export interface DeclineFriendMatchRequest {
+  invitationId: string;
 }
 
 /** recordingShares/{shareId} — a run recording the owner chose to publish. */
@@ -552,4 +651,55 @@ export interface SchemaMeta {
   collections: string[]
   initializedAt: Timestamp
   initializedBy: string
+}
+
+export interface SessionPlayer {
+  uid: string
+  displayName: string
+  elo: number
+  isReady: boolean
+  connected: boolean
+  reconnectUntilMs: number | null
+  score: number
+  beatsHit: number
+}
+
+export interface SessionSnapshot {
+  id: string
+  state: 'lobby' | 'in_progress' | 'complete' | 'abandoned'
+  protocolVersion: string
+  instrument: Instrument
+  scenarioId: string
+  scenarioVersionId: string
+  scenarioTitle: string
+  scenarioDifficulty: number
+  difficultySource: 'author' | 'crowd'
+  inputSource: 'demo'
+  serverSequence: number
+  yourLastSequence: number
+  serverTimeMs: number
+  startedAtMs: number | null
+  durationMs: number
+  beatMs: number
+  totalBeats: number
+  participants: SessionPlayer[]
+  messages: { id: number; uid: string; text: string; atMs: number }[]
+  finalizing: boolean
+  completionReason: string | null
+  ratingEvents: (Omit<RatingEvent, 'appliedAt'> & { appliedAt: string })[]
+}
+
+export interface SessionEvent {
+  eventId: string
+  sequence: number
+  kind: 'ready' | 'demo_hit' | 'emote' | 'resign'
+  phrase?: (typeof PRESET_MESSAGES)[number]['id']
+}
+
+export interface SessionReply {
+  type: 'snapshot'
+  disposition: 'snapshot' | 'accepted' | 'duplicate' | 'rejected'
+  eventId: string | null
+  error: string | null
+  snapshot: SessionSnapshot
 }

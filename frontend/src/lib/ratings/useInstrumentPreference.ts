@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { updatePreferredInstrument } from '@/lib/profile/userProfile'
+import { updatePreferredInstrument } from '@/lib/profile/userPreferences'
 import type { Instrument } from '@/lib/schema/types'
 
 /** Reuse the account preference used by profiles and matchmaking. */
@@ -14,7 +14,7 @@ export function useInstrumentPreference(uid: string | undefined, preferred: Inst
     setPending({ uid, instrument })
     setFailure(null)
     try {
-      await updatePreferredInstrument(uid, instrument)
+      await updatePreferredInstrument(uid, true, instrument)
     } catch {
       setFailure({ uid, message: 'Could not save your instrument. Please try again.' })
     } finally {

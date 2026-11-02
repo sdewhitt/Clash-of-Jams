@@ -101,7 +101,7 @@ describe('live rating subscriptions', () => {
     const { result } = renderHook(() => useSkillRatings('user-1'))
     expect(result.current.loading).toBe(true)
     emitRating(400, 'guitar')
-    emit('userSettings/user-1', [], { preferredInstrument: 'guitar' })
+    emit('userPreferences/user-1', [], { preferredInstrument: 'guitar' })
     expect(result.current.preferredInstrument).toBe('guitar')
     expect(result.current.ratings[0].elo).toBe(400)
     emitRating(416, 'guitar')
@@ -182,7 +182,7 @@ describe('Elo UI', () => {
     )
     await userEvent.selectOptions(screen.getByLabelText('Instrument'), 'guitar')
     expect(updateDoc).toHaveBeenCalledWith(
-      { path: 'userSettings/user-1' },
+      { path: 'userPreferences/user-1' },
       expect.objectContaining({ preferredInstrument: 'guitar' }),
     )
     emitRating(450, 'guitar')

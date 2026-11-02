@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, updateDoc, setDoc, runTransaction, } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, setDoc, runTransaction, getDoc, } from 'firebase/firestore';
 import { type Theme } from "@/context/ThemeContext";
 import { db } from '@/lib/firebase';
 import { scenarioThemesPath } from '../schema/collections';
@@ -72,8 +72,14 @@ export async function processImage(file: File): Promise<string> {
 
 export async function updateUserAvatar( uid: string, avatarUrl: string ) {
     const userRef = doc(db, "users", uid);
+    const publicRef = doc(db, "publicProfile", uid)
 
     await updateDoc(userRef, {
+        avatarUrl: avatarUrl,
+        updatedAt: serverTimestamp(),
+    });
+
+    await updateDoc(publicRef, {
         avatarUrl: avatarUrl,
         updatedAt: serverTimestamp(),
     });
@@ -88,66 +94,65 @@ export async function updateUserTheme( uid: string, userTheme: Theme ) {
     });
 }
 
-export async function updateUserBio( uid: string, bio: string ) {
+export async function updateUserBio( uid: string, publicBio: boolean, bio: string ) {
     const userRef = doc(db, "users", uid);
+    const publicRef = doc(db, "publicProfile", uid);
 
     await updateDoc(userRef, {
         bio: bio,
         updatedAt: serverTimestamp(),
     });
+
+    const docSnap = await getDoc(publicRef);
+    if (docSnap.exists()) {
+        await updateDoc(publicRef, { 
+            bio: publicBio ? bio : "", 
+        });
+    }
 }
 
-export async function updateBioPublicity( uid: string, bio: boolean ) {
+export async function updateBioPublicity( uid: string, bio: boolean, savedBio: string ) {
     const userRef = doc(db, "userSettings", uid);
 
     await updateDoc(userRef, {
         publicBio: bio,
         updatedAt: serverTimestamp(),
     });
-}
 
-export async function updatePreferredGenres( uid: string, genres: string[] ) {
-    const userRef = doc(db, "userSettings", uid);
-
-    await updateDoc(userRef, {
-        preferredGenres: genres,
-        updatedAt: serverTimestamp(),
+    const publicRef = doc(db, "publicProfile", uid);
+    await updateDoc(publicRef, { 
+        bio: bio ? savedBio : "", 
+        updatedAt: serverTimestamp(), 
     });
 }
 
-export async function updateGenrePublicity( uid: string, genres: string[] ) {
+export async function updateGenrePublicity( uid: string, genres: boolean, preferredGenres: string[] ) {
     const userRef = doc(db, "userSettings", uid);
 
     await updateDoc(userRef, {
         publicGenres: genres,
         updatedAt: serverTimestamp(),
     });
-}
 
-export async function updatePreferredInstrument( uid: string, preferredInstrument: string ) {
-    const userRef = doc(db, "userSettings", uid);
-
-    await updateDoc(userRef, {
-        preferredInstrument: preferredInstrument,
-        updatedAt: serverTimestamp(),
+    const publicRef = doc(db, "publicProfile", uid);
+    await updateDoc(publicRef, { 
+        preferredGenres: genres ? preferredGenres : [], 
+        updatedAt: serverTimestamp(), 
     });
 }
 
-export async function updateInstrumentPublicity( uid: string, instrument: boolean ) {
+export async function updateInstrumentPublicity( uid: string, instrument: boolean, savedInstrument: string) {
     const userRef = doc(db, "userSettings", uid);
 
     await updateDoc(userRef, {
         publicInstrument: instrument,
         updatedAt: serverTimestamp(),
     });
-}
 
-export async function updateEloPublicity( uid: string, elo: string[] ) {
-    const userRef = doc(db, "userSettings", uid);
-
-    await updateDoc(userRef, {
-        publicElos: elo,
-        updatedAt: serverTimestamp(),
+    const publicRef = doc(db, "publicProfile", uid);
+    await updateDoc(publicRef, { 
+        preferredInstrument: instrument ? savedInstrument : "", 
+        updatedAt: serverTimestamp(), 
     });
 }
 
@@ -185,7 +190,6 @@ export async function updateScenarioThemeAdvanced( uid: string, themeName: strin
     );
 }
 
-
 export async function updateUsername( uid: string, oldUsername: string, newUsername: string ) {
     const username = newUsername.trim().toLowerCase();
 
@@ -207,6 +211,7 @@ export async function updateUsername( uid: string, oldUsername: string, newUsern
     }
 
     const userRef = doc(db, "users", uid);
+    const publicRef = doc(db, "publicProfile", uid);
     const newUsernameRef = doc(db, "usernames", username);
     const oldUsernameRef = doc(db, "usernames", oldUsername);
 
@@ -221,6 +226,12 @@ export async function updateUsername( uid: string, oldUsername: string, newUsern
             displayName: newUsername,
             username: newUsername,
             usernameLower: username,
+            updatedAt: serverTimestamp(),
+        });
+
+        transaction.update(publicRef, {
+            username: newUsername,
+            displayName: newUsername,
             updatedAt: serverTimestamp(),
         });
 
