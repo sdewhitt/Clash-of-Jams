@@ -15,7 +15,7 @@
  *    separate documents, as the design document requires.
  */
 import type { Timestamp } from 'firebase/firestore'
-import type { PRESET_MESSAGES } from '../multiplayer/types'
+import type { PRESET_MESSAGES } from '@/lib/multiplayer/types'
 
 /* ------------------------------------------------------------------ enums */
 
@@ -492,7 +492,7 @@ export interface FriendRequest {
 export interface Community {
   id: string
   name: string
-  communityIcon: string
+  communityIcon: string | null
   description: string
   ownerUid: string
   members: string[]

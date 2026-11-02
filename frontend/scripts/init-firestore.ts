@@ -27,6 +27,7 @@ import {
   doc,
   getDoc,
   getFirestore,
+  serverTimestamp,
   writeBatch,
   type DocumentData,
   type Firestore,
@@ -51,15 +52,18 @@ import {
   newModerationAction,
   newPlaylist,
   newPlaylistItem,
+  newPublicProfile,
   newRecordingShare,
   newRun,
   newScenario,
   newScenarioReview,
   newScenarioVersion,
   newSkillRating,
+  newUserPreferences,
   newUserProfile,
   newUserReport,
   newUserSettings,
+  newUserStatus,
   newUsernameReservation,
   playlistItemsPath,
   scenarioReviewId,
@@ -100,6 +104,7 @@ const PLAYLIST_ITEM_ID = `${PREFIX}playlist_item`
 const REPORT_ID = `${PREFIX}report`
 const ACTION_ID = `${PREFIX}moderation_action`
 const INVITATION_ID = `${PREFIX}invitation`
+const INVITATION_LOCK =  `${PREFIX}invitation_lock`
 const SHARE_ID = `${PREFIX}recording_share`
 const IMPORT_ID = `${PREFIX}import_job`
 
@@ -169,7 +174,42 @@ function buildPlan(): Plan[] {
     {
       path: `${COLLECTIONS.userSettings}/${UID_A}`,
       entity: 'UserSettings',
-      data: newUserSettings({ uid: UID_A, preferredInstrument: 'piano' }),
+      data: newUserSettings({ uid: UID_A }),
+    },
+    {
+      path: `${COLLECTIONS.userSettings}/${UID_B}`,
+      entity: 'UserSettings',
+      data: newUserSettings({ uid: UID_B }),
+    },
+    {
+      path: `${COLLECTIONS.userPreferences}/${UID_A}`,
+      entity: 'UserPreferences',
+      data: newUserPreferences(),
+    },
+    {
+      path: `${COLLECTIONS.userPreferences}/${UID_B}`,
+      entity: 'UserPreferences',
+      data: newUserPreferences(),
+    },
+    {
+      path: `${COLLECTIONS.userStatus}/${UID_A}`,
+      entity: 'UserStatus',
+      data: newUserStatus(),
+    },
+    {
+      path: `${COLLECTIONS.userStatus}/${UID_B}`,
+      entity: 'UserStatus',
+      data: newUserStatus(),
+    },
+    {
+      path: `${COLLECTIONS.publicProfile}/${UID_A}`,
+      entity: 'PublicProfile',
+      data: newPublicProfile({ uid: UID_A, username: 'SeedPlayerA', displayName: 'Seed Player A', acceptingFriends: true }),
+    },
+    {
+      path: `${COLLECTIONS.publicProfile}/${UID_B}`,
+      entity: 'PublicProfile',
+      data: newPublicProfile({ uid: UID_B, username: 'SeedPlayerB', displayName: 'Seed Player B', acceptingFriends: true }),
     },
     {
       path: `${skillRatingsPath(UID_A)}/piano`,
@@ -263,13 +303,16 @@ function buildPlan(): Plan[] {
       data: newMatchParticipant({ uid: UID_B, matchId: MATCH_ID, partId: 'lead', team: 'blue' }),
     },
     {
+      path: `${COLLECTIONS.friendRequests}/${friendshipId(UID_A, UID_B)}`,
+      entity: 'FriendRequets',
+      data: {potentialFriends: [UID_A, UID_B], initiatorUid: UID_A, status: 'accepted', createdAt: serverTimestamp()},
+    },
+    {
       path: `${COLLECTIONS.friendships}/${friendshipId(UID_A, UID_B)}`,
       entity: 'Friendship',
       data: newFriendship({
         uidOne: UID_A,
         uidTwo: UID_B,
-        requestedByUid: UID_A,
-        state: 'accepted',
       }),
     },
     {
@@ -278,8 +321,10 @@ function buildPlan(): Plan[] {
       data: newCommunity({
         id: COMMUNITY_ID,
         name: 'Seed Community',
+        communityIcon: null,
         ownerUid: UID_A,
         description: 'Template community written by scripts/init-firestore.ts.',
+        isPublic: true,
       }),
     },
     {
@@ -341,6 +386,11 @@ function buildPlan(): Plan[] {
       }),
     },
     {
+      path: `${COLLECTIONS.friendMatchInvitationLocks}/${INVITATION_LOCK}`,
+      entity: 'FriendMatchInvitationLocks',
+      data: {et: 'dummy initialization value'},
+    },
+    {
       path: `${COLLECTIONS.matchInvitations}/${INVITATION_ID}`,
       entity: 'MatchInvitation',
       data: newMatchInvitation({
@@ -348,7 +398,8 @@ function buildPlan(): Plan[] {
         matchId: MATCH_ID,
         fromUid: UID_A,
         toUid: UID_B,
-        expiresAt: SEED_INVITATION_EXPIRY,
+        fromScenarioId: SCENARIO_ID,
+        fromScenarioVersion: VERSION_ID,
       }),
     },
     {

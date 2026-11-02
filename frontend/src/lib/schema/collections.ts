@@ -4,7 +4,7 @@
  * Nothing here touches the Firebase app instance, so this module is safe to
  * import from both the browser app and the Node init script.
  */
-import { serverTimestamp, type WithFieldValue } from 'firebase/firestore'
+import { serverTimestamp, Timestamp, type WithFieldValue } from 'firebase/firestore'
 
 import type {
   ChartPart,
@@ -38,6 +38,7 @@ import type {
   AppNotification,
   FriendRequest,
   FriendshipState,
+  MatchInvitation,
 } from './types.ts'
 
 /** Bumped whenever a document shape changes in a way that needs a migration. */
@@ -56,12 +57,14 @@ export const COLLECTIONS = {
   runs: 'runs',
   matches: 'matches',
   friendships: 'friendships',
+  friendRequests: 'friendRequests',
   communities: 'communities',
   playlists: 'playlists',
   scenarioReviews: 'scenarioReviews',
   userReports: 'userReports',
   moderationActions: 'moderationActions',
   matchInvitations: 'matchInvitations',
+  friendMatchInvitationLocks: 'friendMatchInvitationLocks',
   recordingShares: 'recordingShares',
   importJobs: 'importJobs',
 } as const
@@ -473,7 +476,7 @@ export function newFriendship(args: {
 export function newCommunity(args: {
   id: string
   name: string
-  communityIcon: string
+  communityIcon: string | null
   ownerUid: string
   description?: string
   isPublic?: boolean
@@ -597,20 +600,35 @@ export function newModerationAction(args: {
   }
 }
 
-// export function newMatchInvitation(args: {
-//   matchId: string
-//   fromUid: string
-//   toUid: string
-// }): WithFieldValue<MatchInvitation> {
-//   return {
-//     matchId: args.matchId,
-//     fromUid: args.fromUid,
-//     toUid: args.toUid,
-//     state: 'pending',
-//     createdAt: serverTimestamp(),
-//     expiresAt: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000)
-//   }
-// }
+export function newMatchInvitation(args: {
+  id: string
+  matchId: string
+  fromUid: string
+  toUid: string
+  fromScenarioId: string
+  fromScenarioVersion: string
+}): WithFieldValue<MatchInvitation> {
+  return {
+    id: args.id,
+
+    matchId: args.matchId,
+
+    fromUid: args.fromUid,
+    toUid: args.toUid,
+
+    fromScenarioId: args.fromScenarioId,
+    fromScenarioVersionId: args.fromScenarioVersion,
+
+    toScenarioId: null,
+    toScenarioVersionId: null,
+
+    state: 'pending',
+
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    expiresAt: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000)
+  }
+}
 
 export function newRecordingShare(args: {
   id: string
