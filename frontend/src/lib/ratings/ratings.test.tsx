@@ -182,8 +182,8 @@ describe('Elo UI', () => {
     )
     await userEvent.selectOptions(screen.getByLabelText('Instrument'), 'guitar')
     expect(updateDoc).toHaveBeenCalledWith(
-      { path: 'userSettings/user-1' },
-      expect.objectContaining({ preferredInstrument: 'guitar' }),
+      { path: 'userPreferences/user-1' },
+      expect.objectContaining({ preferredInstrument: 'guitar', updatedAt: expect.anything(), }),
     )
     emitRating(450, 'guitar')
     expect(screen.getByRole('button', { name: /View guitar Elo/ })).toHaveTextContent('Guitar-450')

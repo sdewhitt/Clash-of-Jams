@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import { ApiError, apiFetch } from '@/lib/api'
 import { auth } from '@/lib/firebase'
-import type { SessionSnapshot } from '@/lib/multiplayer/types'
+import type { SessionSnapshot } from '@/lib/schema/types'
 import { sessionSnapshot } from '@/test/multiplayer'
 import { sessionSocketUrl, useSession } from './useSession'
 
