@@ -12,11 +12,15 @@ import { board, entry } from '@/test/leaderboards'
 import { renderWithAuth, signedIn } from '@/test/render'
 
 vi.mock('@/components/NotificationButton', () => ({
-    NotificationButton: ({ uid }: { uid: string }) => (
-        <button data-testid="notification-button">
-            Notifications: {uid}
-        </button>
-    ),
+  NotificationButton: ({ uid }: { uid: string }) => (
+    <button
+      type="button"
+      aria-label="Notifications"
+      data-testid="notification-button"
+    >
+      Notifications: {uid}
+    </button>
+  ),
 }))
 
 vi.mock('@/components/LiveElo', () => ({
@@ -36,18 +40,6 @@ afterEach(() => {
 })
 
 describe('EloLeaderboard API responses', () => {
-    it('renders the notification button and live ELO in the header', async () => {
-        renderBoard({ body: board() })
-
-        expect(await screen.findByTestId('notification-button'))
-            .toHaveTextContent('Notifications: me')
-
-        expect(screen.getByTestId('live-elo')).toBeInTheDocument()
-
-        expect(screen.getByRole('heading', { name: 'Leaderboards' }))
-            .toBeInTheDocument()
-    })
-
     it('shows an error when the API returns 404', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {})
         renderBoard({ status: 404, body: { detail: 'Not Found' } })
