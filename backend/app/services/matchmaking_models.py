@@ -91,7 +91,7 @@ class AcceptFriendMatchRequest(ApiModel):
 class FriendMatchInvitationResponse(ApiModel):
     invitation_id: str = Field(alias="invitationId")
     match_id: str | None = Field(alias="matchId")
-    state: Literal["pending", "accepted", "declined", "expired", "canceled"]
+    state: Literal["pending", "accepted", "declined", "expired", "cancelled"]
 
 class DeclineFriendMatchRequest(ApiModel):
     invitation_id: str = Field(
