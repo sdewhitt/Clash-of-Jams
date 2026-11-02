@@ -203,5 +203,16 @@ class MatchmakingService:
             declining_uid,
         )
     
+    def cancel_friend_invitation(
+        self,
+        cancelling_uid: str,
+        invitation_id: str,
+    ) -> str:
+        """Cancel a pending friend challenge sent by the current user."""
+        return self.store.cancel_friend_invitation(
+            invitation_id,
+            cancelling_uid,
+        )
+        
     def expire_friend_invitations(self) -> int:
         return self.store.expire_friend_invitations()

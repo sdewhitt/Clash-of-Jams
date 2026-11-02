@@ -70,7 +70,7 @@ export type JobState = (typeof JOB_STATES)[number]
 export const REPORT_STATES = ['open', 'reviewing', 'resolved', 'dismissed'] as const
 export type ReportState = (typeof REPORT_STATES)[number]
 
-export const INVITATION_STATES = ['pending', 'accepted', 'declined', 'expired'] as const
+export const INVITATION_STATES = ['pending', 'accepted', 'declined', 'expired', 'cancelled'] as const
 export type InvitationState = (typeof INVITATION_STATES)[number]
 
 export const FRIENDSHIP_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
@@ -616,6 +616,10 @@ export interface FriendMatchInvitationResponse {
 }
 
 export interface DeclineFriendMatchRequest {
+  invitationId: string;
+}
+
+export interface CancelFriendMatchRequest {
   invitationId: string;
 }
 
