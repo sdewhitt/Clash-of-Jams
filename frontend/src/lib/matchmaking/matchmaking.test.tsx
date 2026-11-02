@@ -7,7 +7,7 @@ import { Home } from '@/pages/Home'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
 import { renderAtRoute, signedIn } from '@/test/render'
 
-import { cancelQueue, getQueueStatus, joinQueue, type QueueStatus } from './api'
+import { cancelQueue, getQueueStatus, joinQueue, type QueueStatus } from '@/lib/schema/types'
 import { useActiveMatch, useMatchmaking } from './useMatchmaking'
 
 vi.mock('./api', () => ({ joinQueue: vi.fn(), getQueueStatus: vi.fn(), cancelQueue: vi.fn() }))
