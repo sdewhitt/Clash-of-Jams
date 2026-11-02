@@ -10,7 +10,7 @@ import { renderAtRoute, signedIn } from '@/test/render'
 import { cancelQueue, getQueueStatus, joinQueue, type QueueStatus } from '@/lib/schema/types'
 import { useActiveMatch, useMatchmaking } from './useMatchmaking'
 
-vi.mock('./api', () => ({ joinQueue: vi.fn(), getQueueStatus: vi.fn(), cancelQueue: vi.fn() }))
+vi.mock('@/lib/schema/types', () => ({ joinQueue: vi.fn(), getQueueStatus: vi.fn(), cancelQueue: vi.fn() }))
 vi.mock('@/components/LiveElo', () => ({ LiveElo: () => <span>400 Elo</span> }))
 
 const idle: QueueStatus = {
