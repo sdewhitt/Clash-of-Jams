@@ -1,4 +1,4 @@
-import type { SessionSnapshot } from '@/lib/multiplayer/types'
+import type { SessionSnapshot } from "@/lib/schema/types"
 
 export function sessionSnapshot(overrides: Partial<SessionSnapshot> = {}): SessionSnapshot {
   return {
