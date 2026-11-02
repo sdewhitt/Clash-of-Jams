@@ -127,6 +127,7 @@ export interface UserProfile {
   isSocialRestricted: boolean
   isProfilePublic: boolean
   friends: string[]
+  communities: string[]
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -144,6 +145,7 @@ export interface PublicProfile {
   elos: Instrument[]
   acceptingFriends: boolean
   friends: string[]
+  communities: string[]
   publicHistory: boolean
   updatedAt: Timestamp
 }
@@ -508,10 +510,12 @@ export interface FriendRequest {
 export interface Community {
   id: string
   name: string
+  communityIcon: string
   description: string
   ownerUid: string
+  members: string[]
+  announcements: string[]
   isPublic: boolean
-  memberCount: number
   createdAt: Timestamp
 }
 

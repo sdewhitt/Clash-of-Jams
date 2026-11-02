@@ -160,6 +160,7 @@ export function newUserProfile(args: {
     isSocialRestricted: false,
     isProfilePublic: true,
     friends: [],
+    communities: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
@@ -183,6 +184,7 @@ export function newPublicProfile(args: {
     elos: [],
     acceptingFriends: args.acceptingFriends,
     friends: [],
+    communities: [],
     publicHistory: true,
     updatedAt: serverTimestamp(),
   }
@@ -471,6 +473,7 @@ export function newFriendship(args: {
 export function newCommunity(args: {
   id: string
   name: string
+  communityIcon: string
   ownerUid: string
   description?: string
   isPublic?: boolean
@@ -478,10 +481,12 @@ export function newCommunity(args: {
   return {
     id: args.id,
     name: args.name,
+    communityIcon: args.communityIcon,
     description: args.description ?? '',
     ownerUid: args.ownerUid,
+    members: [args.ownerUid],
+    announcements: [],
     isPublic: args.isPublic ?? true,
-    memberCount: 1,
     createdAt: serverTimestamp(),
   }
 }

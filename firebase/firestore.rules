@@ -84,7 +84,7 @@ service cloud.firestore {
 
     function isValidUser(d) {
       return hasExactly(d, ['uid', 'username', 'usernameLower', 'displayName', 'avatarUrl', 'bio',
-            'role', 'isBanned', 'isSocialRestricted', 'isProfilePublic', 'createdAt', 'updatedAt', 'friends'])
+            'role', 'isBanned', 'isSocialRestricted', 'isProfilePublic', 'createdAt', 'updatedAt', 'friends', 'communities'])
         && d.uid is string
         && d.username is string
         && d.usernameLower == d.username.lower()
@@ -97,7 +97,8 @@ service cloud.firestore {
         && d.isProfilePublic is bool
         && d.createdAt is timestamp
         && d.updatedAt is timestamp
-        && d.friends is list;
+        && d.friends is list
+        && d.communities is list;
     }
 
     function isValidScenario(d, scenarioId) {
@@ -180,6 +181,7 @@ service cloud.firestore {
         && (
             isAdmin()
             || changed('friends')
+            || changed('commnuities')
             || (
                 isSelf(uid)
                 && unchanged('role')
@@ -222,6 +224,7 @@ service cloud.firestore {
         allow create, delete: if isSelf(uid) || isAdmin();
 
         allow update: if changed('friends')
+            || changed('communities')
             || isAdmin()
             || isSelf(uid);
     }

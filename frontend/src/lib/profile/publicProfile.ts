@@ -24,6 +24,7 @@ export async function updatePublicProfile(uid: string, savedUsername: string, pu
 
         if (userSnapshot.exists()) {
             const friends: string[] = userSnapshot.data().friends ?? [];
+            const communities: string[] = userSnapshot.data().communities ?? [];
 
             await Promise.all(
                 friends.map(async (friendUid) => {
@@ -34,6 +35,14 @@ export async function updatePublicProfile(uid: string, savedUsername: string, pu
                     await updateDoc(friendPublicRef, { friends: arrayRemove(uid) });
                 })
             );
+
+            await Promise.all(
+                communities.map(async (communityUid) => {
+                    const communityRef = doc(db, COLLECTIONS.communities, communityUid);
+
+                    await updateDoc(communityRef, { members: arrayRemove(uid) });
+                })
+            )
 
             await updateDoc(userRef, { friends: []});
         }
@@ -46,7 +55,7 @@ export async function updatePublicProfile(uid: string, savedUsername: string, pu
         await setDoc( docRef, { uid: uid, username: savedUsername, usernameLower: savedUsername.toLowerCase(), displayName: savedUsername, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, acceptingFriends: acceptingFriends, updatedAt: serverTimestamp(), publicHistory: publicHistory}, { merge: true } );
     }
     else {
-        await setDoc( docRef, { uid: uid, username: savedUsername, usernameLower: savedUsername.toLowerCase(), displayName: savedUsername, avatarUrl: avatarUrl, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, acceptingFriends: acceptingFriends, friends: [], updatedAt: serverTimestamp(), publicHistory: publicHistory}, { merge: true } );
+        await setDoc( docRef, { uid: uid, username: savedUsername, usernameLower: savedUsername.toLowerCase(), displayName: savedUsername, avatarUrl: avatarUrl, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, acceptingFriends: acceptingFriends, friends: [], communities: [], updatedAt: serverTimestamp(), publicHistory: publicHistory}, { merge: true } );
     }
 }
 
