@@ -1,6 +1,7 @@
 """Router for the history of previously played scenarios."""
 
-from datetime import datetime
+from collections import defaultdict
+from datetime import date, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -10,6 +11,8 @@ from app.dependencies import CurrentUserDep
 from app.firebase import firestore, get_firestore_client
 from app.routers.leaderboards import _as_utc
 from app.schemas import (
+    Instrument,
+    PlayedScenario,
     PlayHistoryEntry,
     PlayHistoryResponse,
     RunValidation,
@@ -17,6 +20,8 @@ from app.schemas import (
     ScenarioScoreHistory,
     ScenarioScoreStats,
     ScoreSummary,
+    ScoreTrendPoint,
+    ScoreTrends,
     Visibility,
 )
 
@@ -85,6 +90,76 @@ def get_scenario_score_history(
         scenario_id=scenario_id, stats=summarize_attempts(attempts), attempts=attempts
     )
 
+
+@router.get("/trends", response_model=ScoreTrends)
+def get_score_trends(
+    user:CurrentUserDep,
+    scenario_id: str | None = None,
+    instrument: Instrument | None = None,
+    played_after: datetime | None = None,
+    played_before: datetime | None = None,
+    utc_offset_minutes: Annotated[int, Query(ge=-14 * 60, le=14 * 60)] = 0,
+) -> ScoreTrends:
+    """each scenario's best and average score per day"""
+
+
+    docs = db.collection("runs").where(filter=FieldFilter("userUid", "==", user.uid)).stream()
+    runs = [doc.to_dict() for doc in docs]
+    runs = [run for run in runs if run["validation"] != RunValidation.REJECTED]
+
+    played_after = _as_utc(played_after)
+    played_before = _as_utc(played_before)
+    offset = timedelta(minutes=utc_offset_minutes)
+    # key: scenario_id, date.  value: list of scores
+    scores_by_day: dict[tuple[str,date],list[float]] = defaultdict(list)
+    for run in runs:
+        played_at = run["playedAt"]
+        # filters
+        if scenario_id is not None and run["scenarioId"] != scenario_id:
+            continue
+        if instrument is not None and run["instrument"] != instrument:
+            continue
+        if played_after is not None and played_at < played_after:
+            continue
+        if played_before is not None and played_at > played_before:
+            continue
+        scores_by_day[(run["scenarioId"], (played_at + offset).date())].append(run["finalScore"])
+
+    points = [
+        ScoreTrendPoint(
+            scenario_id=run_scenario_id,
+            day=day,
+            best_score=max(scores),
+            average_score=round(sum(scores) / len(scores), 2),
+            attempts=len(scores),
+        )
+        for (run_scenario_id, day), scores in sorted(
+            scores_by_day.items(), key=lambda item: (item[0][1], item[0][0])
+        )
+    ]
+    return ScoreTrends(scenarios=_played_scenarios(runs, user.uid), points=points)
+
+
+
+def _played_scenarios(runs: list[dict], uid: str) -> list[PlayedScenario]:
+    """all scenarios in runs, most recent first, titled unless it is private or deleted"""
+    last_played: dict[str, datetime] = {}
+    # find date of most recent run for each scenario
+    for run in runs:
+        sid, played_at = run["scenarioId"], run["playedAt"]
+        last_played[sid] = max(last_played.get(sid, played_at), played_at)
+
+    refs = [db.collection("scenarios").document(sid) for sid in last_played if "/" not in sid]
+    scenarios = {snap.id: snap.to_dict() for snap in db.get_all(refs) if snap.exists}
+
+    return [
+        PlayedScenario(
+            scenario_id=sid,
+            title=scenarios[sid]["title"] if _is_visible(scenarios.get(sid), uid) else None,
+            last_played_at=played_at,
+        )
+        for sid, played_at in sorted(last_played.items(), key=lambda item: item[1], reverse=True)
+    ]
 
 def summarize_attempts(attempts: list[ScenarioAttempt]) -> ScenarioScoreStats | None:
     """stats of all non-rejected runs"""

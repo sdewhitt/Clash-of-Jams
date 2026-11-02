@@ -93,3 +93,47 @@ export function fetchScenarioScoreHistory(
     `/history/scenarios/${encodeURIComponent(scenarioId)}?${params}`,
   )
 }
+
+/** Mirrors ScoreTrendPoint: one scenario's scores on one of the caller's local days. */
+export interface ScoreTrendPoint {
+  scenarioId: string
+  /** YYYY-MM-DD, in the caller's own timezone. */
+  day: string
+  bestScore: number
+  averageScore: number
+  attempts: number
+}
+
+/** Mirrors PlayedScenario. */
+export interface PlayedScenario {
+  scenarioId: string
+  /** null once the scenario is deleted or made private. */
+  title: string | null
+  lastPlayedAt: string
+}
+
+export interface ScoreTrends {
+  /** Every scenario the caller has played, most recent first, ignoring the filters. */
+  scenarios: PlayedScenario[]
+  /** Oldest day first, with the filters applied. */
+  points: ScoreTrendPoint[]
+}
+
+export interface ScoreTrendFilters {
+  scenarioId?: string | null
+  instrument?: Instrument | null
+  /** ISO timestamps bounding when the runs were played. */
+  playedAfter?: string | null
+  playedBefore?: string | null
+}
+
+/** Each scenario's best and average score per day, grouped by the browser's own timezone. */
+export function fetchScoreTrends(filters: ScoreTrendFilters = {}): Promise<ScoreTrends> {
+  // getTimezoneOffset is UTC minus local; the API wants local minus UTC.
+  const params = new URLSearchParams({ utc_offset_minutes: String(-new Date().getTimezoneOffset()) })
+  if (filters.scenarioId) params.set('scenario_id', filters.scenarioId)
+  if (filters.instrument) params.set('instrument', filters.instrument)
+  if (filters.playedAfter) params.set('played_after', filters.playedAfter)
+  if (filters.playedBefore) params.set('played_before', filters.playedBefore)
+  return apiFetch<ScoreTrends>(`/history/trends?${params}`)
+}

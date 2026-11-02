@@ -253,3 +253,109 @@ def test_unknown_sort_is_rejected(client, fake_db, me) -> None:
     add_scenario(fake_db)
 
     assert client.get(SCENARIO_HISTORY, params={"sort": "instrument"}).status_code == 422
+
+
+# ------------------------------------------------------ score trends over time (#33)
+
+TRENDS = "/api/v1/history/trends"
+
+
+def at(dom: int, hour: int = 16) -> datetime:
+    return datetime(2026, 9, dom, hour, tzinfo=UTC)
+
+
+def add_timed_run(db: FakeFirestore, uid: str, when: datetime, score: float, *,
+                  scenario_id: str = "scn", instrument: str = "piano",
+                  validation: str = "accepted") -> None:
+    run_id = add_run(db, uid, scenario_id=scenario_id, score=score, instrument=instrument,
+                     validation=validation)
+    db.docs[f"runs/{run_id}"]["playedAt"] = when
+
+
+def trends(client: TestClient, **params) -> dict:
+    response = client.get(TRENDS, params=params)
+    assert response.status_code == 200
+    return response.json()
+
+
+def points(body: dict) -> list[tuple[str, str, float]]:
+    return [(p["scenarioId"], p["day"], p["bestScore"]) for p in body["points"]]
+
+
+def test_no_runs_gives_no_points(client, fake_db, me) -> None:
+    assert trends(client) == {"scenarios": [], "points": []}
+
+
+def test_each_scenario_gets_its_best_and_average_per_day(client, fake_db, me) -> None:
+    add_scenario(fake_db)
+    add_timed_run(fake_db, me, at(1, 10), 60_000)
+    add_timed_run(fake_db, me, at(1, 18), 90_000)
+    add_timed_run(fake_db, me, at(1, 20), 75_000)
+    add_timed_run(fake_db, me, at(3), 80_000)
+    add_timed_run(fake_db, me, at(3), 99_999, validation="rejected")  # never counted
+    add_timed_run(fake_db, "someone-else", at(2), 50_000)
+
+    body = trends(client)
+
+    assert body["points"] == [
+        {"scenarioId": "scn", "day": "2026-09-01", "bestScore": 90_000,
+         "averageScore": 75_000, "attempts": 3},
+        {"scenarioId": "scn", "day": "2026-09-03", "bestScore": 80_000,
+         "averageScore": 80_000, "attempts": 1},
+    ]
+
+
+def test_days_follow_the_players_timezone(client, fake_db, me) -> None:
+    add_scenario(fake_db)
+    add_timed_run(fake_db, me, at(2, 2), 70_000)  # 02:00 UTC is still the 1st in US Eastern
+
+    assert points(trends(client)) == [("scn", "2026-09-02", 70_000)]
+    assert points(trends(client, utc_offset_minutes=-240)) == [("scn", "2026-09-01", 70_000)]
+
+
+def test_time_range_excludes_runs_outside_it(client, fake_db, me) -> None:
+    add_scenario(fake_db)
+    for dom in [1, 10, 20]:
+        add_timed_run(fake_db, me, at(dom), dom * 1_000)
+
+    body = trends(client, played_after="2026-09-05T00:00:00Z", played_before="2026-09-15T00:00:00Z")
+
+    assert points(body) == [("scn", "2026-09-10", 10_000)]
+
+
+def test_scenario_and_instrument_filters_keep_only_matching_runs(client, fake_db, me) -> None:
+    add_scenario(fake_db, "a")
+    add_scenario(fake_db, "b")
+    add_timed_run(fake_db, me, at(1), 10_000, scenario_id="a", instrument="piano")
+    add_timed_run(fake_db, me, at(2), 20_000, scenario_id="a", instrument="guitar")
+    add_timed_run(fake_db, me, at(3), 30_000, scenario_id="b", instrument="piano")
+
+    assert points(trends(client, scenario_id="a")) == [
+        ("a", "2026-09-01", 10_000), ("a", "2026-09-02", 20_000),
+    ]
+    assert points(trends(client, instrument="piano")) == [
+        ("a", "2026-09-01", 10_000), ("b", "2026-09-03", 30_000),
+    ]
+    assert points(trends(client, scenario_id="a", instrument="guitar")) == [
+        ("a", "2026-09-02", 20_000),
+    ]
+
+
+def test_scenario_list_ignores_filters_and_lists_most_recent_first(client, fake_db, me) -> None:
+    add_scenario(fake_db, "old")
+    add_scenario(fake_db, "hidden", visibility="private")
+    add_timed_run(fake_db, me, at(1), 10_000, scenario_id="old")
+    add_timed_run(fake_db, me, at(5), 20_000, scenario_id="hidden")
+    add_timed_run(fake_db, me, at(3), 30_000, scenario_id="deleted")
+
+    body = trends(client, scenario_id="old")
+
+    assert [(s["scenarioId"], s["title"]) for s in body["scenarios"]] == [
+        ("hidden", None), ("deleted", None), ("old", "Warmup"),
+    ]
+    assert points(body) == [("old", "2026-09-01", 10_000)]
+
+
+def test_unknown_instrument_is_rejected(client, fake_db, me) -> None:
+    assert client.get(TRENDS, params={"instrument": "kazoo"}).status_code == 422
+

@@ -11,7 +11,7 @@ moves between the TypeScript side and this one without either side renaming
 anything.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator
@@ -265,6 +265,29 @@ class ScenarioScoreHistory(ApiModel):
     scenario_id: str
     stats: ScenarioScoreStats | None # none until we have a non-rejected run
     attempts: list[ScenarioAttempt]
+
+
+class ScoreTrendPoint(ApiModel):
+    """scenario scores on one day == one point on chart"""
+    scenario_id: str
+    day: date # callers local day
+    best_score: float
+    average_score: float
+    attempts: int
+
+
+class PlayedScenario(ApiModel):
+    """a scenario the caller has played"""
+
+    scenario_id: str
+    title: str | None # none if scenario deleted or made private
+    last_played_at: datetime
+
+
+class ScoreTrends(ApiModel):
+    scenarios: list[PlayedScenario] # list of scenarios caller has played
+    points: list[ScoreTrendPoint] # list of scores per day, oldest day first
+
 
 
 class Role(StrEnum):
