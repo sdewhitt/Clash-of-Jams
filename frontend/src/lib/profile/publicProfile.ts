@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, setDoc, } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, setDoc, arrayRemove, } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { PublicProfile, UserStatus } from '@/lib/schema/types';
 import { COLLECTIONS } from '@/lib/schema/collections';
@@ -20,7 +20,23 @@ export async function updatePublicProfile(uid: string, savedUsername: string, pu
     const docRef = doc(db, COLLECTIONS.publicProfile, uid);
 
     if (!publicToggle) {
-        await updateDoc(userRef, {friends: []});
+        const userSnapshot = await getDoc(userRef);
+
+        if (userSnapshot.exists()) {
+            const friends: string[] = userSnapshot.data().friends ?? [];
+
+            await Promise.all(
+                friends.map(async (friendUid) => {
+                    const friendRef = doc(db, COLLECTIONS.users, friendUid);
+                    const friendPublicRef = doc(db, 'publicProfile', friendUid);
+
+                    await updateDoc(friendRef, { friends: arrayRemove(uid) });
+                    await updateDoc(friendPublicRef, { friends: arrayRemove(uid) });
+                })
+            );
+
+            await updateDoc(userRef, { friends: []});
+        }
         await deleteDoc(docRef);
         return;
     }
