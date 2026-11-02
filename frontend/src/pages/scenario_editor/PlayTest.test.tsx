@@ -22,7 +22,7 @@ vi.mock('@/lib/scenarios/store', () => ({
   saveScenarioDraft: vi.fn(),
 }))
 vi.mock('@/lib/runs/store', () => ({ submitRun: vi.fn() }))
-vi.mock('@/lib/profile/UserSettings', () => ({ getUserSettings: vi.fn() }))
+vi.mock('@/lib/profile/userSettings', () => ({ getUserSettings: vi.fn() }))
 
 const RESULT: ScoreResult = {
   finalScore: 80,
