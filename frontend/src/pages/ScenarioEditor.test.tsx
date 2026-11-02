@@ -5,7 +5,7 @@
  * strip, the signed-out Your Library prompt, and the route guard. Editing and
  * saving belong to story #25 and are tested beside EditorPanel's modules.
  */
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -55,7 +55,7 @@ describe('homepage entry point', () => {
 })
 
 describe('editor default state', () => {
-  it('opens on the New Scenario tab with blank metadata', () => {
+  it('opens on the New Scenario tab with blank metadata', async () => {
     renderEditor()
 
     expect(screen.getByRole('heading', { name: 'Scenario Editor' })).toBeInTheDocument()
@@ -63,6 +63,7 @@ describe('editor default state', () => {
 
     const panel = screen.getByRole('tabpanel')
     expect(within(panel).getByLabelText('Title')).toHaveValue('')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Details' }))
     expect(within(panel).getByLabelText('Description')).toHaveValue('')
     expect(within(panel).getByLabelText('Instrument')).toHaveValue('piano')
     expect(within(panel).getByLabelText('Visibility')).toHaveValue('private')
@@ -72,6 +73,7 @@ describe('editor default state', () => {
   it('starts from an empty 120 BPM 4/4 chart that cannot be saved untitled', () => {
     renderEditor()
 
+    fireEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
     expect(screen.getByLabelText('Tempo (BPM)')).toHaveValue(120)
     expect(screen.getByLabelText('Beats per bar')).toHaveValue(4)
     expect(screen.getByLabelText('Beat unit')).toHaveValue('4')
@@ -120,6 +122,7 @@ describe('MusicXML import (user story #29)', () => {
 
     expect(await screen.findByText('Imported 2 notes from ode.musicxml.')).toBeInTheDocument()
     expect(screen.getByLabelText('Title')).toHaveValue('Ode to Joy')
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
     expect(screen.getByLabelText('Tempo (BPM)')).toHaveValue(90)
     expect(screen.getByText(/^2 notes · 90 BPM · 4\/4/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
