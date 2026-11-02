@@ -85,26 +85,50 @@ function emitRating(elo = 400, instrument: Instrument = 'piano') {
   ])
 }
 
+function emitPreferences( data: Record<string, unknown> = {} ) {
+  emit('userPreferences/user-1', [], data)
+}
+
 beforeEach(() => {
   listeners.clear()
   settings.clear()
+
   updateDoc
     .mockReset()
-    .mockImplementation(async (ref: { path: string }, data: Record<string, unknown>) => {
-      settings.set(ref.path, data)
-      listeners.get(ref.path)?.next({ docs: [], data: () => data })
-    })
+    .mockImplementation(
+      async (
+        ref: { path: string },
+        data: Record<string, unknown>
+      ) => {
+        const updatedData = {
+          ...settings.get(ref.path),
+          ...data,
+        }
+
+        settings.set(ref.path, updatedData)
+
+        listeners.get(ref.path)?.next({
+          docs: [],
+          data: () => updatedData,
+        })
+      }
+    )
 })
 
 describe('live rating subscriptions', () => {
   it('uses the preferred instrument and updates ratings without a reload', () => {
     const { result } = renderHook(() => useSkillRatings('user-1'))
+  
     expect(result.current.loading).toBe(true)
+  
     emitRating(400, 'guitar')
-    emit('userPreferences/user-1', [], { preferredInstrument: 'guitar' })
+    emitPreferences({ preferredInstrument: 'guitar' })
+  
     expect(result.current.preferredInstrument).toBe('guitar')
     expect(result.current.ratings[0].elo).toBe(400)
+  
     emitRating(416, 'guitar')
+  
     expect(result.current.ratings[0].elo).toBe(416)
   })
 
