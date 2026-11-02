@@ -19,13 +19,13 @@ vi.mock('@/components/NotificationButton', () => ({
     ),
 }))
 
-vi.mock('@/components/LiveElo', () => ({
-    LiveElo: () => (
-        <div data-testid="live-elo">
-            Live ELO
-        </div>
-    ),
-}))
+// vi.mock('@/components/LiveElo', () => ({
+//     LiveElo: () => (
+//         <div data-testid="live-elo">
+//             Live ELO
+//         </div>
+//     ),
+// }))
 
 const PATH = '/leaderboards/elo'
 
