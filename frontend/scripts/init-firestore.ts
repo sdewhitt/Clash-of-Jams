@@ -143,12 +143,6 @@ interface Plan {
   data: DocumentData
 }
 
-/**
- * Fixed rather than "now + 24h" so a standalone --verify compares against the
- * same value the write produced.
- */
-const SEED_INVITATION_EXPIRY = Timestamp.fromDate(new Date('2030-01-01T00:00:00.000Z'))
-
 function buildPlan(): Plan[] {
   return [
     {
