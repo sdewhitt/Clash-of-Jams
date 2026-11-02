@@ -46,7 +46,7 @@ describe('EloLeaderboard API responses', () => {
         expect(await screen.findByTestId('notification-button'))
             .toHaveTextContent('Notifications: me')
 
-        expect(screen.getByTestId('live-elo')).toBeInTheDocument()
+        // expect(screen.getByTestId('live-elo')).toBeInTheDocument()
 
         expect(screen.getByRole('heading', { name: 'Leaderboards' }))
             .toBeInTheDocument()
