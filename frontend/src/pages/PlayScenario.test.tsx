@@ -7,7 +7,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { FinishedRun } from '@/components/ScenarioPlayer'
+import type { FinishedRun, PlayerSetup } from '@/components/ScenarioPlayer'
 import { apiFetch } from '@/lib/api'
 import { getUserSettings } from '@/lib/profile/UserSettings'
 import { submitRun } from '@/lib/runs/store'
@@ -70,22 +70,31 @@ const RESULT: ScoreResult = {
 }
 const FINISHED: FinishedRun = {
   instrument: 'piano',
+  inputKind: 'midi',
+  midiDeviceId: 'keys-1',
   performed: [],
   result: RESULT,
   explanation: explainScore({ result: RESULT, expected: NOTES }),
 }
 
-const player = vi.hoisted(() => ({ fake: false }))
+const player = vi.hoisted(() => ({
+  fake: false,
+  initialSetup: null as PlayerSetup | null | undefined,
+  latencyMs: 0,
+}))
 vi.mock('@/components/ScenarioPlayer', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ScenarioPlayer')>()
   return {
     ...actual,
-    ScenarioPlayer: (props: Parameters<typeof actual.ScenarioPlayer>[0]) =>
-      player.fake ? (
+    ScenarioPlayer: (props: Parameters<typeof actual.ScenarioPlayer>[0]) => {
+      player.initialSetup = props.initialSetup
+      player.latencyMs = props.latencyMs
+      return player.fake ? (
         <button onClick={() => props.onFinish(FINISHED)}>Finish run</button>
       ) : (
         <actual.ScenarioPlayer {...props} />
-      ),
+      )
+    },
   }
 })
 
@@ -183,5 +192,92 @@ describe('after a run', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Finish run' }))
 
     expect(await screen.findByText('Your run could not be saved.')).toBeInTheDocument()
+  })
+})
+
+describe('play again', () => {
+  beforeEach(() => {
+    player.fake = true
+    vi.mocked(submitRun).mockResolvedValue({ runId: 'r1', validation: 'accepted', reason: null })
+  })
+
+  async function finishRun() {
+    await userEvent.click(await screen.findByRole('button', { name: 'Finish run' }))
+    await screen.findByText('Run saved to the leaderboard.')
+  }
+
+  it('restarts the version just played with the same instrument, input and calibration', async () => {
+    // No version in the URL: the replay must still pin the one that was played.
+    renderPlay('/play/s1')
+    await finishRun()
+    await userEvent.click(screen.getByRole('button', { name: 'Play again' }))
+
+    expect(await screen.findByRole('button', { name: 'Finish run' })).toBeInTheDocument()
+    expect(loadScenario).toHaveBeenLastCalledWith('s1', 'v1')
+    expect(player.initialSetup).toEqual({
+      instrument: 'piano',
+      inputKind: 'midi',
+      midiDeviceId: 'keys-1',
+    })
+    expect(player.latencyMs).toBe(40)
+  })
+
+  it('clears the previous score before the replay', async () => {
+    renderPlay()
+    await finishRun()
+    await userEvent.click(screen.getByRole('button', { name: 'Play again' }))
+
+    await screen.findByRole('button', { name: 'Finish run' })
+    expect(screen.queryByRole('region', { name: 'Your score' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Run saved to the leaderboard.')).not.toBeInTheDocument()
+  })
+
+  it('saves every attempt as a separate run', async () => {
+    vi.mocked(submitRun)
+      .mockResolvedValueOnce({ runId: 'r1', validation: 'accepted', reason: null })
+      .mockResolvedValueOnce({ runId: 'r2', validation: 'accepted', reason: null })
+    renderPlay()
+    await finishRun()
+    await userEvent.click(screen.getByRole('button', { name: 'Play again' }))
+    await finishRun()
+
+    expect(submitRun).toHaveBeenCalledTimes(2)
+    for (const [args] of vi.mocked(submitRun).mock.calls) {
+      expect(args).toMatchObject({
+        scenarioId: 's1',
+        scenarioVersionId: 'v1',
+        instrument: 'piano',
+        speedMultiplier: 1,
+      })
+    }
+  })
+
+  it('waits for the run to be saved before allowing a replay', async () => {
+    vi.mocked(submitRun).mockReturnValue(new Promise(() => {}))
+    renderPlay()
+    await userEvent.click(await screen.findByRole('button', { name: 'Finish run' }))
+
+    expect(screen.getByRole('button', { name: 'Play again' })).toBeDisabled()
+  })
+
+  it('blocks a replay when the scenario was deleted or made private', async () => {
+    renderPlay()
+    await finishRun()
+    vi.mocked(loadScenario).mockRejectedValueOnce(new Error('Missing or insufficient permissions.'))
+    await userEvent.click(screen.getByRole('button', { name: 'Play again' }))
+
+    expect(await screen.findByText(/can no longer be played/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Finish run' })).not.toBeInTheDocument()
+  })
+
+  it('blocks a replay when the version is gone', async () => {
+    renderPlay()
+    await finishRun()
+    vi.mocked(loadScenario).mockResolvedValueOnce({ scenario, version: null })
+    await userEvent.click(screen.getByRole('button', { name: 'Play again' }))
+
+    expect(
+      await screen.findByText(/version of the scenario is no longer available/),
+    ).toBeInTheDocument()
   })
 })
