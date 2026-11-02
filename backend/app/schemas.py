@@ -127,15 +127,6 @@ class ScenarioWithAuthor(ApiModel):
     author_name: str
 
 
-class FilterResponse(ApiModel):
-    max_plays: int | None = None
-    min_plays: int | None = None
-    max_rating: float = 5.0
-    min_rating: float = 0.0
-    max_difficulty: float | None = None # TODO: for now this is the difficulty set by the author.  I would like to make this the avg_rating eventually
-    min_difficulty: float | None = None
-
-
 class ReviewUpsert(ApiModel):
     comment: str = Field(default="", max_length=200)
     rating: int = Field(ge=1, le=5)

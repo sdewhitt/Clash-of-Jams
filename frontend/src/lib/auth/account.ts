@@ -20,6 +20,7 @@ import {
 import type { User } from 'firebase/auth'
 import { doc, getDoc, writeBatch } from 'firebase/firestore'
 
+import { PROFANE_USERNAME_MESSAGE, isProfaneUsername } from '@/lib/auth/profanity'
 import { auth, db } from '@/lib/firebase'
 import {
   COLLECTIONS,
@@ -63,6 +64,9 @@ export async function signUp(args: {
   if (!USERNAME_PATTERN.test(username)) {
     throw new AuthError('Usernames are 3-20 characters: letters, numbers and underscores.')
   }
+  if (isProfaneUsername(username)) {
+    throw new AuthError(PROFANE_USERNAME_MESSAGE)
+  }
   if (!(await isUsernameAvailable(username))) {
     throw new AuthError('That username is taken.')
   }
@@ -105,12 +109,13 @@ async function writeAccountDocuments(args: { uid: string; username: string; disp
 /**
  * A username for an OAuth account, which arrives without one. Built from the
  * provider's display name or email; if that is taken, a uid suffix makes it
- * unique without a second round trip.
+ * unique without a second round trip. A profane provider name falls back to
+ * the placeholder rather than becoming public.
  */
 async function usernameFor(user: User): Promise<string> {
   const source = user.displayName || user.email?.split('@')[0] || ''
   const cleaned = source.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 14)
-  const base = cleaned.length >= 3 ? cleaned : 'player'
+  const base = cleaned.length >= 3 && !isProfaneUsername(cleaned) ? cleaned : 'player'
   if (await isUsernameAvailable(base)) return base
   return `${base}_${user.uid.slice(0, 5)}`
 }

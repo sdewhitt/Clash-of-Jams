@@ -28,7 +28,7 @@ class FakeFirestore:
     def collection(self, name: str) -> "FakeCollection":
         return FakeCollection(self, name)
 
-    def get_all(self, refs) -> list["FakeSnapshot"]:
+    def get_all(self, refs, field_paths=None, transaction=None) -> list["FakeSnapshot"]:
         return [ref.get() for ref in refs]
 
     def transaction(self) -> "FakeTransaction":
