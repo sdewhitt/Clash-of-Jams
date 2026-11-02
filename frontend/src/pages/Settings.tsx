@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
-import { ProfileButton } from "../components/ProfileButton"
+import { ProfileButton } from "@/components/ProfileButton"
 import { InputLatencySetting } from "@/pages/settings/InputLatencySetting"
 import { NotificationButton } from "@/components/NotificationButton"
 import { LiveElo } from "@/components/LiveElo"
