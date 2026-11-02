@@ -10,7 +10,7 @@ import { MultiplayerSession } from './MultiplayerSession'
 
 vi.mock('@/lib/multiplayer/useSession', () => ({ useSession: vi.fn() }))
 vi.mock('@/components/LiveElo', () => ({ LiveElo: () => <span>400 Elo</span> }))
-vi.mock('@/lib/matchmaking/api', () => ({ getQueueStatus: vi.fn(), cancelQueue: vi.fn() }))
+vi.mock('@/lib/schema/types', () => ({ getQueueStatus: vi.fn(), cancelQueue: vi.fn() }))
 const navigate = vi.fn()
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router')>()),
