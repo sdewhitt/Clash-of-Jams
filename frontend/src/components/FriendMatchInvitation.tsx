@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { AppNotification } from "@/lib/schema/types";
 import { declineFriendMatchInvitation } from "@/lib/matchmaking/gameInvitations";
 import { ChallengeFriendDialog } from "./ChallengeFriendDialog";
-import { getFriendName } from "@/lib/friendship/friendRequest";
+import { getFriendName } from "@/lib/friendship/friendRequests";
 import { deleteNotification } from "@/lib/notifications/readNotifications";
 
 interface FriendMatchInvitationProps {

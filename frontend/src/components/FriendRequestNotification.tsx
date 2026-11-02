@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFriendName } from "@/lib/friendship/friendRequest";
+import { getFriendName } from "@/lib/friendship/friendRequests";
 import { useNavigate } from "react-router";
 import { markNotificationRead } from "@/lib/notifications/readNotifications";
 import { deleteNotification } from "@/lib/notifications/readNotifications";
