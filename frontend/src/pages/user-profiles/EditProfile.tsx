@@ -7,9 +7,9 @@ import { BackButton } from "@/components/BackButton"
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { SettingsButton } from "@/components/SettingsButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import { processImage, updateBioPublicity, updateEloPublicity, updateGenrePublicity, updateInstrumentPublicity, updatePreferredGenres, updatePreferredInstrument, updateScenarioThemeAccompany, updateScenarioThemeAdvanced, updateScenarioThemeDefault, updateUserAvatar, updateUserBio, updateUsername, updateUserTheme } from "@/lib/profile/UserProfile";
-import { getAvatars, type Avatar } from "@/lib/profile/Avatar";
-import { getScenarioThemes, getUserElos, getUserScenarioTheme, getUserSettings } from "@/lib/profile/UserSettings";
+import { processImage, updateBioPublicity, updateEloPublicity, updateGenrePublicity, updateInstrumentPublicity, updatePreferredGenres, updatePreferredInstrument, updateScenarioThemeAccompany, updateScenarioThemeAdvanced, updateScenarioThemeDefault, updateUserAvatar, updateUserBio, updateUsername, updateUserTheme } from "@/lib/profile/userProfile";
+import { getAvatars, type Avatar } from "@/lib/profile/avatar";
+import { getScenarioThemes, getUserElos, getUserScenarioTheme, getUserSettings } from "@/lib/profile/userSettings";
 import type { UserSettings } from "@/lib/schema/types";
 import { useTheme, type Theme } from "@/context/ThemeContext";
 import { UsernameEditor } from "@/components/UsernameEditor";

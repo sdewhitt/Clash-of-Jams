@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FinishedRun } from '@/components/ScenarioPlayer'
-import { getUserSettings } from '@/lib/profile/UserSettings'
+import { getUserSettings } from '@/lib/profile/userSettings'
 import { submitRun } from '@/lib/runs/store'
 import { listMyScenarios, loadScenario, saveScenarioDraft } from '@/lib/scenarios/store'
 import type { UserSettings } from '@/lib/schema/types'
@@ -22,7 +22,7 @@ vi.mock('@/lib/scenarios/store', () => ({
   saveScenarioDraft: vi.fn(),
 }))
 vi.mock('@/lib/runs/store', () => ({ submitRun: vi.fn() }))
-vi.mock('@/lib/profile/UserSettings', () => ({ getUserSettings: vi.fn() }))
+vi.mock('@/lib/profile/userSettings', () => ({ getUserSettings: vi.fn() }))
 
 const RESULT: ScoreResult = {
   finalScore: 80,
