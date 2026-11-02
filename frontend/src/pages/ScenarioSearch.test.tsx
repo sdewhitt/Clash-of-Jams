@@ -2,7 +2,7 @@
  * User story #15: how the scenario search page handles what the API sends back,
  * then searching and sorting what it got.
  */
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -141,3 +141,42 @@ describe('ScenarioSearch links', () => {
     expect(await screen.findByText('No attempts yet.')).toBeInTheDocument()
   })
 })
+
+describe('ScenarioSearch full-screen preview', () => {
+  it('expands the preview with the same tabs and a Play button, and closes it again', async () => {
+    renderSearch({ body: SCENARIOS }, '/scenario_search?scenario=c')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Expand preview' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Scenario preview' })
+    expect(within(dialog).getByRole('heading', { name: 'CCCCC' })).toBeInTheDocument()
+    expect(within(dialog).getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Leaderboard',
+      'Reviews',
+      'My Scores',
+    ])
+    expect(within(dialog).getByRole('button', { name: 'Play!' })).toBeEnabled()
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close full-screen preview' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Expand preview' })).toBeInTheDocument()
+  })
+
+  it('closes the full-screen preview with Escape', async () => {
+    renderSearch({ body: SCENARIOS }, '/scenario_search?scenario=c')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Expand preview' }))
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('only offers to expand once a scenario is selected', async () => {
+    renderSearch({ body: SCENARIOS })
+
+    await screen.findByText('AAAAA')
+    expect(screen.queryByRole('button', { name: 'Expand preview' })).not.toBeInTheDocument()
+  })
+})
+

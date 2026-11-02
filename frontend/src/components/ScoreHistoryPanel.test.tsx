@@ -146,3 +146,69 @@ describe('ScoreHistoryPanel', () => {
     expect(screen.getByRole('button', { name: 'Highest first' })).toBeInTheDocument()
   })
 })
+
+describe('ScoreHistoryPanel attempt details', () => {
+  const attempts = [
+    attempt({ runId: 'r2', finalScore: 90_000 }),
+    attempt({
+      runId: 'r1',
+      finalScore: 60_000,
+      instrument: 'guitar',
+      breakdown: {
+        pitchAccuracy: 91.5,
+        rhythmAccuracy: 72.5,
+        completeness: 100,
+        notesHit: 7,
+        notesMissed: 3,
+        extraNotes: 4,
+      },
+    }),
+  ]
+
+  async function openSecondAttempt() {
+    await screen.findByRole('table')
+    const rows = screen.getAllByRole('row').slice(1)
+    await userEvent.click(within(rows[1]).getByRole('button', { name: 'Details' }))
+    return screen.getByRole('region', { name: 'Attempt details' })
+  }
+
+  /** The value shown with a label inside the detail view, e.g. detail(view, 'Pitch'). */
+  function detail(view: HTMLElement, label: string) {
+    return within(view).getByText(label).nextElementSibling?.textContent
+  }
+
+  it("opens an attempt to show its pitch, rhythm and completeness subscores", async () => {
+    renderPanel({ body: history({ attempts }) })
+
+    const view = await openSecondAttempt()
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(view).toHaveTextContent((60_000).toLocaleString())
+    expect(view).toHaveTextContent('guitar')
+    expect(detail(view, 'Pitch')).toBe('91.5%')
+    expect(detail(view, 'Rhythm')).toBe('72.5%')
+    expect(detail(view, 'Completeness')).toBe('100%')
+    expect(detail(view, 'Notes hit')).toBe('7')
+    expect(detail(view, 'Notes missed')).toBe('3')
+    expect(detail(view, 'Extra notes')).toBe('4')
+  })
+
+  it('goes back to the table of attempts', async () => {
+    renderPanel({ body: history({ attempts }) })
+
+    const view = await openSecondAttempt()
+    await userEvent.click(within(view).getByRole('button', { name: '← All attempts' }))
+
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Attempt details' })).not.toBeInTheDocument()
+  })
+
+  it("explains that a rejected attempt doesn't count", async () => {
+    renderPanel({ body: history({ attempts: [attempts[0], { ...attempts[1], validation: 'rejected' }] }) })
+
+    const view = await openSecondAttempt()
+
+    expect(view).toHaveTextContent("doesn't count toward your stats")
+  })
+})
+

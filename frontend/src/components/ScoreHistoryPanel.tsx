@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 
+import { AttemptDetail } from "@/components/AttemptDetail"
 import {
     fetchScenarioScoreHistory,
     type ScenarioScoreHistory,
@@ -48,6 +49,7 @@ type ScoreHistoryPanelProps = {
 export function ScoreHistoryPanel({ scenarioId }: ScoreHistoryPanelProps) {
     const [sort, setSort] = useState<ScoreSort>("date")
     const [order, setOrder] = useState<SortOrder>("desc")
+    const [openRunId, setOpenRunId] = useState<string | null>(null)
     const query = `${sort}:${order}`
 
     // The last history we received, tagged with the sort that produced it. While a new sort
@@ -82,6 +84,11 @@ export function ScoreHistoryPanel({ scenarioId }: ScoreHistoryPanelProps) {
     const { stats, attempts } = loaded.history
     if (attempts.length === 0) {
         return <p className="text-sm italic text-muted">No attempts yet.</p>
+    }
+
+    const openAttempt = attempts.find((attempt) => attempt.runId === openRunId)
+    if (openAttempt) {
+        return <AttemptDetail attempt={openAttempt} onBack={() => setOpenRunId(null)} />
     }
 
     return (
@@ -129,6 +136,9 @@ export function ScoreHistoryPanel({ scenarioId }: ScoreHistoryPanelProps) {
                             <th className="py-1 font-semibold">Played</th>
                             <th className="py-1 font-semibold">Instrument</th>
                             <th className="py-1 text-right font-semibold">Score</th>
+                            <th className="py-1">
+                                <span className="sr-only">Details</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -146,6 +156,15 @@ export function ScoreHistoryPanel({ scenarioId }: ScoreHistoryPanelProps) {
                                     {attempt.validation === "rejected" && (
                                         <span className="ml-1 text-xs text-muted">(not counted)</span>
                                     )}
+                                </td>
+                                <td className="py-1.5 pl-3 text-right">
+                                    <button
+                                        type="button"
+                                        onClick={() => setOpenRunId(attempt.runId)}
+                                        className="rounded-md border-2 border-accent-start px-2 py-0.5 text-xs font-semibold hover:bg-accent-start"
+                                    >
+                                        Details
+                                    </button>
                                 </td>
                             </tr>
                         ))}
