@@ -28,6 +28,7 @@
     "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
+    "@fontsource/noto-music": "^5.3.0",
     "@tonejs/midi": "^2.0.28",
     "fflate": "^0.8.3",
     "firebase": "^12.19.0",

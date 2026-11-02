@@ -61,6 +61,7 @@ describe('MIDI import', () => {
 
     expect(await screen.findByText('Imported 3 notes from song.mid.')).toBeInTheDocument()
     expect(screen.getByLabelText('Title')).toHaveValue('Two Hands')
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
     expect(screen.getByLabelText('Tempo (BPM)')).toHaveValue(96)
   })
 
@@ -97,6 +98,7 @@ describe('MIDI export', () => {
   it('is unavailable for an empty scenario', () => {
     renderPanel()
 
+    fireEvent.click(screen.getByRole('button', { name: 'File' }))
     expect(screen.getByRole('button', { name: 'Export MIDI' })).toBeDisabled()
   })
 
@@ -108,6 +110,7 @@ describe('MIDI export', () => {
     )
     await screen.findByText('Imported 2 notes from song.mid.')
 
+    fireEvent.click(screen.getByRole('button', { name: 'File' }))
     fireEvent.click(screen.getByRole('button', { name: 'Export MIDI' }))
 
     const [bytes, fileName, type] = vi.mocked(downloadBytes).mock.calls[0]
@@ -134,6 +137,7 @@ describe('velocity editing', () => {
     fireEvent.change(slider, { target: { value: '20' } })
 
     expect(slider).toHaveValue('20')
+    fireEvent.click(screen.getByRole('button', { name: 'File' }))
     fireEvent.click(screen.getByRole('button', { name: 'Export MIDI' }))
     const [bytes] = vi.mocked(downloadBytes).mock.calls[0]
     const exported = midiTrackImport(readMidiFile(bytes as Uint8Array), 0)
