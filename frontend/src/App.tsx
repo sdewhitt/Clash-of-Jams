@@ -23,11 +23,15 @@ import { AudioLab } from '@/pages/AudioLab'
 import { PlayScenario } from '@/pages/PlayScenario'
 import { EloLeaderboard } from '@/pages/EloLeaderboard'
 import { RatingHistory } from '@/pages/RatingHistory'
+import OnlineStatusManager from '@/context/StatusManager'
+import { PublicProfile } from '@/pages/user-profiles/PublicProfile'
+import { FriendMatchWaiting } from './pages/FriendMatchWaiting'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
   { path: '/home', element: <Home /> },
   { path: '/profile', element: <UserProfile /> },
+  { path: '/profile/:uid', element: <PublicProfile />},
   { path: '/profile/edit_profile', element: <EditProfile /> },
   { path: '/friends/my_friends', element: <MyFriends /> },
   { path: '/friends/find_friends', element: <FindFriends /> },
@@ -40,6 +44,7 @@ const PROTECTED_ROUTES = [
   { path: '/scenario_search', element: <ScenarioSearch /> },
   { path: '/scenario_difficulty', element: <ScenarioDifficulty /> },
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
+  { path: '/multiplayer/friend-invitations/:invitationId', element: <FriendMatchWaiting /> },
   { path: '/multiplayer/:matchId', element: <MultiplayerSession /> },
   { path: '/audio_lab', element: <AudioLab /> },
   { path: '/play/:scenarioId', element: <PlayScenario /> },
@@ -67,6 +72,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <OnlineStatusManager />
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>

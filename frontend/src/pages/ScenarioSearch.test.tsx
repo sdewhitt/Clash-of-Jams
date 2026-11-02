@@ -52,6 +52,23 @@ function listedTitles() {
   return screen.getAllByText(/^[A-Z]{5}$/).map((title) => title.textContent)
 }
 
+vi.mock('@/components/NotificationButton', () => ({
+  NotificationButton: ({ uid }: { uid: string }) => (
+    <button
+      type="button"
+      aria-label="Notifications"
+      data-testid="notification-button"
+    >
+      Notifications: {uid}
+    </button>
+  ),
+}))
+
+vi.mock('@/components/LiveElo', () => ({
+  LiveElo: () => null,
+}))
+
+
 afterEach(() => {
   vi.unstubAllGlobals()
   localStorage.clear()

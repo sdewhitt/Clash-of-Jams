@@ -46,3 +46,57 @@ class QueueStatus(ApiModel):
 class QueueCancel(ApiModel):
     queue_id: str = Field(min_length=1, max_length=128, pattern=r"^[^/]+$")
     leave_lobby: bool = False
+
+class CreateFriendMatchRequest(ApiModel):
+    to_uid: str = Field(
+        alias="toUid",
+        min_length=1,
+        max_length=128,
+        pattern=r"^[^/]+$",
+    )
+    scenario_id: str = Field(
+        alias="scenarioId",
+        min_length=1,
+        max_length=128,
+        pattern=r"^[^/]+$",
+    )
+    scenario_version_id: str = Field(
+        alias="scenarioVersionId",
+        min_length=1,
+        max_length=128,
+        pattern=r"^[^/]+$",
+    )
+
+
+class AcceptFriendMatchRequest(ApiModel):
+    invitation_id: str = Field(
+        alias="invitationId",
+        min_length=1,
+        max_length=128,
+        pattern=r"^[^/]+$",
+    )
+    scenario_id: str = Field(
+        alias="scenarioId",
+        min_length=1,
+        max_length=128,
+        pattern=r"^[^/]+$",
+    )
+    scenario_version_id: str = Field(
+        alias="scenarioVersionId",
+        min_length=1,
+        max_length=128,
+        pattern=r"^[^/]+$",
+    )
+
+class FriendMatchInvitationResponse(ApiModel):
+    invitation_id: str = Field(alias="invitationId")
+    match_id: str | None = Field(alias="matchId")
+    state: Literal["pending", "accepted", "declined", "expired"]
+
+class DeclineFriendMatchRequest(ApiModel):
+    invitation_id: str = Field(
+        alias="invitationId",
+        min_length=1,
+        max_length=128,
+        pattern=r"^[^/]+$",
+    )

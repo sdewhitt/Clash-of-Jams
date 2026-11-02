@@ -1,4 +1,4 @@
-import type { Instrument, RatingEvent } from '@/lib/schema/types'
+import type { Instrument, RatingEvent } from '../schema/types.ts'
 
 export const PRESET_MESSAGES = [
   { id: 'well_done', text: 'Well done!', key: 'ArrowUp', shortcut: '↑' },

@@ -12,6 +12,22 @@ vi.mock('@/lib/play/settings', () => ({
   saveInputLatencyMs: vi.fn(),
 }))
 
+vi.mock('@/components/NotificationButton', () => ({
+  NotificationButton: ({ uid }: { uid: string }) => (
+    <button
+      type="button"
+      aria-label="Notifications"
+      data-testid="notification-button"
+    >
+      Notifications: {uid}
+    </button>
+  ),
+}))
+
+vi.mock('@/components/LiveElo', () => ({
+  LiveElo: () => null,
+}))
+
 function renderSettings() {
   return renderAtRoute(<Settings />, { path: '/settings', auth: signedIn() })
 }

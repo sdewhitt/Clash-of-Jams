@@ -1,7 +1,7 @@
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import type { Instrument, ScenarioTheme, SkillRating, UserSettings } from '@/lib/schema/types'
 import { db } from "@/lib/firebase";
-import { COLLECTIONS, scenarioThemesPath, skillRatingsPath } from "../schema/collections";
+import { COLLECTIONS, scenarioThemesPath, skillRatingsPath } from "@/lib/schema/collections";
 
 export async function getUserSettings(uid: string): Promise<UserSettings> {
     // Read by id, not by query: the rules grant userSettings/{uid} to its owner by

@@ -30,6 +30,22 @@ vi.mock('@/lib/scenarios/store', () => ({
   saveScenarioDraft: vi.fn(),
 }))
 
+vi.mock('@/components/NotificationButton', () => ({
+  NotificationButton: ({ uid }: { uid: string }) => (
+    <button
+      type="button"
+      aria-label="Notifications"
+      data-testid="notification-button"
+    >
+      Notifications: {uid}
+    </button>
+  ),
+}))
+
+vi.mock('@/components/LiveElo', () => ({
+  LiveElo: () => null,
+}))
+
 const BEAT_WIDTH = 64
 const ROW_HEIGHT = 18
 

@@ -9,6 +9,8 @@ import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
 import { loadCachedSearch, saveCachedSearch, type ScenarioWithAuthor } from "@/lib/scenarios/searchCache"
 import { INSTRUMENTS, type Scenario, type ScenarioReview } from "@/lib/schema/types"
+import { NotificationButton } from "@/components/NotificationButton"
+import { LiveElo } from "@/components/LiveElo"
 
 // Mirrors backend/app/schemas.py's PublicReview; timestamps arrive as ISO strings.
 type ApiReview = Omit<ScenarioReview, "createdAt" | "updatedAt"> & {
@@ -195,11 +197,14 @@ export function ScenarioSearch() {
                     <BackButton onClick={() => navPortal('/home')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Scenario Search</h1>
                 </div>
-                <div className="mr-6">
-                <ProfileButton
-                    username={profile?.displayName ?? user?.email ?? "…"}
-                    userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
-                />
+                <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
+                    <ProfileButton
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
+                    />
                 </div>
             </header>
 

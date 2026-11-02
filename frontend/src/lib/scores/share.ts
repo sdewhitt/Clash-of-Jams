@@ -22,14 +22,14 @@ export interface SharedScore {
 /** The user's accepted friends, by display name. */
 export async function listFriends(uid: string): Promise<Friend[]> {
   const friendships = collection(db, COLLECTIONS.friendships)
-  const accepted = where('state', '==', 'accepted')
+  // A friendship document only exists once a request is accepted.
   const [asA, asB] = await Promise.all([
-    getDocs(query(friendships, where('idA', '==', uid), accepted)),
-    getDocs(query(friendships, where('idB', '==', uid), accepted)),
+    getDocs(query(friendships, where('uidA', '==', uid))),
+    getDocs(query(friendships, where('uidB', '==', uid))),
   ])
   const friendUids = [
-    ...asA.docs.map((snapshot) => (snapshot.data() as Friendship).idB),
-    ...asB.docs.map((snapshot) => (snapshot.data() as Friendship).idA),
+    ...asA.docs.map((snapshot) => (snapshot.data() as Friendship).uidB),
+    ...asB.docs.map((snapshot) => (snapshot.data() as Friendship).uidA),
   ]
   const friends = await Promise.all(
     friendUids.map(async (friendUid) => ({
