@@ -13,8 +13,16 @@ anything.
 
 from datetime import date, datetime
 from enum import StrEnum
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FiniteFloat,
+    StringConstraints,
+    field_validator,
+)
 from pydantic.alias_generators import to_camel
 
 
@@ -320,3 +328,31 @@ class HealthResponse(ApiModel):
     status: str
     app: str
     version: str
+
+
+PlaylistName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
+
+
+class PlaylistCreate(ApiModel):
+    name: PlaylistName
+    description: str = Field(default = "", max_length=200)
+    is_public: bool = False
+
+
+class PlaylistUpdate(ApiModel):
+    """only provided fields are changed"""
+    name: PlaylistName | None = None
+    description: str | None = Field(default=None, max_length=200)
+    is_public: bool | None = None
+
+
+class Playlist(ApiModel):
+    """playlists/{playlistId}"""
+    id: str
+    owner_uid: str
+    name: str
+    description: str
+    is_public: bool
+    scenario_ids: list[str]
+    created_at: datetime
+    updated_at: datetime
