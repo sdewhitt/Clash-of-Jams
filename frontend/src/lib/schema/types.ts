@@ -130,6 +130,12 @@ export interface UserSettings {
   publicElos: Instrument[]
   /** Milliseconds of input latency the gameplay engine compensates for. */
   inputLatencyOffsetMs: number
+  /** The audio interface or microphone to play through; null is the browser default. */
+  audioInputDeviceId?: string | null
+  /** The device's name when it was chosen, to find it again if its id changes. */
+  audioInputDeviceLabel?: string | null
+  /** Which input of the device to analyze, from 0; null mixes every input together. */
+  audioInputChannel?: number | null
   masterVolume: number
   metronomeEnabled: boolean
   updatedAt: Timestamp

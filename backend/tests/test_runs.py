@@ -203,3 +203,17 @@ def test_validate_refuses_someone_elses_run(client: TestClient, db: FakeDb) -> N
 
 def test_validate_unknown_run_is_404(client: TestClient, db: FakeDb) -> None:
     assert client.post("/api/v1/runs/nope/validate").status_code == 404
+
+
+def test_speeds_from_0_3x_to_3x_are_accepted() -> None:
+    for speed in (0.3, 0.5, 1, 2.5, 3.0):
+        run = make_run()
+        run["speedMultiplier"] = speed
+        assert check_run(run, make_version()) is None
+
+
+def test_speeds_outside_0_3x_to_3x_are_rejected() -> None:
+    for speed in (0.29, 3.01):
+        run = make_run()
+        run["speedMultiplier"] = speed
+        assert check_run(run, make_version()) == "Speed multiplier is out of range"

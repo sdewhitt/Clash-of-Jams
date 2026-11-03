@@ -70,19 +70,22 @@ const RESULT: ScoreResult = {
 }
 const FINISHED: FinishedRun = {
   instrument: 'piano',
+  speedMultiplier: 1,
   performed: [],
   result: RESULT,
   explanation: explainScore({ result: RESULT, expected: NOTES }),
 }
 
-const player = vi.hoisted(() => ({ fake: false }))
+const player = vi.hoisted(() => ({ fake: false, speed: 1 }))
 vi.mock('@/components/ScenarioPlayer', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ScenarioPlayer')>()
   return {
     ...actual,
     ScenarioPlayer: (props: Parameters<typeof actual.ScenarioPlayer>[0]) =>
       player.fake ? (
-        <button onClick={() => props.onFinish(FINISHED)}>Finish run</button>
+        <button onClick={() => props.onFinish({ ...FINISHED, speedMultiplier: player.speed })}>
+          Finish run
+        </button>
       ) : (
         <actual.ScenarioPlayer {...props} />
       ),
@@ -95,6 +98,7 @@ function renderPlay(route = '/play/s1?version=v1') {
 
 beforeEach(() => {
   player.fake = false
+  player.speed = 1
   vi.mocked(loadScenario).mockReset().mockResolvedValue({ scenario, version })
   vi.mocked(submitRun).mockReset()
   vi.mocked(getUserSettings)
@@ -157,6 +161,20 @@ describe('after a run', () => {
       breakdown: RESULT.breakdown,
     })
     expect(await screen.findByText('Run saved to the leaderboard.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Played tempo')).toHaveTextContent('Played at 1x · 120 bpm')
+  })
+
+  it('saves the speed with a slowed-down run and shows the tempo it was played at', async () => {
+    player.speed = 0.5
+    vi.mocked(submitRun).mockResolvedValue({ runId: 'r1', validation: 'accepted', reason: null })
+    renderPlay()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Finish run' }))
+
+    expect(screen.getByLabelText('Played tempo')).toHaveTextContent(
+      'Played at 0.5x · 60 bpm (written 120 bpm)',
+    )
+    expect(submitRun).toHaveBeenCalledWith(expect.objectContaining({ speedMultiplier: 0.5 }))
   })
 
   it('explains a rejected run', async () => {

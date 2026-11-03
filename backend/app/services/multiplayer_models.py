@@ -31,6 +31,8 @@ class SessionPlayer(ApiModel):
     reconnect_until_ms: float | None
     score: float
     beats_hit: int
+    # Zero-based beat slots this player hit, ascending; the results screen reads streaks from it.
+    hit_beats: list[int] = Field(default_factory=list)
 
 
 class SessionMessage(ApiModel):

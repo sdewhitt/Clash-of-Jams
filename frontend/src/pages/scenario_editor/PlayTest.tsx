@@ -8,8 +8,11 @@
  */
 import { useEffect, useState } from 'react'
 
+import { DEFAULT_INPUT_CHOICE, type AudioInputChoice } from '@/audio/devices'
 import { ScenarioPlayer, type FinishedRun } from '@/components/ScenarioPlayer'
 import { ScoreReport } from '@/components/ScoreReport'
+import { audioInputChoiceFrom, saveAudioInputChoice } from '@/lib/play/settings'
+import { DEFAULT_SPEED } from '@/lib/play/speed'
 import { buildTimeline } from '@/lib/play/timeline'
 import { getUserSettings } from '@/lib/profile/UserSettings'
 import { DEFAULT_SCORING_RULES } from '@/lib/schema/collections'
@@ -29,7 +32,9 @@ interface PlayTestProps {
 
 export function PlayTest({ draft, uid, onClose }: PlayTestProps) {
   const [latencyMs, setLatencyMs] = useState(0)
+  const [audioInput, setAudioInput] = useState<AudioInputChoice>(DEFAULT_INPUT_CHOICE)
   const [run, setRun] = useState<FinishedRun | null>(null)
+  const [speed, setSpeed] = useState(DEFAULT_SPEED)
 
   useEffect(() => {
     if (!uid) return
@@ -37,7 +42,9 @@ export function PlayTest({ draft, uid, onClose }: PlayTestProps) {
     // Settings are optional: play with no latency correction if they can't be read.
     getUserSettings(uid)
       .then((settings) => {
-        if (!cancelled) setLatencyMs(settings.inputLatencyOffsetMs ?? 0)
+        if (cancelled) return
+        setLatencyMs(settings.inputLatencyOffsetMs ?? 0)
+        setAudioInput(audioInputChoiceFrom(settings))
       })
       .catch(() => {})
     return () => {
@@ -82,10 +89,15 @@ export function PlayTest({ draft, uid, onClose }: PlayTestProps) {
 
         {run ? (
           <>
-            <ScoreReport finalScore={run.result.finalScore} explanation={run.explanation} />
+            <ScoreReport
+              finalScore={run.result.finalScore}
+              explanation={run.explanation}
+              speedMultiplier={run.speedMultiplier}
+              tempoMap={tempoMap}
+            />
             <div className="w-full max-w-xl">
               <NoteHighway
-                timeline={buildTimeline({ notes, tempoMap })}
+                timeline={buildTimeline({ notes, tempoMap, speedMultiplier: run.speedMultiplier })}
                 verdicts={
                   new Map(
                     run.result.breakdown.noteResults.map((result) => [
@@ -107,7 +119,16 @@ export function PlayTest({ draft, uid, onClose }: PlayTestProps) {
             rules={DEFAULT_SCORING_RULES}
             defaultInstrument={draft.instrument}
             latencyMs={latencyMs}
-            onFinish={setRun}
+            initialSpeed={speed}
+            audioInput={audioInput}
+            onAudioInputChange={(choice) => {
+              setAudioInput(choice)
+              if (uid) saveAudioInputChoice(uid, choice).catch(console.error)
+            }}
+            onFinish={(finished) => {
+              setSpeed(finished.speedMultiplier)
+              setRun(finished)
+            }}
           />
         )}
       </div>

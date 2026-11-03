@@ -7,8 +7,11 @@ import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
 import { ScenarioPlayer, type FinishedRun } from "@/components/ScenarioPlayer"
 import { ScoreReport } from "@/components/ScoreReport"
 import { StarPicker } from "@/components/StarRating"
+import type { AudioInputChoice } from "@/audio/devices"
 import { ApiError, apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
+import { audioInputChoiceFrom, saveAudioInputChoice } from "@/lib/play/settings"
+import { DEFAULT_SPEED } from "@/lib/play/speed"
 import { buildTimeline, resolveScoringRules } from "@/lib/play/timeline"
 import { getUserSettings } from "@/lib/profile/UserSettings"
 import { submitRun, type SubmittedRun } from "@/lib/runs/store"
@@ -32,6 +35,7 @@ type PlayableScenario = {
     rules: ScoringRules
     instrument: Instrument
     latencyMs: number
+    audioInput: AudioInputChoice
 }
 
 const buttonClass = `
@@ -84,6 +88,8 @@ export function PlayScenario() {
     const [run, setRun] = useState<FinishedRun | null>(null)
     const [saved, setSaved] = useState<SubmittedRun | null>(null)
     const [saveError, setSaveError] = useState<string | null>(null)
+    // Play again keeps the speed the last run was played at.
+    const [speed, setSpeed] = useState(DEFAULT_SPEED)
 
     useEffect(() => {
         if (!scenarioId || !user) return
@@ -107,6 +113,7 @@ export function PlayScenario() {
                     rules: resolveScoringRules(version.scoringRules),
                     instrument: scenario.instrument,
                     latencyMs: settings?.inputLatencyOffsetMs ?? 0,
+                    audioInput: audioInputChoiceFrom(settings),
                 })
             } catch (err) {
                 setLoadError(err instanceof Error ? err.message : "Could not load this scenario.")
@@ -117,6 +124,7 @@ export function PlayScenario() {
 
     function finishRun(finished: FinishedRun) {
         setRun(finished)
+        setSpeed(finished.speedMultiplier)
         setSaved(null)
         setSaveError(null)
         setPhase("results")
@@ -127,7 +135,7 @@ export function PlayScenario() {
             scenarioVersionId: playable.versionId,
             instrument: finished.instrument,
             partId: playable.partId,
-            speedMultiplier: 1,
+            speedMultiplier: finished.speedMultiplier,
             scoringRules: playable.rules,
             finalScore: finished.result.finalScore,
             breakdown: finished.result.breakdown,
@@ -137,6 +145,12 @@ export function PlayScenario() {
                 console.error(err)
                 setSaveError("Your run could not be saved.")
             })
+    }
+
+    function rememberAudioInput(choice: AudioInputChoice) {
+        setPlayable((current) => current && { ...current, audioInput: choice })
+        if (!user) return
+        saveAudioInputChoice(user.uid, choice).catch(console.error)
     }
 
     // Pre-fill the form if the user has rated this scenario before.
@@ -206,6 +220,9 @@ export function PlayScenario() {
                             rules={playable.rules}
                             defaultInstrument={playable.instrument}
                             latencyMs={playable.latencyMs}
+                            initialSpeed={speed}
+                            audioInput={playable.audioInput}
+                            onAudioInputChange={rememberAudioInput}
                             onFinish={finishRun}
                         />
                     )}
@@ -228,12 +245,21 @@ export function PlayScenario() {
                     <h2 className="text-3xl font-bold text-ink">Results</h2>
 
                     {run && (
-                        <ScoreReport finalScore={run.result.finalScore} explanation={run.explanation} />
+                        <ScoreReport
+                            finalScore={run.result.finalScore}
+                            explanation={run.explanation}
+                            speedMultiplier={run.speedMultiplier}
+                            tempoMap={playable?.tempoMap}
+                        />
                     )}
                     {run && playable && (
                         <div className="flex w-full max-w-xl shrink-0 flex-col gap-2">
                             <NoteHighway
-                                timeline={buildTimeline({ notes: playable.expected, tempoMap: playable.tempoMap })}
+                                timeline={buildTimeline({
+                                    notes: playable.expected,
+                                    tempoMap: playable.tempoMap,
+                                    speedMultiplier: run.speedMultiplier,
+                                })}
                                 verdicts={
                                     new Map(
                                         run.result.breakdown.noteResults.map((result) => [

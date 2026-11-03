@@ -20,8 +20,9 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 
 # Scores are rounded to two decimals client-side, so recomputed values can differ slightly.
 SCORE_TOLERANCE = 0.02
-MIN_SPEED = 0.25
-MAX_SPEED = 2.0
+# Mirrors MIN_SPEED and MAX_SPEED in frontend/src/lib/play/speed.ts.
+MIN_SPEED = 0.3
+MAX_SPEED = 3.0
 
 # Mirrors DEFAULT_SCORING_RULES in frontend/src/lib/schema/collections.ts.
 DEFAULT_WEIGHTS = {"pitchWeight": 0.4, "rhythmWeight": 0.4, "completenessWeight": 0.2}

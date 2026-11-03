@@ -6,6 +6,8 @@ The queue shows a live minutes:seconds timer anchored to the server's queue age.
 
 The demo input is a button or Space, with one accepted tap per server second. Its normalized score is accepted beats / 60. This exercises multiplayer independently of the team's instrument/scoring work; it does not measure musical performance. Both screens show live scores and progress. Arrow keys or touch buttons send four fixed phrases; free-form chat is unavailable.
 
+The results screen shows the outcome, both players' score breakdowns, the opponent's profile, strengths and weaknesses, a worked explanation of the Elo change, and tips; see [practice-tools.md](practice-tools.md#multiplayer-match-results-58). Snapshots list each player's `hitBeats` for the beat-by-beat breakdown.
+
 ## Server and database
 
 One FastAPI process owns live sessions in memory. Its monotonic clock controls countdown, beat slots, match completion, heartbeats, and disconnect deadlines. WebSockets publish personalized snapshots with a shared match state and server time. The browser derives its visual timer from that time.

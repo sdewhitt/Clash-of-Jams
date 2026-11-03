@@ -50,6 +50,7 @@ vi.mock('@/components/ScenarioPlayer', async (importOriginal) => {
       if (!player.fake) return <actual.ScenarioPlayer {...props} />
       const finished: FinishedRun = {
         instrument: props.defaultInstrument,
+        speedMultiplier: 1,
         performed: [],
         result: RESULT,
         explanation: explainScore({ result: RESULT, expected: props.expected }),

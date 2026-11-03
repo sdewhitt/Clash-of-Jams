@@ -1,10 +1,9 @@
-import { Timestamp } from 'firebase/firestore'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
 import { LiveElo } from '@/components/LiveElo'
+import { MatchResults } from '@/components/MatchResults'
 import { ProfileButton } from '@/components/ProfileButton'
-import { RatingResult } from '@/components/RatingResult'
 import { useAuth } from '@/lib/auth/useAuth'
 import { cancelQueue, getQueueStatus } from '@/lib/matchmaking/api'
 import { PRESET_MESSAGES } from '@/lib/multiplayer/types'
@@ -43,7 +42,6 @@ export function MultiplayerSession() {
   const running = snapshot?.state === 'in_progress' && !snapshot.finalizing
   const playable = running && elapsed >= 0 && remaining > 0 && connection === 'connected'
   const currentBeat = Math.max(0, Math.floor(elapsed / (snapshot?.beatMs ?? 1000)) + 1)
-  const result = snapshot?.ratingEvents.find((event) => event.uid === user?.uid)
 
   useEffect(() => {
     if (
@@ -289,17 +287,12 @@ export function MultiplayerSession() {
               </section>
             )}
             {snapshot.state === 'complete' && (
-              <section aria-label="Match results" className="space-y-4">
-                <h2 className="text-2xl font-bold">Match results</h2>
-                {result && (
-                  <RatingResult
-                    event={{ ...result, appliedAt: Timestamp.fromDate(new Date(result.appliedAt)) }}
-                  />
-                )}
-                <button className={button} onClick={() => navigate('/home')}>
-                  Return Home
-                </button>
-              </section>
+              <MatchResults
+                snapshot={snapshot}
+                selfUid={user?.uid}
+                onHome={() => navigate('/home')}
+                buttonClass={button}
+              />
             )}
             {snapshot.state === 'abandoned' && (
               <section aria-label="Match ended" className="space-y-4">
