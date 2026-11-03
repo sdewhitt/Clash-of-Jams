@@ -446,26 +446,18 @@ export interface CommunityMembership {
   joinedAt: Timestamp
 }
 
-/** playlists/{playlistId} */
+/** playlists/{playlistId} — written only by the backend's /playlists routes. */
 export interface Playlist {
   id: string
   ownerUid: string
   name: string
   description: string
+  /** Shared: anyone signed in can open it, only the owner can change it. */
   isPublic: boolean
-  itemCount: number
+  /** Play order. A scenario appears at most once. */
+  scenarioIds: string[]
   createdAt: Timestamp
   updatedAt: Timestamp
-}
-
-/** playlists/{playlistId}/items/{itemId} */
-export interface PlaylistItem {
-  id: string
-  playlistId: string
-  scenarioId: string
-  /** Zero-based ordering within the playlist. */
-  position: number
-  addedAt: Timestamp
 }
 
 /**

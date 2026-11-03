@@ -315,16 +315,10 @@ service cloud.firestore {
       }
     }
 
+    // Writes go through the backend's /playlists routes, which check names and duplicates.
     match /playlists/{playlistId} {
       allow read: if resource.data.isPublic == true || isSelf(resource.data.ownerUid);
-      allow create: if isSelf(request.resource.data.ownerUid);
-      allow update, delete: if isSelf(resource.data.ownerUid) || isAdmin();
-
-      match /items/{itemId} {
-        allow read: if get(/databases/$(database)/documents/playlists/$(playlistId)).data.isPublic == true
-          || isSelf(get(/databases/$(database)/documents/playlists/$(playlistId)).data.ownerUid);
-        allow write: if isSelf(get(/databases/$(database)/documents/playlists/$(playlistId)).data.ownerUid);
-      }
+      allow write: if false;
     }
 
     // Document id is "{scenarioId}_{reviewerUid}", which is what makes one

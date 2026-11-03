@@ -4,6 +4,7 @@ import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { RangeSlider } from "@/components/RangeSlider"
 import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
+import { AddToPlaylist } from "@/components/AddToPlaylist"
 import { ScoreHistoryPanel } from "@/components/ScoreHistoryPanel"
 import { StarDisplay } from "@/components/StarRating"
 import { apiFetch } from "@/lib/api"
@@ -539,6 +540,8 @@ export function ScenarioSearch() {
                                             ))}
                                         </ul>
                                     )}
+
+                                    <AddToPlaylist key={selected.scenario.id} scenarioId={selected.scenario.id} />
 
                                     <div role="tablist" aria-label="Scenario details" className="mt-6 flex gap-2 border-b-2 border-accent-start">
                                         {DETAILS_TABS.map((tab) => {
