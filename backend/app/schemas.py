@@ -356,3 +356,22 @@ class Playlist(ApiModel):
     scenario_ids: list[str]
     created_at: datetime
     updated_at: datetime
+
+
+class PlaylistAdd(ApiModel):
+    scenario_id: str = Field(min_length=1)
+
+
+class PlaylistReorder(ApiModel):
+    """same scenario ids, just in desired order"""
+    scenario_ids: list[str]
+
+
+class PlaylistEntry(ApiModel):
+    scenario_id: str
+    title: str | None # none if scenario unavailable
+    available: bool
+
+class PlaylistDetail(Playlist):
+    """playlist w/ each scenario looked up in play order"""
+    entries: list[PlaylistEntry]
