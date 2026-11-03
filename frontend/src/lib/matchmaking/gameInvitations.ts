@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api";
-import type { AcceptFriendMatchRequest, CreateFriendMatchRequest, DeclineFriendMatchRequest, FriendMatchInvitationResponse } from "../schema/types";
+import type { AcceptFriendMatchRequest, CancelFriendMatchRequest, CreateFriendMatchRequest, DeclineFriendMatchRequest, FriendMatchInvitationResponse } from "../schema/types";
 
 /**
  * Challenge an existing friend with a selected scenario.
@@ -26,6 +26,18 @@ export function acceptFriendMatchInvitation( request: AcceptFriendMatchRequest )
  */
 export function declineFriendMatchInvitation( request: DeclineFriendMatchRequest ): Promise<FriendMatchInvitationResponse> {
   return apiFetch("/matchmaking/friends/invitations/decline", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Cancel a pending challenge that the current user sent.
+ */
+export function cancelFriendMatchInvitation(
+  request: CancelFriendMatchRequest
+): Promise<FriendMatchInvitationResponse> {
+  return apiFetch("/matchmaking/friends/invitations/cancel", {
     method: "POST",
     body: JSON.stringify(request),
   });

@@ -1327,3 +1327,141 @@ class FirestoreMatchmakingStore:
                 expired_count += 1
 
         return expired_count
+    
+
+    def cancel_friend_invitation(
+        self,
+        invitation_id: str,
+        cancelling_uid: str,
+    ) -> str:
+        """Cancel a pending friend invitation sent by the current user."""
+
+        if not invitation_id or "/" in invitation_id:
+            raise MatchmakingError("Invalid invitation.", 422)
+
+        invitation_ref = (
+            self.db.collection("matchInvitations")
+            .document(invitation_id)
+        )
+
+        now = datetime.now(UTC)
+
+        @firestore.transactional
+        def cancel_transaction(transaction):
+
+            # ---------------------------------------------------------
+            # READ PHASE
+            # ---------------------------------------------------------
+
+            invitation_snapshot = invitation_ref.get(
+                transaction=transaction
+            )
+
+            if not invitation_snapshot.exists:
+                raise MatchmakingError(
+                    "Invitation not found.",
+                    404,
+                )
+
+            invitation = invitation_snapshot.to_dict()
+
+            from_uid = invitation.get("fromUid")
+            to_uid = invitation.get("toUid")
+
+            if not from_uid or not to_uid:
+                raise MatchmakingError(
+                    "Invalid invitation record.",
+                    409,
+                )
+
+            # Only the sender can cancel.
+            if from_uid != cancelling_uid:
+                raise MatchmakingError(
+                    "You cannot cancel this invitation.",
+                    403,
+                )
+
+            state = invitation.get("state")
+
+            # Make repeated cancellation requests harmless.
+            if state == "cancelled":
+                return "cancellled"
+
+            if state == "expired":
+                return "expired"
+
+            if state != "pending":
+                raise MatchmakingError(
+                    "This invitation can no longer be cancelled.",
+                    409,
+                )
+
+            # Identify the associated lock and notification.
+            uid_a, uid_b = sorted([from_uid, to_uid])
+
+            lock_ref = (
+                self.db.collection(FRIEND_INVITATION_LOCKS)
+                .document(f"{uid_a}_{uid_b}")
+            )
+
+            notification_id = invitation.get("notificationId")
+
+            notification_ref = (
+                self.db.collection("notifications")
+                .document(notification_id)
+                if notification_id
+                else None
+            )
+
+            lock_snapshot = lock_ref.get(
+                transaction=transaction
+            )
+
+            notification_snapshot = (
+                notification_ref.get(transaction=transaction)
+                if notification_ref
+                else None
+            )
+
+            # Check whether the invitation has already expired.
+            expires_at = invitation.get("expiresAt")
+
+            if expires_at is None or expires_at <= now:
+                new_state = "expired"
+            else:
+                new_state = "cancelled"
+
+            # ---------------------------------------------------------
+            # WRITE PHASE
+            # ---------------------------------------------------------
+
+            updates = {
+                "state": new_state,
+                "updatedAt": now,
+            }
+
+            if new_state == "cancelled":
+                updates["cancelledAt"] = now
+
+            transaction.update(
+                invitation_ref,
+                updates,
+            )
+
+            # Mark the recipient's invitation notification as read.
+            if notification_snapshot and notification_snapshot.exists:
+                transaction.update(
+                    notification_ref,
+                    {"read": True},
+                )
+
+            # Only delete the lock if it still belongs to this invitation.
+            if lock_snapshot.exists:
+                lock_data = lock_snapshot.to_dict()
+
+                if lock_data.get("pendingInvitationId") == invitation_id:
+                    transaction.delete(lock_ref)
+
+            return new_state
+
+        return cancel_transaction(self.db.transaction())

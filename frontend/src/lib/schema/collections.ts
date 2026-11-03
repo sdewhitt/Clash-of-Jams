@@ -490,7 +490,7 @@ export function newCommunity(args: {
     communityIcon: args.communityIcon,
     description: args.description ?? '',
     ownerUid: args.ownerUid,
-    members: [args.ownerUid],
+    memberCount: 1,
     announcements: [],
     isPublic: args.isPublic ?? true,
     createdAt: serverTimestamp(),

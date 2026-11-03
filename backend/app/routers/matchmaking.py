@@ -13,6 +13,7 @@ from app.services.matchmaking_store import MatchmakingError
 from app.services.matchmaking_models import (
     AcceptFriendMatchRequest,
     DeclineFriendMatchRequest,
+    CancelFriendMatchRequest,
     CreateFriendMatchRequest,
     FriendMatchInvitationResponse,
     QueueCancel,
@@ -129,5 +130,23 @@ def decline_friend_invitation(
     return FriendMatchInvitationResponse(
         invitationId=payload.invitation_id,
         matchId=None,
+        state=state,
+    )
+
+@router.post( "/friends/invitations/cancel", response_model=FriendMatchInvitationResponse, )
+def cancel_friend_invitation(
+    payload: CancelFriendMatchRequest,
+    user: CurrentUserDep,
+    matchmaker: MatchmakerDep,
+):
+    state = _call(
+        matchmaker.cancel_friend_invitation,
+        user.uid,
+        payload.invitation_id,
+    )
+
+    return FriendMatchInvitationResponse(
+        invitation_id=payload.invitation_id,
+        match_id=None,
         state=state,
     )

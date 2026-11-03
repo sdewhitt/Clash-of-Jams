@@ -118,8 +118,8 @@ export function MyFriends() {
                             flex flex-row
                             justify-between
                             px-6
-                            py-4`
-                        }>
+                            py-4
+                        `}>
                             <h1 className="text-2xl font-bold mt-2">Your Friends</h1>
                             <button 
                                 className={`

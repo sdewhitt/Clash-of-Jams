@@ -15,7 +15,7 @@ export async function getPublicProfile(uid: string): Promise<PublicProfile> {
     } as PublicProfile;
 }
 
-export async function updatePublicProfile(uid: string, savedUsername: string, publicToggle: boolean, bio: boolean, savedBio: string, instrument: boolean, savedInstrument: string, genres: boolean, savedGenres: string[], elos: string[], acceptingFriends: boolean, avatarUrl: string, publicHistory: boolean) {
+export async function updatePublicProfile( uid: string, savedUsername: string, publicToggle: boolean, bio: boolean, savedBio: string, instrument: boolean, savedInstrument: string, genres: boolean, savedGenres: string[], elos: string[], acceptingFriends: boolean, avatarUrl: string, publicHistory: boolean ) {
     const userRef = doc(db, COLLECTIONS.users, uid);
     const docRef = doc(db, COLLECTIONS.publicProfile, uid);
 
@@ -23,40 +23,85 @@ export async function updatePublicProfile(uid: string, savedUsername: string, pu
         const userSnapshot = await getDoc(userRef);
 
         if (userSnapshot.exists()) {
-            const friends: string[] = userSnapshot.data().friends ?? [];
-            const communities: string[] = userSnapshot.data().communities ?? [];
+            const userData = userSnapshot.data();
+
+            const friends: string[] = userData.friends ?? [];
+            const communities: string[] = userData.communities ?? [];
+
+            const ownedCommunities = await Promise.all(
+                communities.map(async (communityUid) => {
+                    const communityRef = doc( db, COLLECTIONS.communities, communityUid );
+                    const communitySnapshot = await getDoc(communityRef);
+
+                    if ( communitySnapshot.exists() && communitySnapshot.data().ownerUid === uid ) {
+                        return communityUid;
+                    }
+
+                    return null;
+                })
+            );
+
+            const ownedCommunityIds = ownedCommunities.filter((communityUid): communityUid is string => communityUid !== null);
+
+            if (ownedCommunityIds.length > 0) {
+                throw new Error(
+                    "You must transfer ownership of or delete your communities before making your profile private."
+                );
+            }
 
             await Promise.all(
                 friends.map(async (friendUid) => {
-                    const friendRef = doc(db, COLLECTIONS.users, friendUid);
-                    const friendPublicRef = doc(db, 'publicProfile', friendUid);
+                    const friendRef = doc( db, COLLECTIONS.users, friendUid );
+                    const friendPublicRef = doc( db, COLLECTIONS.publicProfile, friendUid );
 
                     await updateDoc(friendRef, { friends: arrayRemove(uid) });
                     await updateDoc(friendPublicRef, { friends: arrayRemove(uid) });
                 })
             );
-
+            
             await Promise.all(
                 communities.map(async (communityUid) => {
-                    const communityRef = doc(db, COLLECTIONS.communities, communityUid);
+                    const communityRef = doc( db, COLLECTIONS.communities, communityUid );
 
                     await updateDoc(communityRef, { members: arrayRemove(uid) });
                 })
-            )
+            );
 
-            await updateDoc(userRef, { friends: []});
+            await updateDoc(userRef, { friends: [], communities: [] });
         }
+
         await deleteDoc(docRef);
         return;
     }
 
     const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-        await setDoc( docRef, { uid: uid, username: savedUsername, usernameLower: savedUsername.toLowerCase(), displayName: savedUsername, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, acceptingFriends: acceptingFriends, updatedAt: serverTimestamp(), publicHistory: publicHistory}, { merge: true } );
-    }
-    else {
-        await setDoc( docRef, { uid: uid, username: savedUsername, usernameLower: savedUsername.toLowerCase(), displayName: savedUsername, avatarUrl: avatarUrl, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, acceptingFriends: acceptingFriends, friends: [], communities: [], updatedAt: serverTimestamp(), publicHistory: publicHistory}, { merge: true } );
-    }
+
+    const profileData = {
+        uid,
+        username: savedUsername,
+        usernameLower: savedUsername.toLowerCase(),
+        displayName: savedUsername,
+        avatarUrl,
+        bio: bio ? savedBio : "",
+        preferredInstrument: instrument ? savedInstrument : "",
+        preferredGenres: genres ? savedGenres : [],
+        elos,
+        acceptingFriends,
+        updatedAt: serverTimestamp(),
+        publicHistory
+    };
+
+    await setDoc(
+        docRef,
+        {
+            ...profileData,
+            ...(!snapshot.exists() && {
+                friends: [],
+                communities: []
+            })
+        },
+        { merge: true }
+    );
 }
 
 export async function updateAcceptingFriends( uid: string, accepting: boolean ) {

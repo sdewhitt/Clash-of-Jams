@@ -10,7 +10,7 @@ interface FriendMatchInvitationProps {
 }
 
 export function FriendMatchInvitation({ notification, }: FriendMatchInvitationProps) {
-    const [showOptions, setShowOptions] = useState(true);
+    // const [showOptions, setShowOptions] = useState(true);
 
     const [friendName, setFriendName] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -40,14 +40,19 @@ export function FriendMatchInvitation({ notification, }: FriendMatchInvitationPr
         }
     }
 
+    async function handleNotificationDeletion(){
+        void handleDecline();
+        deleteNotification(notification.id ?? "")
+    }
+
     async function handleInteraction(mode: string) {
         if (mode === 'accept') {
             setShowDialog(true);
-            setShowOptions(false);
+            // setShowOptions(false);
         }
         else {
             void handleDecline();
-            setShowOptions(false);
+            // setShowOptions(false);
         }
     }
 
@@ -80,11 +85,33 @@ export function FriendMatchInvitation({ notification, }: FriendMatchInvitationPr
     }, [notification]);
 
     if (loading) {
-        return <p className="p-4 text-sm text-muted">Loading...</p>;
+        return <p className={`
+            bg-linear-to-b
+            from-contrast-start from-50
+            via-contrast-middle
+            to-contrast-end to-70
+            brightness-80
+            border-b border-line 
+            text-sm text-ink
+            p-4
+        `}>
+            Loading...
+        </p>;
     }
 
     if (error) {
-        return <p className="p-4 text-sm text-red-400">{error}</p>;
+        return <p className={`
+            bg-linear-to-b
+            from-contrast-start from-50
+            via-contrast-middle
+            to-contrast-end to-70
+            brightness-80
+            border-b border-line 
+            text-sm text-ink
+            p-4
+        `}>
+            {error}
+        </p>;
     }
 
     return (
@@ -106,7 +133,7 @@ export function FriendMatchInvitation({ notification, }: FriendMatchInvitationPr
             <button
                 id="delete_notification"
                 type="button"
-                onClick={() => deleteNotification(notification.id ?? "")}
+                onClick={() => handleNotificationDeletion()}
                 className={`
                     text-2xl text-inverse-ink 
                     text-muted
@@ -133,7 +160,7 @@ export function FriendMatchInvitation({ notification, }: FriendMatchInvitationPr
                     </p>
                 )}
 
-                {(!notification.read && showOptions) && (
+                {(!notification.read) && (
                     <div className="flex gap-2">
                         <button
                             type="button"

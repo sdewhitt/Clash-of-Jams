@@ -477,6 +477,53 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                             Displayed On Public Profile
                         </div>
                     </div>
+                    {error && (
+                        <div
+                            role="alert"
+                            className="
+                                flex
+                                items-center
+                                justify-between
+                                gap-4
+                                rounded-lg
+                                border-2
+                                border-accent-start
+                                bg-linear-to-b
+                                from-accent-start
+                                via-accent-middle
+                                to-accent-end
+                                brightness-85
+                                opacity-80
+                                px-4
+                                py-3
+                                text-inverse-ink
+                            "
+                        >
+                            <div>
+                                <p className="font-semibold">
+                                    Update failed
+                                </p>
+                                <p className="text-sm">
+                                    {error}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setError(null)}
+                                className="
+                                    rounded-md
+                                    px-2
+                                    py-1
+                                    text-lg
+                                    hover:bg-contrast-start
+                                "
+                                aria-label="Dismiss error"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
                     <div className="mx-8">
                         <p className="text-md font-medium text-accent-start select-none">
                             Profile Publicity:
