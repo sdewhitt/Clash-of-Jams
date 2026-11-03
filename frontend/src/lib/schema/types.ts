@@ -496,7 +496,6 @@ export interface Community {
   description: string
   ownerUid: string
   memberCount: number
-  announcements: string[]
   isPublic: boolean
   createdAt: Timestamp
 }
@@ -508,6 +507,16 @@ export interface CommunityMembership {
   role: CommunityRole
   joinedAt: Timestamp
 }
+
+/** communities/{communityId}/announcement/{announcementId} */
+export interface CommunityAnnouncement {
+  announcerUid: string
+  announcementTitle: string
+  announcement: string
+  announcementViewers: CommunityRole[]
+  postedAt: Timestamp
+}
+
 
 /** playlists/{playlistId} */
 export interface Playlist {

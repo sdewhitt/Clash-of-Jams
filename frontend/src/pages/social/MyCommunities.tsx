@@ -8,10 +8,13 @@ import { LiveElo } from "@/components/LiveElo"
 import type { Community } from "@/lib/schema/types"
 import { getMyCommunities } from "@/lib/communities/communitySearch"
 import CommunitySearchResults from "@/components/CommunitySearchResult"
+import { CreateCommunityCard } from "@/components/CreateCommunityCard"
 
 export function MyCommunities() {
     const { user, profile } = useAuth();
     const navigate = useNavigate();
+
+    const [showCommunityCreation, setShowCommunityCreation] = useState(false);
 
     const [searchTerm, setSearchTerm] = useState("");
     const [communities, setCommunities] = useState<Community[]>([]);
@@ -70,7 +73,7 @@ export function MyCommunities() {
             <header className="flex items-center justify-between bg-linear-to-r from-accent-base-start from-10% via-accent-base-middle via-70% to-accent-base-end to-90% border-b-4 border-accent-start py-6">
                 <div className="flex ml-12">
                     <BackButton onClick={() => navigate('/home')}></BackButton>
-                    <h1 className="ml-4 text-4xl font-bold text-ink">Jamming With Your Friends</h1>
+                    <h1 className="ml-4 text-4xl font-bold text-ink">Jamming With Your Community</h1>
                 </div>
                 <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
                     <NotificationButton uid={profile?.uid ?? ""}/>
@@ -121,7 +124,7 @@ export function MyCommunities() {
                                         px-3 
                                         py-3`
                                     } 
-                                    onClick={() => navigate("/friends/find_communities")}
+                                    onClick={() => setShowCommunityCreation(true)}
                                 >
                                     Create a Community
                                 </button>
@@ -214,6 +217,7 @@ export function MyCommunities() {
                                 <CommunitySearchResults
                                     key={community.id}
                                     community={community}
+                                    activeUid={profile?.uid ?? ""}
                                     member={true}
                                 />
                             ))}
@@ -221,6 +225,12 @@ export function MyCommunities() {
                     )}
                 </div>
             </div>
+            {showCommunityCreation && profile?.uid && (
+                <CreateCommunityCard
+                    ownerUid={profile?.uid}
+                    onClose={() => setShowCommunityCreation(false)}
+                />
+            )}
         </main>
     )
 }

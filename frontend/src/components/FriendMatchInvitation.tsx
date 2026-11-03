@@ -10,8 +10,6 @@ interface FriendMatchInvitationProps {
 }
 
 export function FriendMatchInvitation({ notification, }: FriendMatchInvitationProps) {
-    // const [showOptions, setShowOptions] = useState(true);
-
     const [friendName, setFriendName] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -48,11 +46,9 @@ export function FriendMatchInvitation({ notification, }: FriendMatchInvitationPr
     async function handleInteraction(mode: string) {
         if (mode === 'accept') {
             setShowDialog(true);
-            // setShowOptions(false);
         }
         else {
             void handleDecline();
-            // setShowOptions(false);
         }
     }
 

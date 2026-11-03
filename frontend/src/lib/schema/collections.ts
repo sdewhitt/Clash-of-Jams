@@ -39,6 +39,8 @@ import type {
   FriendRequest,
   FriendshipState,
   MatchInvitation,
+  CommunityAnnouncement,
+  CommunityRole,
 } from './types.ts'
 
 /** Bumped whenever a document shape changes in a way that needs a migration. */
@@ -91,6 +93,9 @@ export const ratingHistoryPath = (uid: string, instrument: Instrument) =>
 
 export const communityMembersPath = (communityId: string) =>
   `${COLLECTIONS.communities}/${communityId}/members`
+
+export const communityAnnouncementsPath = (communityId: string) =>
+  `${COLLECTIONS.communities}/${communityId}/announcements`
 
 export const playlistItemsPath = (playlistId: string) =>
   `${COLLECTIONS.playlists}/${playlistId}/items`
@@ -488,7 +493,6 @@ export function newCommunity(args: {
     description: args.description ?? '',
     ownerUid: args.ownerUid,
     memberCount: 1,
-    announcements: [],
     isPublic: args.isPublic ?? true,
     createdAt: serverTimestamp(),
   }
@@ -504,6 +508,21 @@ export function newCommunityMembership(args: {
     communityId: args.communityId,
     role: args.role ?? 'member',
     joinedAt: serverTimestamp(),
+  }
+}
+
+export function newCommunityAnnouncement(args: {
+  announcerUid: string
+  announcementTitle: string
+  announcement: string
+  announcementViewers: CommunityRole[]
+}): WithFieldValue<CommunityAnnouncement> {
+  return {
+    announcerUid: args.announcerUid,
+    announcementTitle: args.announcementTitle,
+    announcement: args.announcement,
+    announcementViewers: args.announcementViewers,
+    postedAt: serverTimestamp(),
   }
 }
 

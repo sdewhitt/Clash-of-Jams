@@ -20,8 +20,14 @@ export async function searchCommunities( activeUid: string, queryName: string, l
         limit(30),
     ];
 
+    const userCommunities = activeProfileSnap.data().communities
+
+    if (userCommunities.length > 0) {
+        constraints.push(where("__name__", "not-in", userCommunities))
+    }
+
     if (!limitOverride) {
-        constraints.push(orderBy('usernameLower'));
+        constraints.push(orderBy('id'));
         constraints.push(startAt(term));
         constraints.push(endAt(term + "\uf8ff"));
     }
@@ -40,14 +46,12 @@ export async function searchCommunities( activeUid: string, queryName: string, l
 }
 
 export async function getMyCommunities( communityIds: string[] ): Promise<Community[]> {
-    const uniqueCommunityIds = [...new Set(communityIds)];
-
-    if (uniqueCommunityIds.length === 0) {
+    if (communityIds.length === 0) {
         return [];
     }
 
     const communitiesRef = collection(db, "communities");
-    const communitiesQuery = query( communitiesRef, where("__name__", "in", uniqueCommunityIds));
+    const communitiesQuery = query( communitiesRef, where("__name__", "in", communityIds));
     const snapshot = await getDocs(communitiesQuery);
 
     return snapshot.docs.map(doc => ({

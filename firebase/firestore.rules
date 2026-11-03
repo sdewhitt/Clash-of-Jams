@@ -24,6 +24,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
     }
 
+    function canPostAnnouncement(communityId, memberUid) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/communities/$(communityId))
+        && get(/databases/$(database)/documents/communities/$(communityId)/members/$(memberUid)).data.role in ['owner', 'moderator'];
+    }
+
     function pairId(uidOne, uidTwo) {
       return uidOne < uidTwo
         ? uidOne + '_' + uidTwo
@@ -181,7 +187,7 @@ service cloud.firestore {
         && (
             isAdmin()
             || changed('friends')
-            || changed('commnuities')
+            || changed('communities')
             || (
                 isSelf(uid)
                 && unchanged('role')
@@ -493,13 +499,22 @@ service cloud.firestore {
     match /communities/{communityId} {
       allow read: if resource.data.isPublic == true || signedIn();
       allow create: if isSelf(request.resource.data.ownerUid);
-      allow update, delete: if isSelf(resource.data.ownerUid) || isAdmin();
+      allow update: if (isSelf(resource.data.ownerUid) || isAdmin()) || (signedIn() && changed('memberCount'))
+      allow delete: if isSelf(resource.data.ownerUid) || isAdmin();
 
       match /members/{uid} {
         allow read: if signedIn();
-        allow create: if isSelf(uid) && request.resource.data.role == 'member';
+        allow create: if isSelf(uid);
         allow update, delete: if isSelf(uid)
           || isSelf(get(/databases/$(database)/documents/communities/$(communityId)).data.ownerUid)
+          || isAdmin();
+      }
+
+      match /announcements/{announcementId} {
+        allow read: if signedIn();
+        allow create: if isSelf(request.resource.data.announcerUid) && canPostAnnouncement(communityId, request.resource.data.announcerUid);
+        allow update, delete: if isSelf(request.resource.data.announcerUid)
+          || canPostAnnouncement(communityId, request.resource.data.announcerUid)
           || isAdmin();
       }
     }
