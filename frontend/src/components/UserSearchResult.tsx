@@ -35,7 +35,7 @@ export default function UserSearchResult({ profile, }: UserSearchResultProps) {
     return (
         <button
             type="button"
-            onClick={() => navigate(`/profile/${profile.uid}`)}
+            onClick={() => navigate(`/profile/${encodeURIComponent(profile.uid)}`, { replace: true })}
             className={`
                 flex 
                 w-full 
