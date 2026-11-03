@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, setDoc, arrayRemove, } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, setDoc, arrayRemove, runTransaction, } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { PublicProfile, UserStatus } from '@/lib/schema/types';
 import { COLLECTIONS } from '@/lib/schema/collections';
@@ -108,14 +108,9 @@ export async function updateAcceptingFriends( uid: string, accepting: boolean ) 
     const userRef = doc(db, "userSettings", uid);
     const publicRef = doc(db, "publicProfile", uid);
 
-    await updateDoc(publicRef, {
-        acceptingFriends: accepting,
-        updatedAt: serverTimestamp(),
-    });
-
-    await updateDoc(userRef, {
-        acceptingFriends: accepting,
-        updatedAt: serverTimestamp(),
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {acceptingFriends: accepting, updatedAt: serverTimestamp(),});
+        transaction.update(publicRef, {acceptingFriends: accepting, updatedAt: serverTimestamp(),});
     });
 }
 
@@ -124,14 +119,9 @@ export async function updateEloPublicity( uid: string, elos: string[] ) {
     const userRef = doc(db, "userSettings", uid);
     const publicRef = doc(db, "publicProfile", uid);
 
-    await updateDoc(publicRef, {
-        elos: elos,
-        updatedAt: serverTimestamp(),
-    });
-
-    await updateDoc(userRef, {
-        publicElos: elos,
-        updatedAt: serverTimestamp(),
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {publicElos: elos, updatedAt: serverTimestamp(),});
+        transaction.update(publicRef, {elos: elos, updatedAt: serverTimestamp(),});
     });
 }
 
@@ -149,7 +139,5 @@ export async function getUserStatus( uid: string): Promise<UserStatus> {
 export async function updateDoNotDistrub( uid: string, dnd: boolean ) {
     const userRef = doc(db, "userStatus", uid);
 
-    await updateDoc(userRef, {
-        dnd: dnd,
-    });
+    await updateDoc(userRef, { dnd: dnd, });
 }

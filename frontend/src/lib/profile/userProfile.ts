@@ -74,85 +74,59 @@ export async function updateUserAvatar( uid: string, avatarUrl: string ) {
     const userRef = doc(db, "users", uid);
     const publicRef = doc(db, "publicProfile", uid)
 
-    await updateDoc(userRef, {
-        avatarUrl: avatarUrl,
-        updatedAt: serverTimestamp(),
-    });
-
-    await updateDoc(publicRef, {
-        avatarUrl: avatarUrl,
-        updatedAt: serverTimestamp(),
-    });
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {avatarUrl: avatarUrl, updatedAt: serverTimestamp(),});
+        transaction.update(publicRef, {avatarUrl: avatarUrl,  updatedAt: serverTimestamp(),});
+    })
 }
 
 export async function updateUserTheme( uid: string, userTheme: Theme ) {
     const userRef = doc(db, "userSettings", uid);
 
-    await updateDoc(userRef, {
-        theme: userTheme,
-        updatedAt: serverTimestamp(),
-    });
+    await updateDoc(userRef, {theme: userTheme, updatedAt: serverTimestamp(),});
 }
 
 export async function updateUserBio( uid: string, publicBio: boolean, bio: string ) {
     const userRef = doc(db, "users", uid);
     const publicRef = doc(db, "publicProfile", uid);
 
-    await updateDoc(userRef, {
-        bio: bio,
-        updatedAt: serverTimestamp(),
-    });
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {bio: bio, updatedAt: serverTimestamp})
 
-    const docSnap = await getDoc(publicRef);
-    if (docSnap.exists()) {
-        await updateDoc(publicRef, { 
-            bio: publicBio ? bio : "", 
-        });
-    }
+        const docSnap = await getDoc(publicRef);
+        if (docSnap.exists()) {
+            transaction.update(publicRef, {bio: publicBio ? bio : "",});
+        }
+    });
 }
 
 export async function updateBioPublicity( uid: string, bio: boolean, savedBio: string ) {
     const userRef = doc(db, "userSettings", uid);
-
-    await updateDoc(userRef, {
-        publicBio: bio,
-        updatedAt: serverTimestamp(),
-    });
-
     const publicRef = doc(db, "publicProfile", uid);
-    await updateDoc(publicRef, { 
-        bio: bio ? savedBio : "", 
-        updatedAt: serverTimestamp(), 
+
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {publicBio: bio, updatedAt: serverTimestamp(),});
+        transaction.update(publicRef, {bio: bio ? savedBio : "",  updatedAt: serverTimestamp(),});
     });
 }
 
 export async function updateGenrePublicity( uid: string, genres: boolean, preferredGenres: string[] ) {
     const userRef = doc(db, "userSettings", uid);
-
-    await updateDoc(userRef, {
-        publicGenres: genres,
-        updatedAt: serverTimestamp(),
-    });
-
     const publicRef = doc(db, "publicProfile", uid);
-    await updateDoc(publicRef, { 
-        preferredGenres: genres ? preferredGenres : [], 
-        updatedAt: serverTimestamp(), 
+
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {publicGenres: genres, updatedAt: serverTimestamp(),});
+        transaction.update(publicRef, {preferredGenres: genres ? preferredGenres : [],  updatedAt: serverTimestamp(),});
     });
 }
 
 export async function updateInstrumentPublicity( uid: string, instrument: boolean, savedInstrument: string) {
     const userRef = doc(db, "userSettings", uid);
-
-    await updateDoc(userRef, {
-        publicInstrument: instrument,
-        updatedAt: serverTimestamp(),
-    });
-
     const publicRef = doc(db, "publicProfile", uid);
-    await updateDoc(publicRef, { 
-        preferredInstrument: instrument ? savedInstrument : "", 
-        updatedAt: serverTimestamp(), 
+
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {publicInstrument: instrument, updatedAt: serverTimestamp(),});
+        transaction.update(publicRef, {preferredInstrument: instrument ? savedInstrument : "", updatedAt: serverTimestamp(),});
     });
 }
 
@@ -172,8 +146,7 @@ export async function updateScenarioThemeAccompany( uid: string, themeName: stri
             themeName: themeName,
             accompanyTheme: accompanyTheme,
             updatedAt: serverTimestamp(),
-        }
-    );
+    });
 }
 
 export async function updateScenarioThemeAdvanced( uid: string, themeName: string, themeUrl: string, accompanyTheme: string) {
