@@ -8,7 +8,12 @@ import { DEFAULT_SCORING_RULES } from '@/lib/schema/collections'
 import type { ExpectedNote, TempoMapEntry } from '@/lib/schema/types'
 import { installFakeAudioContext, lastAudioContext } from '@/test/audio'
 
-import { DISCONNECTED_MESSAGE, ScenarioPlayer, type FinishedRun } from './ScenarioPlayer'
+import {
+  DISCONNECTED_MESSAGE,
+  ScenarioPlayer,
+  type FinishedRun,
+  type PlayerSetup,
+} from './ScenarioPlayer'
 
 vi.mock('@/audio/input', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/audio/input')>()),
@@ -28,7 +33,7 @@ function notes(pitches: number[]): ExpectedNote[] {
   }))
 }
 
-function renderPlayer(pitches: number[], onFinish = vi.fn()) {
+function renderPlayer(pitches: number[], onFinish = vi.fn(), initialSetup?: PlayerSetup) {
   render(
     <ScenarioPlayer
       expected={notes(pitches)}
@@ -36,6 +41,7 @@ function renderPlayer(pitches: number[], onFinish = vi.fn()) {
       rules={DEFAULT_SCORING_RULES}
       defaultInstrument="piano"
       latencyMs={0}
+      initialSetup={initialSetup}
       onFinish={onFinish}
     />,
   )
@@ -52,11 +58,38 @@ beforeEach(() => {
   installFakeAudioContext()
 })
 
+function stubTwoKeyboards() {
+  const inputs = new Map([
+    ['kb1', { id: 'kb1', name: 'Keyboard One', type: 'input', state: 'connected' }],
+    ['kb2', { id: 'kb2', name: 'Keyboard Two', type: 'input', state: 'connected' }],
+  ])
+  const access = Object.assign(new EventTarget(), { inputs })
+  vi.stubGlobal('navigator', { requestMIDIAccess: async () => access })
+}
+
 afterEach(() => {
   vi.unstubAllGlobals()
 })
 
 describe('ScenarioPlayer', () => {
+  it('starts from the previous run setup', async () => {
+    stubTwoKeyboards()
+    renderPlayer([60], vi.fn(), { instrument: 'guitar', inputKind: 'midi', midiDeviceId: 'kb2' })
+
+    expect(screen.getByLabelText('Instrument')).toHaveValue('guitar')
+    expect(screen.getByLabelText('Input')).toHaveValue('midi')
+    await screen.findByRole('option', { name: 'Keyboard Two' })
+    expect(screen.getByLabelText('MIDI controller')).toHaveValue('kb2')
+  })
+
+  it('falls back to the first controller when the previous one is unplugged', async () => {
+    stubTwoKeyboards()
+    renderPlayer([60], vi.fn(), { instrument: 'piano', inputKind: 'midi', midiDeviceId: 'unplugged' })
+
+    await screen.findByRole('option', { name: 'Keyboard One' })
+    expect(screen.getByLabelText('MIDI controller')).toHaveValue('kb1')
+  })
+
   it('starts with piano and the microphone selected', () => {
     renderPlayer([60, 62, 64])
     expect(screen.getByLabelText('Instrument')).toHaveValue('piano')

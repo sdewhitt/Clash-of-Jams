@@ -6,21 +6,19 @@ type UsernameEditorProps = {
 export function UsernameEditor({ username, onUsernameDraftChanged, }: UsernameEditorProps) {
     return (
         <div className="flex flex-col gap-2">
-            <label
-                htmlFor="username"
-                className="text-md font-medium text-accent-start select-none"
-            >
+            <p className="text-md font-medium text-accent-start select-none">
                 Username:
-            </label>
+            </p>
 
             <input
-                id="username"
+                id="usernameInput"
                 type="text"
                 value={username}
                 onChange={(event) =>
                     onUsernameDraftChanged(event.target.value)
                 }
                 className="
+                    mt-2
                     w-full
                     rounded-lg
                     border

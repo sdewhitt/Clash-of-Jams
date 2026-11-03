@@ -42,8 +42,16 @@ const END_PADDING_MS = 1000
 /** Gap between pressing Start and the first count-in click. */
 const LEAD_IN_SECONDS = 0.3
 
-export interface FinishedRun {
+type InputKind = 'microphone' | 'midi'
+
+/** What the player picked before pressing Start; a replay starts from the same choices. */
+export interface PlayerSetup {
   instrument: Instrument
+  inputKind: InputKind
+  midiDeviceId: string
+}
+
+export interface FinishedRun extends PlayerSetup {
   /** The speed the run was played at; note times in `performed` are at this speed. */
   speedMultiplier: number
   performed: PerformedNote[]
@@ -51,7 +59,6 @@ export interface FinishedRun {
   explanation: ScoreExplanation
 }
 
-type InputKind = 'microphone' | 'midi'
 type Mode = 'setup' | 'playback'
 
 type ScenarioPlayerProps = {
@@ -68,6 +75,8 @@ type ScenarioPlayerProps = {
   audioInput?: AudioInputChoice
   /** Called when the player picks another interface or input, so it can be remembered. */
   onAudioInputChange?: (choice: AudioInputChoice) => void
+  /** The previous run's choices, when replaying. Falls back to defaultInstrument and the microphone. */
+  initialSetup?: PlayerSetup | null
 }
 
 /** Everything that exists only while a scenario is being played. */
@@ -116,22 +125,25 @@ export function ScenarioPlayer({
   rules,
   defaultInstrument,
   latencyMs,
+  initialSetup,
   onFinish,
   initialSpeed = DEFAULT_SPEED,
   audioInput = DEFAULT_INPUT_CHOICE,
   onAudioInputChange,
 }: ScenarioPlayerProps) {
   const [mode, setMode] = useState<Mode>('setup')
-  const [instrument, setInstrument] = useState<Instrument>(defaultInstrument)
+  const [instrument, setInstrument] = useState<Instrument>(
+    initialSetup?.instrument ?? defaultInstrument,
+  )
   const [inputKind, setInputKind] = useState<InputKind>(
-    defaultInstrument === 'midi' ? 'midi' : 'microphone',
+    initialSetup?.inputKind ?? (defaultInstrument === 'midi' ? 'midi' : 'microphone'),
   )
   const [speed, setSpeed] = useState(() => clampSpeed(initialSpeed))
   const [inputChoice, setInputChoice] = useState<AudioInputChoice>(audioInput)
   const [checkingLevel, setCheckingLevel] = useState(false)
   const [midiAccess, setMidiAccess] = useState<MIDIAccess | null>(null)
   const [midiDevices, setMidiDevices] = useState<MIDIInput[]>([])
-  const [midiDeviceId, setMidiDeviceId] = useState('')
+  const [midiDeviceId, setMidiDeviceId] = useState(initialSetup?.midiDeviceId ?? '')
   const [midiConnected, setMidiConnected] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
@@ -190,7 +202,10 @@ export function ScenarioPlayer({
       if (!access) return
       const devices = listMidiInputs(access)
       setMidiDevices(devices)
-      setMidiDeviceId((current) => current || devices[0]?.id || '')
+      // Keep the chosen controller if it's still plugged in; otherwise fall back to the first one.
+      setMidiDeviceId((current) =>
+        devices.some((device) => device.id === current) ? current : (devices[0]?.id ?? ''),
+      )
     }
 
     requestMidiAccess()
@@ -366,7 +381,15 @@ export function ScenarioPlayer({
       speedMultiplier: speed,
     })
     const explanation = explainScore({ result, expected, rules, speedMultiplier: speed })
-    onFinish({ instrument, speedMultiplier: speed, performed, result, explanation })
+    onFinish({
+      instrument,
+      inputKind,
+      midiDeviceId,
+      speedMultiplier: speed,
+      performed,
+      result,
+      explanation,
+    })
   }
 
   if (mode === 'playback' && expected.length > 0) {

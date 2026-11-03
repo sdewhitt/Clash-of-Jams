@@ -69,7 +69,28 @@ def create_app() -> FastAPI:
                     logging.getLogger(__name__).exception("Matchmaking pass failed; queue retained")
                 await asyncio.sleep(1)
 
+        async def expire_friend_invites():
+            while True:
+                try:
+                    expired_count = await run_in_threadpool(
+                        matchmaker.expire_friend_invitations
+                    )
+
+                    if expired_count:
+                        logging.getLogger(__name__).info(
+                            "Expired %s friend match invitation(s)",
+                            expired_count,
+                        )
+
+                except Exception:
+                    logging.getLogger(__name__).exception(
+                        "Friend invitation expiration pass failed"
+                    )
+
+                await asyncio.sleep(30)
+
         task = asyncio.create_task(match_queue())
+        expiry_task = asyncio.create_task(expire_friend_invites())
 
         async def update_sessions():
             while True:
@@ -86,12 +107,18 @@ def create_app() -> FastAPI:
             yield
         finally:
             task.cancel()
+            expiry_task.cancel()
             session_task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
                 pass
-            await asyncio.gather(session_task, return_exceptions=True)
+            await asyncio.gather(
+                task,
+                expiry_task,
+                session_task,
+                return_exceptions=True,
+            )
 
     app = FastAPI(
         title=settings.app_name,

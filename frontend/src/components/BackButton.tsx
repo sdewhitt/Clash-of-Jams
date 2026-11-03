@@ -1,5 +1,5 @@
 type BackButtonProps = {
-  onClick?: () => void;
+    onClick?: () => void;
 };
 
 export function BackButton({ onClick, }: BackButtonProps) {

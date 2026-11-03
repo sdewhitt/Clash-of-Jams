@@ -13,6 +13,18 @@ import { useActiveMatch, useMatchmaking } from './useMatchmaking'
 vi.mock('./api', () => ({ joinQueue: vi.fn(), getQueueStatus: vi.fn(), cancelQueue: vi.fn() }))
 vi.mock('@/components/LiveElo', () => ({ LiveElo: () => <span>400 Elo</span> }))
 
+vi.mock('@/components/NotificationButton', () => ({
+  NotificationButton: ({ uid }: { uid: string }) => (
+    <button
+      type="button"
+      aria-label="Notifications"
+      data-testid="notification-button"
+    >
+      Notifications: {uid}
+    </button>
+  ),
+}))
+
 const idle: QueueStatus = {
   state: 'idle',
   queueId: null,

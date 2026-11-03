@@ -278,7 +278,7 @@ class SessionService:
             session.started_epoch_ms = started_ms
 
     def _finish(self, session, reason, forfeiting_uid=None):
-        uids = tuple(session.players)
+        uids = tuple(session.data["participantUids"])
         session.pending = FinalMatchResult(
             match_id=session.id,
             instrument=session.data["matchmaking"]["instrument"],

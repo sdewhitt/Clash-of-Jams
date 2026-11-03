@@ -16,7 +16,7 @@ vi.mock('@/lib/auth/account', async (importOriginal) => ({
 }))
 
 // Login reads the saved theme before moving a signed-in user on.
-vi.mock('@/lib/profile/UserSettings', () => ({
+vi.mock('@/lib/profile/userSettings', () => ({
   getUserSettings: vi.fn().mockResolvedValue({ theme: 'default' }),
 }))
 

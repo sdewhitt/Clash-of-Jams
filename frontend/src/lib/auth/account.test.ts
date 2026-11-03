@@ -111,8 +111,11 @@ describe('signInWithGoogle', () => {
       [
         'users/google-uid-12345',
         'usernames/adalovelace',
+        'publicProfile/google-uid-12345',
         'userSettings/google-uid-12345',
+        'userPreferences/google-uid-12345',
         'userSettings/google-uid-12345/scenarioThemes/Purdue_Pete', // Replace this at a later date with a different variable
+        'userStatus/google-uid-12345',
         ...INSTRUMENTS.map((instrument) => `users/google-uid-12345/skillRatings/${instrument}`),
       ],
     ])

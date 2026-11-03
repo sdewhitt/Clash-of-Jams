@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
-import { ScenarioPlayer, type FinishedRun } from "@/components/ScenarioPlayer"
+import { ScenarioPlayer, type FinishedRun, type PlayerSetup } from "@/components/ScenarioPlayer"
 import { ScoreReport } from "@/components/ScoreReport"
 import { StarPicker } from "@/components/StarRating"
 import type { AudioInputChoice } from "@/audio/devices"
@@ -13,11 +13,13 @@ import { useAuth } from "@/lib/auth/useAuth"
 import { audioInputChoiceFrom, saveAudioInputChoice } from "@/lib/play/settings"
 import { DEFAULT_SPEED } from "@/lib/play/speed"
 import { buildTimeline, resolveScoringRules } from "@/lib/play/timeline"
-import { getUserSettings } from "@/lib/profile/UserSettings"
+import { getUserSettings } from "@/lib/profile/userSettings"
 import { submitRun, type SubmittedRun } from "@/lib/runs/store"
 import { loadScenario } from "@/lib/scenarios/store"
 import type { ExpectedNote, Instrument, ScenarioReview, ScoringRules, TempoMapEntry } from "@/lib/schema/types"
 import { NoteHighway } from "@/pages/play/NoteHighway"
+import { NotificationButton } from "@/components/NotificationButton"
+import { LiveElo } from "@/components/LiveElo"
 
 // Matches ReviewUpsert.comment's max_length in backend/app/schemas.py.
 const MAX_COMMENT_LENGTH = 200
@@ -90,6 +92,10 @@ export function PlayScenario() {
     const [saveError, setSaveError] = useState<string | null>(null)
     // Play again keeps the speed the last run was played at.
     const [speed, setSpeed] = useState(DEFAULT_SPEED)
+    const [setup, setSetup] = useState<PlayerSetup | null>(null)
+    const [attempt, setAttempt] = useState(0)
+    const [checkingReplay, setCheckingReplay] = useState(false)
+    const [replayError, setReplayError] = useState<string | null>(null)
 
     useEffect(() => {
         if (!scenarioId || !user) return
@@ -125,6 +131,11 @@ export function PlayScenario() {
     function finishRun(finished: FinishedRun) {
         setRun(finished)
         setSpeed(finished.speedMultiplier)
+        setSetup({
+            instrument: finished.instrument,
+            inputKind: finished.inputKind,
+            midiDeviceId: finished.midiDeviceId,
+        })
         setSaved(null)
         setSaveError(null)
         setPhase("results")
@@ -152,6 +163,36 @@ export function PlayScenario() {
         if (!user) return
         saveAudioInputChoice(user.uid, choice).catch(console.error)
     }
+
+    /** Checks the scenario can still be played, then starts a fresh run of the same version. */
+    async function playAgain() {
+        if (!scenarioId || !playable) return
+        setCheckingReplay(true)
+        setReplayError(null)
+        try {
+            // Rules hide a scenario made private by someone else, so that and a deletion both throw here.
+            const { version } = await loadScenario(scenarioId, playable.versionId)
+            if (!version) {
+                setReplayError("This version of the scenario is no longer available.")
+                return
+            }
+        } catch (err) {
+            console.error(err)
+            setReplayError("This scenario can no longer be played. It may have been deleted or made private.")
+            return
+        } finally {
+            setCheckingReplay(false)
+        }
+
+        setRun(null)
+        setSaved(null)
+        setSaveError(null)
+        setAttempt((previous) => previous + 1)
+        setPhase("playing")
+    }
+
+    // A replay waits for the last run to be saved (or to fail), so no attempt goes missing.
+    const saving = run !== null && !saved && !saveError
 
     // Pre-fill the form if the user has rated this scenario before.
     useEffect(() => {
@@ -202,10 +243,13 @@ export function PlayScenario() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">Play Scenario</h1>
                 </div>
 
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>
@@ -215,6 +259,7 @@ export function PlayScenario() {
                     <p className="text-3xl font-bold text-ink">{playable?.title ?? "Play scenario"}</p>
                     {playable && (
                         <ScenarioPlayer
+                            key={attempt}
                             expected={playable.expected}
                             tempoMap={playable.tempoMap}
                             rules={playable.rules}
@@ -223,6 +268,7 @@ export function PlayScenario() {
                             initialSpeed={speed}
                             audioInput={playable.audioInput}
                             onAudioInputChange={rememberAudioInput}
+                            initialSetup={setup}
                             onFinish={finishRun}
                         />
                     )}
@@ -302,16 +348,17 @@ export function PlayScenario() {
                         )}
                     </section>
 
+                    {replayError && (
+                        <p className="text-sm font-semibold text-red-400">{replayError}</p>
+                    )}
                     <div className="flex w-full max-w-xl gap-4">
                         <button
                             type="button"
-                            onClick={() => {
-                                setRun(null)
-                                setPhase("playing")
-                            }}
+                            onClick={() => void playAgain()}
+                            disabled={!playable || saving || checkingReplay}
                             className={`${buttonClass} flex-1 bg-white text-black hover:brightness-95`}
                         >
-                            Play again
+                            {checkingReplay ? "Checking…" : "Play again"}
                         </button>
                         <button
                             type="button"

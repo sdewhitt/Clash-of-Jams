@@ -13,7 +13,25 @@ const api = vi.hoisted(() => ({
   loadDifficulty: vi.fn(),
   publishDifficulty: vi.fn(),
 }))
+
 vi.mock('@/lib/difficulty/api', () => api)
+
+vi.mock('@/components/NotificationButton', () => ({
+  NotificationButton: ({ uid }: { uid: string }) => (
+    <button
+      type="button"
+      aria-label="Notifications"
+      data-testid="notification-button"
+    >
+      Notifications: {uid}
+    </button>
+  ),
+}))
+
+vi.mock('@/components/LiveElo', () => ({
+  LiveElo: () => null,
+}))
+
 const examples = examplesFixture as DifficultyDetail[]
 
 function show(route = '/scenario_difficulty') {
