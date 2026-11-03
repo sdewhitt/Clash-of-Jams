@@ -1,0 +1,34 @@
+import { useNavigate, useParams } from "react-router"
+import { useAuth } from "@/lib/auth/useAuth"
+import { BackButton } from "@/components/BackButton"
+import { ProfileButton } from "@/components/ProfileButton"
+import { NotificationButton } from "@/components/NotificationButton"
+import { LiveElo } from "@/components/LiveElo"
+import { useEffect, useState } from "react"
+import type { Community } from "@/lib/schema/types"
+
+export function UserCommunity() {  
+    const { user, profile } = useAuth()
+    const { communityId } = useParams<{ communityId: string }>();
+    const navigate = useNavigate();
+
+    return (
+        <main className="h-screen flex flex-col overflow-hidden">
+            <header className="flex items-center justify-between bg-linear-to-r from-accent-base-start from-10% via-accent-base-middle via-70% to-accent-base-end to-90% border-b-4 border-accent-start pt-6 pb-5">
+                <div className="flex ml-12">
+                    <BackButton onClick={() => navigate('/friends/my_communities')}></BackButton>
+                    <h1 className="ml-4 text-4xl font-bold text-ink">{communityId}</h1>
+                </div>
+                <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
+                    <ProfileButton
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
+                    />
+                </div>
+            </header>
+        </main>
+    )
+}

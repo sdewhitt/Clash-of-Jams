@@ -495,7 +495,7 @@ export interface Community {
   communityIcon: string | null
   description: string
   ownerUid: string
-  members: string[]
+  memberCount: number
   announcements: string[]
   isPublic: boolean
   createdAt: Timestamp

@@ -25,6 +25,7 @@ import { RatingHistory } from '@/pages/RatingHistory'
 import OnlineStatusManager from '@/context/StatusManager'
 import { PublicProfile } from '@/pages/user-profiles/PublicProfile'
 import { FriendMatchWaiting } from './pages/FriendMatchWaiting'
+import { UserCommunity } from './pages/Community'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
@@ -36,6 +37,7 @@ const PROTECTED_ROUTES = [
   { path: '/friends/find_friends', element: <FindFriends /> },
   { path: '/friends/my_communities', element: <MyCommunities /> },
   { path: '/friends/find_communities', element: <FindCommunities /> },
+  { path: '/community/:communityId', element: <UserCommunity />},
   { path: '/settings', element: <Settings /> },
   { path: '/tuner', element: <Tuner /> },
   { path: '/scenario_editor', element: <ScenarioEditor /> },
