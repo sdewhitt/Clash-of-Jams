@@ -1,4 +1,5 @@
 import { formatTopPercent, type LeaderboardEntry, type LeaderboardResponse } from "@/lib/leaderboards"
+import { useNavigate } from "react-router"
 
 type LeaderboardStatProps = {
     label: string
@@ -22,18 +23,21 @@ const PODIUM_COLORS = ["text-yellow-400", "text-gray-300", "text-amber-600"]
 
 type LeaderboardRowProps = {
     entry: LeaderboardEntry
-    /** The caller's own row. */
+    /** The caller's own row. **/
     highlighted: boolean
-    /** Smaller text and padding, for narrow spots like the scenario details panel. */
+    /** Smaller text and padding, for narrow spots like the scenario details panel. **/
     compact?: boolean
-    /** The board-specific stats, as LeaderboardStat elements. */
+    /** The board-specific stats, as LeaderboardStat elements. **/
     children: React.ReactNode
 }
 
 export function LeaderboardRow({ entry, highlighted, compact = false, children }: LeaderboardRowProps) {
+    const navigate = useNavigate();
+
     return (
         <li
             aria-current={highlighted ? "true" : undefined}
+            onClick={() => navigate(`/profile/${encodeURIComponent(entry.uid)}`, { replace: true })}
             className={`
                 flex
                 items-center
