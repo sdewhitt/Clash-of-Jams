@@ -10,6 +10,17 @@ import { MultiplayerSession } from './MultiplayerSession'
 
 vi.mock('@/lib/multiplayer/useSession', () => ({ useSession: vi.fn() }))
 vi.mock('@/components/LiveElo', () => ({ LiveElo: () => <span>400 Elo</span> }))
+vi.mock('@/components/NotificationButton', () => ({
+  NotificationButton: ({ uid }: { uid: string }) => (
+    <button
+      type="button"
+      aria-label="Notifications"
+      data-testid="notification-button"
+    >
+      Notifications: {uid}
+    </button>
+  ),
+}))
 vi.mock('@/lib/matchmaking/api', () => ({ getQueueStatus: vi.fn(), cancelQueue: vi.fn() }))
 const navigate = vi.fn()
 vi.mock('react-router', async (importOriginal) => ({

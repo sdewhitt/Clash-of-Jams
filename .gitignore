@@ -7,6 +7,8 @@
 *-debug.log
 .firebase/
 
+node_modules
+
 CLAUDE.md
 AGENTS.md
 

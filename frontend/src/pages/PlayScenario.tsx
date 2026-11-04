@@ -10,11 +10,13 @@ import { StarPicker } from "@/components/StarRating"
 import { ApiError, apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
 import { buildTimeline, resolveScoringRules } from "@/lib/play/timeline"
-import { getUserSettings } from "@/lib/profile/UserSettings"
+import { getUserSettings } from "@/lib/profile/userSettings"
 import { submitRun, type SubmittedRun } from "@/lib/runs/store"
 import { loadScenario } from "@/lib/scenarios/store"
 import type { ExpectedNote, Instrument, ScenarioReview, ScoringRules, TempoMapEntry } from "@/lib/schema/types"
 import { NoteHighway } from "@/pages/play/NoteHighway"
+import { NotificationButton } from "@/components/NotificationButton"
+import { LiveElo } from "@/components/LiveElo"
 
 // Matches ReviewUpsert.comment's max_length in backend/app/schemas.py.
 const MAX_COMMENT_LENGTH = 200
@@ -227,10 +229,13 @@ export function PlayScenario() {
                     <h1 className="ml-4 text-4xl font-bold text-ink">Play Scenario</h1>
                 </div>
 
-                <div className="mr-6">
+                <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
+                    <NotificationButton uid={profile?.uid ?? ""}/>
+                    <LiveElo />
                     <ProfileButton
-                        username={profile?.displayName ?? user?.email ?? "…"}
-                        userAvatar={profile?.avatarUrl ?? "../../favicon.svg"}
+                    className="w-36 shrink-0 sm:w-50"
+                    username={profile?.displayName ?? user?.email ?? '…'}
+                    userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
             </header>

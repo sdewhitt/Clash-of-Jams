@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import { authErrorMessage, sendResetEmail, signIn, signInWithGoogle } from '@/lib/auth/account'
 import { useTheme, type Theme } from '@/context/ThemeContext'
 import { useAuth } from '@/lib/auth/useAuth'
-import { getUserSettings, } from "@/lib/profile/UserSettings";
+import { getUserSettings, } from "@/lib/profile/userSettings";
 
 export function Login() {
   const navigate = useNavigate()

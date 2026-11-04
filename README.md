@@ -6,3 +6,19 @@ We aim to create a music practice application inspired by the gameplay loop in K
 The standard practice loop is: 
 Select a scenario → perform it on a real instrument → receive feedback immediately → compare results → attempt to improve on the same or another scenario. 
 By making improvement measurable and encouraging repeated attempts, the application is intended to provide incremental motivation to engage in deliberate practice.
+
+Frontend:
+
+```
+cd frontend
+npm install
+npm run dev
+```
+
+Backend:
+
+```
+cd backend
+uv sync
+uv run uvicorn app.main:app --reload
+```

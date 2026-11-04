@@ -30,7 +30,7 @@ export function useSkillRatings(uid: string | undefined) {
       () => setEntry({ uid, ratings: [], error: 'Could not load your ratings.' }),
     )
     const unsubscribeSettings = onSnapshot(
-      doc(db, COLLECTIONS.userSettings, uid),
+      doc(db, COLLECTIONS.userPreferences, uid),
       (snapshot) => {
         const instrument = snapshot.data()?.preferredInstrument
         setPreference({
