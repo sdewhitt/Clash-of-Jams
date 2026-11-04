@@ -32,8 +32,10 @@ def fake_db(monkeypatch: pytest.MonkeyPatch) -> FakeFirestore:
     """
     import app.routers
     from app.routers import ratings
+    from app.services import account_deletion
 
     db = FakeFirestore()
+    monkeypatch.setattr(account_deletion, "get_firestore_client", lambda: db)
     for module_info in pkgutil.iter_modules(app.routers.__path__):
         module = importlib.import_module(f"app.routers.{module_info.name}")
         if hasattr(module, "db"):

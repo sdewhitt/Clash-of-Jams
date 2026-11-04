@@ -1,7 +1,8 @@
-import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, setDoc, arrayRemove, } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, runTransaction, arrayRemove, } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { PublicProfile, UserStatus } from '@/lib/schema/types';
+import type { PublicProfile, UserSettings, UserStatus } from '@/lib/schema/types';
 import { COLLECTIONS } from '@/lib/schema/collections';
+import { DEFAULT_APPEARANCE, publicAppearance } from '@/lib/profile/profileAppearance';
 
 export async function getPublicProfile(uid: string): Promise<PublicProfile> {
     // Read by id, not by query: the rules grant userProfile/{uid} to its owner by document id, which a collection query can't be shown to satisfy.
@@ -50,13 +51,27 @@ export async function updatePublicProfile(uid: string, savedUsername: string, pu
         return;
     }
 
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-        await setDoc( docRef, { uid: uid, username: savedUsername, usernameLower: savedUsername.toLowerCase(), displayName: savedUsername, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, acceptingFriends: acceptingFriends, updatedAt: serverTimestamp(), publicHistory: publicHistory}, { merge: true } );
-    }
-    else {
-        await setDoc( docRef, { uid: uid, username: savedUsername, usernameLower: savedUsername.toLowerCase(), displayName: savedUsername, avatarUrl: avatarUrl, bio: bio ? savedBio : "", preferredInstrument: instrument ? savedInstrument : "", preferredGenres: genres ? savedGenres : [], elos, acceptingFriends: acceptingFriends, friends: [], communities: [], updatedAt: serverTimestamp(), publicHistory: publicHistory}, { merge: true } );
-    }
+    await runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(docRef);
+        const settings = await transaction.get(doc(db, COLLECTIONS.userSettings, uid));
+        const appearance = (settings.data() as UserSettings | undefined)?.profileAppearance ?? DEFAULT_APPEARANCE;
+
+        transaction.set(docRef, {
+            ...(snapshot.exists() ? {} : { avatarUrl, friends: [], communities: [] }),
+            uid,
+            username: savedUsername,
+            usernameLower: savedUsername.toLowerCase(),
+            displayName: savedUsername,
+            bio: bio ? savedBio : "",
+            preferredInstrument: instrument ? savedInstrument : "",
+            preferredGenres: genres ? savedGenres : [],
+            elos,
+            acceptingFriends,
+            updatedAt: serverTimestamp(),
+            publicHistory,
+            profileAppearance: publicAppearance(appearance, publicHistory),
+        }, { merge: true });
+    });
 }
 
 export async function updateAcceptingFriends( uid: string, accepting: boolean ) {

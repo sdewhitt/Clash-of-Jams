@@ -15,7 +15,7 @@
  *    separate documents, as the design document requires.
  */
 import type { Timestamp } from 'firebase/firestore'
-import type { PRESET_MESSAGES } from '@/lib/multiplayer/types'
+import type { PRESET_MESSAGES } from '../multiplayer/types.ts'
 
 /* ------------------------------------------------------------------ enums */
 
@@ -114,6 +114,17 @@ export interface UserProfile {
   updatedAt: Timestamp
 }
 
+export interface FeaturedProfileScore {
+  runId: string
+  scenarioId: string
+  finalScore: number
+}
+
+export interface ProfileAppearance {
+  accent: 'Default' | 'Blue' | 'Green' | 'Violet'
+  featuredScores: FeaturedProfileScore[]
+}
+
 /** publicProfile/{uid} — outward facing use profiles for public queries. **/
 export interface PublicProfile {
   uid: string
@@ -129,6 +140,7 @@ export interface PublicProfile {
   friends: string[]
   communities: string[]
   publicHistory: boolean
+  profileAppearance?: ProfileAppearance
   updatedAt: Timestamp
 }
 
@@ -147,6 +159,7 @@ export interface UsernameReservation {
 
 /** userSettings/{uid} — themes, accessibility options, instrument preferences. **/
 export interface UserSettings {
+  profileAppearance?: ProfileAppearance
   uid: string
   scenarioTheme: string
   theme: string

@@ -15,6 +15,7 @@ export function RatingResult({ event }: { event: RatingEvent }) {
         <h3 className="text-xl font-bold">{outcome}</h3>
         <span className="text-sm text-muted">{event.appliedAt.toDate().toLocaleString()}</span>
       </div>
+      {event.opponentUid.startsWith('deleted-') && <p className="text-sm text-muted">Deleted Player</p>}
       <p className="mt-3 text-3xl font-bold" aria-label="Rating change">
         {number.format(event.eloBefore)} <span aria-hidden="true">→</span>{' '}
         {number.format(event.eloAfter)} <span className="text-xl">({delta})</span>

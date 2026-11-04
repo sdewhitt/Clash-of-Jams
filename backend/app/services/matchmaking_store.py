@@ -194,7 +194,13 @@ class FirestoreMatchmakingStore:
     def __init__(self, database):
         self.db = database
 
+    def _account_available(self, uid, transaction=None):
+        account = self.db.collection("accountDeletions").document(uid).get(transaction=transaction)
+        return not account.exists or account.to_dict().get("state") == "active"
+
     def load_player(self, uid: str, instrument: str | None, joined_at: float, ticket: str):
+        if not self._account_available(uid):
+            raise MatchmakingError("This account cannot join multiplayer.", 403)
         user_ref = self.db.collection("users").document(uid)
         profile = user_ref.get()
         if not profile.exists:
@@ -384,7 +390,11 @@ class FirestoreMatchmakingStore:
                 profile = (
                     self.db.collection("users").document(player.uid).get(transaction=transaction)
                 )
-                if not profile.exists or profile.to_dict().get("isBanned"):
+                if (
+                    not profile.exists
+                    or profile.to_dict().get("isBanned")
+                    or not self._account_available(player.uid, transaction)
+                ):
                     raise MatchmakingError("A participant can no longer join multiplayer.", 403)
                 rating = (
                     self.db.collection("users")

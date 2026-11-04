@@ -19,11 +19,11 @@ export function Home() {
     <main className="h-screen flex flex-col overflow-hidden">
       <header className="relative flex flex-wrap items-center justify-between gap-4 bg-linear-to-r from-accent-base-start from-10% via-accent-base-middle via-70% to-accent-base-end to-90% border-b-4 border-accent-start px-4 py-4 sm:px-12 sm:py-6">
         <h1 className="whitespace-nowrap text-3xl font-bold sm:text-4xl">Clash of Jams</h1>
-        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+        <div className="ml-auto flex w-full min-w-0 items-center justify-end gap-3 sm:w-auto sm:gap-4">
           <NotificationButton uid={profile?.uid ?? ""}/>
           <LiveElo />
           <ProfileButton
-            className="w-36 shrink-0 sm:w-50"
+            className="w-36 min-w-0 sm:w-50 sm:shrink-0"
             username={profile?.displayName ?? user?.email ?? '…'}
             userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
           />

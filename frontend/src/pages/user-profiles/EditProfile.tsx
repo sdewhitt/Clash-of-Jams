@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/useAuth"
-import { useNavigate } from "react-router"
+import { useNavigate, useSearchParams } from "react-router"
 import type { User } from 'firebase/auth'
 import type { PublicProfile, ScenarioTheme, SkillRating, UserPreferences, UserProfile } from '@/lib/schema/types'
 import { BackButton } from "@/components/BackButton"
@@ -18,9 +18,11 @@ import { getUserPreferences, updatePreferredGenres, updatePreferredInstrument } 
 import { getPublicProfile, getUserStatus, updateDoNotDistrub, updateEloPublicity, updatePublicProfile } from "@/lib/profile/publicProfile";
 import { NotificationButton } from "@/components/NotificationButton";
 import { LiveElo } from "@/components/LiveElo";
+import { ProfileAppearanceEditor } from "./ProfileAppearanceEditor";
 
 type ProfileSection =
     | "profile"
+    | "appearance"
     | "avatar"
     | "applicationTheme"
     | "scenarioTheme"
@@ -437,6 +439,8 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     const displayedAvatars = showAllAvatars ? avatars : avatars.slice(0, 4);
     
     switch(selectedSetting) {
+        case "appearance":
+            return user ? <ProfileAppearanceEditor key={user.uid} uid={user.uid} /> : null;
         case "presence":
             return (
                 <div className="flex flex-col overscroll-contain m-4 gap-4">
@@ -1736,7 +1740,10 @@ export function EditProfile() {
     const { user, profile, loading } = useAuth()
     const [draftUsername, setDraftUsername] = useState(""); 
     const [draftAvatar, setDraftAvatar] = useState("../../favicon.svg");
-    const [selectedSetting, setSelectedSetting] = useState<ProfileSection>("profile");
+    const [searchParams] = useSearchParams();
+    const [selectedSetting, setSelectedSetting] = useState<ProfileSection>(
+        searchParams.get("section") === "appearance" ? "appearance" : "profile"
+    );
     const navigate = useNavigate()
 
     function navPortal(location: string) {
@@ -1787,6 +1794,12 @@ export function EditProfile() {
                         active={selectedSetting === "profile"}
                     >
                         My Profile
+                    </SettingsButton>
+                    <SettingsButton
+                        onClick={() => setSelectedSetting("appearance")}
+                        active={selectedSetting === "appearance"}
+                    >
+                        Appearance
                     </SettingsButton>
                     <SettingsButton
                         onClick={() => setSelectedSetting("avatar")}
