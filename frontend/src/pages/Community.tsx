@@ -223,7 +223,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
     switch(selectedSetting) {
         case "announcements":
             return (
-                <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-base-start inset-shadow-sm">
+                <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-start inset-shadow-sm">
                     <div className="flex flex-col gap-4 m-6">
                         {notificationsLoading ? (
                             <p className={`
@@ -466,7 +466,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
             );
         case "members":
             return (
-                <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-base-start inset-shadow-sm">
+                <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-start inset-shadow-sm">
                     <div className="flex flex-col overflow-y-auto overscroll-contain gap-4 m-6">
                         {members.map((member) => {
                             const isCommunityOwner = member.uid === community.ownerUid;
@@ -574,7 +574,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
             );
         case "settings":
             return (
-                <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-base-start inset-shadow-sm overflow-scroll overscroll-contain">
+                <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-start inset-shadow-sm overflow-scroll overscroll-contain">
                     <div className="flex flex-col items-center gap-4 m-6">
                         <div className="flex flex-col gap-2">
                             <div className="w-full flex text-left text-md font-medium text-accent-start select-none">
