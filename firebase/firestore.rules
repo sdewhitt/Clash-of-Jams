@@ -11,7 +11,15 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() {
-      return request.auth != null;
+      return request.auth != null && accountAllowsAccess(request.auth.uid);
+    }
+
+    // The backend owns accountDeletions/{uid}. A restored account keeps its
+    // auth cutoff so a session issued before deletion cannot regain access.
+    function accountAllowsAccess(uid) {
+      let path = /databases/$(database)/documents/accountDeletions/$(uid);
+      return !exists(path) || (get(path).data.state == 'active'
+        && request.auth.token.auth_time > get(path).data.authAfter);
     }
 
     function isSelf(uid) {
@@ -162,6 +170,11 @@ service cloud.firestore {
         && d.playedAt is timestamp;
     }
 
+    match /accountDeletions/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
     // Public profiles are readable; only the owner edits their own, and only
     // an admin can flip the moderation flags.
     match /users/{uid} {
@@ -175,7 +188,7 @@ service cloud.firestore {
         && request.resource.data.isBanned == false
         && request.resource.data.isSocialRestricted == false
         && stampedNow(request.resource.data.createdAt);
-      allow update: if isValidUser(request.resource.data)
+      allow update: if signedIn() && isValidUser(request.resource.data)
         && unchanged('uid')
         && unchanged('createdAt')
         && (
@@ -223,10 +236,10 @@ service cloud.firestore {
 
         allow create, delete: if isSelf(uid) || isAdmin();
 
-        allow update: if changed('friends')
+        allow update: if signedIn() && (changed('friends')
             || changed('communities')
             || isAdmin()
-            || isSelf(uid);
+            || isSelf(uid));
     }
 
     // Reservations are public so the sign-up form can check availability, and
@@ -247,8 +260,7 @@ service cloud.firestore {
     }
 
     match /userPreferences/{uid} {
-      allow read, create, update: if request.auth != null
-        && request.auth.uid == uid
+      allow read, create, update: if isSelf(uid);
 
       allow delete: if false || isAdmin();
     }
@@ -459,7 +471,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.notifierUid == request.auth.uid
         && request.resource.data.notifiedUid != request.auth.uid
-        && request.resource.data.read == false
+        && request.resource.data.read == false;
 
       allow update: if isSelf(resource.data.notifiedUid) &&
         request.resource.data.diff(resource.data)

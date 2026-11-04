@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
 
 import { signOutCurrentUser } from "@/lib/auth/account";
+import { AuthContext } from "@/lib/auth/context";
+import { useProfileAccent } from "@/lib/profile/useProfileAccent";
 
 type ProfileButtonProps = {
     username: string;
@@ -12,6 +14,7 @@ type ProfileButtonProps = {
 
 export function ProfileButton({ username, userAvatar, className = "w-50" }: ProfileButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const accent = useProfileAccent(useContext(AuthContext)?.user?.uid, true);
     const { setTheme } = useTheme();
     const navigate = useNavigate();
 
@@ -41,23 +44,18 @@ export function ProfileButton({ username, userAvatar, className = "w-50" }: Prof
                         flex
                         items-center
                         indent-5
-                        bg-linear-to-b 
-                        from-contrast-start 
-                        from-50 
-                        via-contrast-middle 
-                        to-contrast-end
-                        to-70
+                        ${accent ? "text-slate-950" : "bg-linear-to-b from-contrast-start from-50 via-contrast-middle to-contrast-end to-70 text-ink"}
                         outline-3
                         outline-contrast-middle
-                        text-ink
                         group-hover:brightness-125
                         transition-colors
                         truncate
                         ${isOpen ? "rounded-t-lg" : "rounded-r-lg"}
                         px-4
                     `}
+                    style={{ backgroundColor: accent }}
                 >
-                    {username}
+                    <span className="truncate">{username}</span>
                 </div>
                 <div
                     className={`

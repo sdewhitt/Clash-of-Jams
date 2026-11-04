@@ -9,6 +9,9 @@ import { EloDisplay } from "@/components/EloDisplay";
 import { getUserPreferences } from "@/lib/profile/userPreferences";
 import { NotificationButton } from "@/components/NotificationButton";
 import { LiveElo } from "@/components/LiveElo";
+import { FeaturedProfileScores } from "@/components/FeaturedProfileScores";
+import { DEFAULT_APPEARANCE, PROFILE_ACCENTS } from "@/lib/profile/profileAppearance";
+import { getUserSettings } from "@/lib/profile/userSettings";
 
 export function UserProfile() {
     const { user, profile, loading } = useAuth();
@@ -16,6 +19,17 @@ export function UserProfile() {
     const [ preferredInstrument, setPreferredInstrument ] = useState("");
     const { ratings: eloRatings } = useSkillRatings(user?.uid);
     const navigate = useNavigate();
+    const [appearance, setAppearance] = useState(DEFAULT_APPEARANCE);
+    const uid = user?.uid;
+
+    useEffect(() => {
+        if (!uid) return;
+        let cancelled = false;
+        void getUserSettings(uid).then((settings) => {
+            if (!cancelled) setAppearance(settings.profileAppearance ?? DEFAULT_APPEARANCE);
+        }).catch(() => { /* Older accounts can use the default appearance. */ });
+        return () => { cancelled = true; };
+    }, [uid]);
 
     function formatLabel(value: string) {
         return value
@@ -111,10 +125,12 @@ export function UserProfile() {
                     rounded-lg
                     py-8
                     mb-8`
-                }>
-                    <button className="absolute top-8 right-8 text-5xl hover:opacity-70 hover:scale-105 active:scale-95" onClick={() => navPortal('/profile/edit_profile')}>
-                        ✎
-                    </button>
+                } style={{ outlineColor: PROFILE_ACCENTS[appearance.accent] }}>
+                    <div className="flex justify-end px-6">
+                        <button type="button" className="rounded-lg border border-line bg-base-start px-4 py-2 font-bold text-ink" onClick={() => navPortal('/profile/edit_profile?section=appearance')}>
+                            Customize Profile
+                        </button>
+                    </div>
                     <div className="grid grid-cols-[1.5fr_3fr] gap-2 m-8">
                         <img 
                             src={profile?.avatarUrl ?? "../../favicon.svg"}
@@ -199,6 +215,7 @@ export function UserProfile() {
                             </div>
                         </div>
                     </div>
+                    <FeaturedProfileScores scores={appearance.featuredScores} />
                 </div>
 
                 <div className={` 

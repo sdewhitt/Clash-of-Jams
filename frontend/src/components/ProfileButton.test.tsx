@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ProfileButton } from '@/components/ProfileButton'
 import { signOutCurrentUser } from '@/lib/auth/account'
+import { useProfileAccent } from '@/lib/profile/useProfileAccent'
 import { renderAtRoute, signedIn } from '@/test/render'
 
 vi.mock('@/lib/auth/account', async (importOriginal) => ({
@@ -41,4 +42,13 @@ describe('ProfileButton sign out', () => {
     expect(screen.queryByRole('button', { name: 'Sign Out' })).not.toBeInTheDocument()
     expect(signOutCurrentUser).not.toHaveBeenCalled()
   })
+})
+
+it('uses the selected profile accent as the header username background', () => {
+  vi.mocked(useProfileAccent).mockReturnValueOnce('#60a5fa')
+  renderAtRoute(<ProfileButton username="Player One" userAvatar="avatar.png" />, {
+    path: '/home',
+    auth: signedIn(),
+  })
+  expect(screen.getByText('Player One').parentElement).toHaveStyle({ backgroundColor: 'rgb(96, 165, 250)' })
 })

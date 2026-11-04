@@ -5,10 +5,11 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 
+import { AccountRecovery } from '@/pages/settings/AccountRecovery'
 import { useAuth } from '@/lib/auth/useAuth'
 
 export function RequireAuth({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth()
+  const { user, loading, account } = useAuth()
   const location = useLocation()
 
   // Blank rather than a spinner: restoring a session is near-instant, and a
@@ -18,6 +19,8 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
+
+  if (account && account.state !== 'active') return <AccountRecovery account={account} />
 
   return <>{children}</>
 }

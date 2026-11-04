@@ -32,6 +32,7 @@ class Settings(BaseSettings):
 
     # Firebase project the ID tokens are issued for. Matches firebase/.firebaserc.
     firebase_project_id: str = "clash-of-jams"
+    firebase_storage_bucket: str | None = None
     # Path to a service account JSON key. Leave unset to fall back to
     # Application Default Credentials (gcloud auth application-default login).
     google_application_credentials: str | None = None

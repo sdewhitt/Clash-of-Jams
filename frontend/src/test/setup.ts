@@ -14,3 +14,6 @@ vi.mock('@/lib/firebase', () => ({ app: {}, auth: { currentUser: null }, db: {} 
 afterEach(() => {
   cleanup()
 })
+
+// The Firebase stub above has no live profile documents.
+vi.mock('@/lib/profile/useProfileAccent', () => ({ useProfileAccent: vi.fn() }))
