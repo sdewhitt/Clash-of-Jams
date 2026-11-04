@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router"
+import { useNavigate, useSearchParams } from "react-router"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { RangeSlider } from "@/components/RangeSlider"
 import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
+import { AddToPlaylist } from "@/components/AddToPlaylist"
+import { ScoreHistoryPanel } from "@/components/ScoreHistoryPanel"
 import { StarDisplay } from "@/components/StarRating"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
@@ -48,6 +50,7 @@ type SortKey = (typeof SORT_OPTIONS)[number]["value"]
 const DETAILS_TABS = [
     { value: "leaderboard", label: "Leaderboard" },
     { value: "reviews", label: "Reviews" },
+    { value: "scores", label: "My Scores" },
 ] as const
 
 type DetailsTab = (typeof DETAILS_TABS)[number]["value"]
@@ -63,6 +66,24 @@ function ScenarioStat({ label, children }: { label: string; children: React.Reac
 
 const controlClass =
     "w-full rounded-lg border-2 border-accent-start bg-white px-3 py-2 text-black"
+
+const playButtonClass = `
+    shrink-0
+    rounded-xl
+    border-3
+    border-accent-start
+    bg-accent-start
+    py-4
+    text-2xl
+    font-bold
+    text-ink
+    hover:brightness-110
+    active:scale-[0.98]
+    disabled:cursor-not-allowed
+    disabled:opacity-50
+    disabled:hover:brightness-100
+    disabled:active:scale-100
+`
 
 export function ScenarioSearch() {
     const { user, profile } = useAuth()
@@ -81,9 +102,13 @@ export function ScenarioSearch() {
     const [scenarios, setScenarios] = useState<ScenarioWithAuthor[]>([])
     // So a failed fetch reads as an error rather than as "nothing matches".
     const [scenariosFailed, setScenariosFailed] = useState(false)
-    const [selectedId, setSelectedId] = useState<string | null>(null)
+    // ?scenario=<id> opens with that scenario's preview showing, e.g. from play history.
+    const [searchParams] = useSearchParams()
+    const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get("scenario"))
     // Kept across selections, so someone reading reviews can flip between scenarios without re-picking the tab.
     const [detailsTab, setDetailsTab] = useState<DetailsTab>("leaderboard")
+    // The preview can open full screen, so its tabs have room to breathe.
+    const [previewExpanded, setPreviewExpanded] = useState(false)
     const selected = scenarios.find(({ scenario }) => scenario.id === selectedId) ?? null
 
     // Tagged with the scenario they belong to, so switching selection never shows
@@ -115,6 +140,23 @@ export function ScenarioSearch() {
             .then(setFilterBounds)
             .catch(console.error)
     }, [])
+
+    function playSelected() {
+        if (!selected) return
+        // Gameplay always plays the current version; scenarios without one still open for now.
+        const version = selected.scenario.currentVersionId
+        navigate(`/play/${selected.scenario.id}${version ? `?version=${version}` : ""}`)
+    }
+
+    // Escape closes the full-screen preview.
+    useEffect(() => {
+        if (!previewExpanded) return
+        function closeOnEscape(event: KeyboardEvent) {
+            if (event.key === "Escape") setPreviewExpanded(false)
+        }
+        document.addEventListener("keydown", closeOnEscape)
+        return () => document.removeEventListener("keydown", closeOnEscape)
+    }, [previewExpanded])
 
     useEffect(() => {
         if (!selectedId) return
@@ -435,24 +477,41 @@ export function ScenarioSearch() {
                             />
                         </section>
 
-                        <section className={`
-                            min-h-0
-                            flex-1
-                            overflow-y-auto
-                            rounded-xl
-                            border-3
-                            border-accent-start
-                            bg-linear-to-br
-                            from-accent-base-start from-50
-                            via-accent-base-middle
-                            to-accent-base-end to-70
-                            px-5
-                            py-4
-                        `}>
+                        <section
+                            aria-label="Scenario preview"
+                            aria-modal={previewExpanded && selected ? true : undefined}
+                            role={previewExpanded && selected ? "dialog" : undefined}
+                            className={`
+                                overflow-y-auto
+                                border-accent-start
+                                bg-linear-to-br
+                                from-accent-base-start from-50
+                                via-accent-base-middle
+                                to-accent-base-end to-70
+                                ${previewExpanded && selected
+                                    ? "fixed inset-0 z-50 border-4 px-12 py-8"
+                                    : "min-h-0 flex-1 rounded-xl border-3 px-5 py-4"}
+                            `}
+                        >
                             {selected ? (
-                                <>
-                                    <h2 className="text-2xl font-bold text-ink">{selected.scenario.title}</h2>
-                                    <p className="text-sm text-muted">by {selected.authorName}</p>
+                                <div className={previewExpanded ? "mx-auto flex w-full max-w-5xl flex-col" : ""}>
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <h2 className={`font-bold text-ink ${previewExpanded ? "text-4xl" : "text-2xl"}`}>
+                                                {selected.scenario.title}
+                                            </h2>
+                                            <p className="text-sm text-muted">by {selected.authorName}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPreviewExpanded((expanded) => !expanded)}
+                                            aria-label={previewExpanded ? "Close full-screen preview" : "Expand preview"}
+                                            title={previewExpanded ? "Close (Esc)" : "Expand"}
+                                            className="shrink-0 rounded-lg border-2 border-accent-start bg-white px-3 py-1 text-sm font-semibold text-black hover:brightness-95 active:scale-95"
+                                        >
+                                            {previewExpanded ? "✕ Close" : "⤢ Expand"}
+                                        </button>
+                                    </div>
 
                                     <p className="mt-3 text-ink">
                                         {selected.scenario.description || (
@@ -486,6 +545,8 @@ export function ScenarioSearch() {
                                             ))}
                                         </ul>
                                     )}
+
+                                    <AddToPlaylist key={selected.scenario.id} scenarioId={selected.scenario.id} />
 
                                     <div role="tablist" aria-label="Scenario details" className="mt-6 flex gap-2 border-b-2 border-accent-start">
                                         {DETAILS_TABS.map((tab) => {
@@ -531,6 +592,11 @@ export function ScenarioSearch() {
                                             scenarioId={selected.scenario.id}
                                             versionId={selected.scenario.currentVersionId}
                                         />
+                                    ) : detailsTab === "scores" ? (
+                                        <ScoreHistoryPanel
+                                            key={selected.scenario.id}
+                                            scenarioId={selected.scenario.id}
+                                        />
                                     ) : selectedReviews === null ? (
                                         <p className="text-sm text-muted">Loading reviews…</p>
                                     ) : selectedReviews.reviews === null ? (
@@ -563,7 +629,17 @@ export function ScenarioSearch() {
                                         </ul>
                                     )}
                                     </div>
-                                </>
+
+                                    {previewExpanded && (
+                                        <button
+                                            type="button"
+                                            onClick={playSelected}
+                                            className={`mt-6 ${playButtonClass}`}
+                                        >
+                                            Play!
+                                        </button>
+                                    )}
+                                </div>
                             ) : (
                                 <p className="flex h-full items-center justify-center text-center text-muted">
                                     Select a scenario to see its details.
@@ -575,29 +651,8 @@ export function ScenarioSearch() {
                         <button
                             type="button"
                             disabled={!selected}
-                            onClick={() => {
-                                if (!selected) return
-                                // Gameplay always plays the current version; scenarios without one still open for now.
-                                const version = selected.scenario.currentVersionId
-                                navigate(`/play/${selected.scenario.id}${version ? `?version=${version}` : ""}`)
-                            }}
-                            className={`
-                                shrink-0
-                                rounded-xl
-                                border-3
-                                border-accent-start
-                                bg-accent-start
-                                py-4
-                                text-2xl
-                                font-bold
-                                text-ink
-                                hover:brightness-110
-                                active:scale-[0.98]
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
-                                disabled:hover:brightness-100
-                                disabled:active:scale-100
-                            `}
+                            onClick={playSelected}
+                            className={playButtonClass}
                         >
                             Play!
                         </button>

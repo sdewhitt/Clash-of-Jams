@@ -23,6 +23,9 @@ SCORE_TOLERANCE = 0.02
 # Mirrors MIN_SPEED and MAX_SPEED in frontend/src/lib/play/speed.ts.
 MIN_SPEED = 0.3
 MAX_SPEED = 3.0
+# Mirrors MAX_SCORE in frontend/src/scoring/score.ts: finalScore is on a 0-100,000 scale,
+# while the breakdown accuracies stay 0-100.
+MAX_SCORE = 100_000
 
 # Mirrors DEFAULT_SCORING_RULES in frontend/src/lib/schema/collections.ts.
 DEFAULT_WEIGHTS = {"pitchWeight": 0.4, "rhythmWeight": 0.4, "completenessWeight": 0.2}
@@ -83,7 +86,8 @@ def _check_against_version(run: dict, version: dict) -> str | None:
     if sum(weights) <= 0:
         return "Scenario version has no scoring weights"
     final = sum(v * w for v, w in zip((pitch, rhythm, completeness), weights, strict=True))
-    if abs(run["finalScore"] - final / sum(weights)) > SCORE_TOLERANCE:
+    expected_score = final / sum(weights) / 100 * MAX_SCORE
+    if abs(run["finalScore"] - expected_score) > SCORE_TOLERANCE / 100 * MAX_SCORE:
         return "Final score does not match the breakdown"
 
     return None

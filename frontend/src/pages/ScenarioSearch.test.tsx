@@ -2,7 +2,7 @@
  * User story #15: how the scenario search page handles what the API sends back,
  * then searching and sorting what it got.
  */
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -50,12 +50,12 @@ const SCENARIOS = [
   scenario('a', 'AAAAA', 'TestUser'),
 ]
 
-function renderSearch(scenarios: { status?: number; body: unknown }) {
+function renderSearch(scenarios: { status?: number; body: unknown }, route = '/') {
   stubApi({
     '/scenarios/scenario_with_author': scenarios,
     '/scenarios/filter_items': { body: FILTER_BOUNDS },
   })
-  renderWithAuth(<ScenarioSearch />, { auth: signedIn() })
+  renderWithAuth(<ScenarioSearch />, { auth: signedIn(), route })
 }
 
 /** Scenario titles in the order the list shows them. */
@@ -133,3 +133,67 @@ describe('ScenarioSearch search and sort', () => {
     expect(listedTitles()).toEqual(['CCCCC', 'BBBBB', 'AAAAA'])
   })
 })
+
+describe('ScenarioSearch links', () => {
+  it('opens with the scenario named in ?scenario= selected', async () => {
+    renderSearch({ body: SCENARIOS }, '/scenario_search?scenario=c')
+
+    const selected = await screen.findByRole('button', { name: 'Selected' })
+    expect(selected).toHaveAttribute('aria-pressed', 'true')
+    // The title shows twice: once in the list, once in the preview panel.
+    expect(screen.getAllByText('CCCCC')).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Select' })).toHaveLength(2)
+  })
+
+  it("shows the user's own scores in the My Scores tab", async () => {
+    stubApi({
+      '/scenarios/scenario_with_author': { body: SCENARIOS },
+      '/scenarios/filter_items': { body: FILTER_BOUNDS },
+      '/history/scenarios/c': { body: { scenarioId: 'c', stats: null, attempts: [] } },
+    })
+    renderWithAuth(<ScenarioSearch />, { auth: signedIn(), route: '/scenario_search?scenario=c' })
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'My Scores' }))
+
+    expect(await screen.findByText('No attempts yet.')).toBeInTheDocument()
+  })
+})
+
+describe('ScenarioSearch full-screen preview', () => {
+  it('expands the preview with the same tabs and a Play button, and closes it again', async () => {
+    renderSearch({ body: SCENARIOS }, '/scenario_search?scenario=c')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Expand preview' }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Scenario preview' })
+    expect(within(dialog).getByRole('heading', { name: 'CCCCC' })).toBeInTheDocument()
+    expect(within(dialog).getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Leaderboard',
+      'Reviews',
+      'My Scores',
+    ])
+    expect(within(dialog).getByRole('button', { name: 'Play!' })).toBeEnabled()
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Close full-screen preview' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Expand preview' })).toBeInTheDocument()
+  })
+
+  it('closes the full-screen preview with Escape', async () => {
+    renderSearch({ body: SCENARIOS }, '/scenario_search?scenario=c')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Expand preview' }))
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('only offers to expand once a scenario is selected', async () => {
+    renderSearch({ body: SCENARIOS })
+
+    await screen.findByText('AAAAA')
+    expect(screen.queryByRole('button', { name: 'Expand preview' })).not.toBeInTheDocument()
+  })
+})
+

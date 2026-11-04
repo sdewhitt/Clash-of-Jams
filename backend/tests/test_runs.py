@@ -92,7 +92,7 @@ def make_run(uid: str = "someone") -> dict:
         "partId": "lead",
         "speedMultiplier": 1,
         "validation": "pending",
-        "finalScore": 65.0,  # 50 * 0.4 + 75 * 0.4 + 75 * 0.2
+        "finalScore": 65_000,  # (50 * 0.4 + 75 * 0.4 + 75 * 0.2) on the 100,000 scale
         "breakdown": {
             "pitchAccuracy": 50.0,
             "rhythmAccuracy": 75.0,
@@ -120,7 +120,7 @@ def test_missing_version_is_rejected() -> None:
 
 def test_inflated_score_is_rejected() -> None:
     run = make_run()
-    run["finalScore"] = 100.0
+    run["finalScore"] = 100_000
     assert check_run(run, make_version()) == "Final score does not match the breakdown"
 
 
@@ -174,7 +174,7 @@ def test_validate_accepts_and_counts_the_play(client: TestClient, db: FakeDb) ->
 
 def test_validate_rejects_without_counting_the_play(client: TestClient, db: FakeDb) -> None:
     run = make_run(get_settings().auth_dev_uid)
-    run["finalScore"] = 100.0
+    run["finalScore"] = 100_000
     seed(db, run)
 
     response = client.post("/api/v1/runs/run1/validate")
