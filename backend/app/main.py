@@ -23,9 +23,11 @@ from app.config import get_settings
 from app.firebase import get_firestore_client
 from app.routers import (
     health,
+    history,
     leaderboards,
     matchmaking,
     multiplayer,
+    playlists,
     ratings,
     runs,
     scenario_difficulty,
@@ -147,7 +149,9 @@ def create_app() -> FastAPI:
     app.include_router(skill_ratings.router, prefix=settings.api_prefix)
     app.include_router(matchmaking.router, prefix=settings.api_prefix)
     app.include_router(multiplayer.router, prefix=settings.api_prefix)
-
+    app.include_router(history.router, prefix=settings.api_prefix)
+    app.include_router(playlists.router, prefix=settings.api_prefix)
+    
     return app
 
 

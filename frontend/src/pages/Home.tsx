@@ -41,6 +41,10 @@ export function Home() {
 
             <NavButton onClick={() => navPortal('/recent_matches')}>Recent Matches</NavButton>
 
+            <NavButton onClick={() => navPortal('/play_history')}>Play History</NavButton>
+
+            <NavButton onClick={() => navPortal('/playlists')}>Playlists</NavButton>
+
             <NavButton onClick={() => navPortal('/leaderboards')}>Leaderboards</NavButton>
 
             <NavButton onClick={() => navPortal('/scenario_editor')}>Scenario Editor</NavButton>

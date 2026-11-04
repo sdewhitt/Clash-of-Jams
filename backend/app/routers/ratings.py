@@ -76,10 +76,11 @@ def upsert_review(scenario_id: str, user: CurrentUserDep, payload: ReviewUpsert)
         db.collection("runs")
         .where(filter=FieldFilter("scenarioId", "==", scenario_id))
         .where(filter=FieldFilter("userUid", "==", user.uid))
+        .where(filter=FieldFilter("validation", "in", ["pending", "accepted"]))
         .limit(1)
         .get()
     )
-    has_played = len(runs) > 0 and runs[0].get("validation") != "rejected"
+    has_played = len(runs) > 0
     if not has_played:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot review a scenario you have not played")
 

@@ -231,3 +231,35 @@
       outline-accent-middle;
   }
 }
+/*
+  Chart colors. The eight series slots are a fixed order checked for colorblind separation
+  (dataviz validate_palette.js against these surfaces), so never reorder them or add a ninth.
+  Dark themes use the same hues stepped for a dark surface.
+*/
+:root {
+  --chart-series-1: #2a78d6;
+  --chart-series-2: #eb6834;
+  --chart-series-3: #1baf7a;
+  --chart-series-4: #eda100;
+  --chart-series-5: #e87ba4;
+  --chart-series-6: #008300;
+  --chart-series-7: #6250d6;
+  --chart-series-8: #e34948;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+}
+
+html[data-theme="dark"],
+html[data-theme="neon"],
+html[data-theme="tritanopia"] {
+  --chart-series-1: #3987e5;
+  --chart-series-2: #d95926;
+  --chart-series-3: #199e70;
+  --chart-series-4: #c98500;
+  --chart-series-5: #d55181;
+  --chart-series-6: #008300;
+  --chart-series-7: #9085e9;
+  --chart-series-8: #e66767;
+  --chart-grid: #2c2c2a;
+  --chart-axis: #383835;
+}

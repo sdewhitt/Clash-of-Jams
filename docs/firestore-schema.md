@@ -86,8 +86,7 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 | `friendships/{idA_idB}`                   | `Friendship`          | One doc per pair, `idA < idB`.            |
 | `communities/{communityId}`               | `Community`           |                                           |
 | `communities/{communityId}/members/{uid}` | `CommunityMembership` |                                           |
-| `playlists/{playlistId}`                  | `Playlist`            |                                           |
-| `playlists/{playlistId}/items/{itemId}`   | `PlaylistItem`        | `position` orders the list.               |
+| `playlists/{playlistId}`                  | `Playlist`            | `scenarioIds` is the play order. API-only writes. |
 | `scenarioReviews/{scenarioId}_{uid}`      | `ScenarioReview`      |                                           |
 | `userReports/{reportId}`                  | `UserReport`          |                                           |
 | `moderationActions/{actionId}`            | `ModerationAction`    |                                           |
