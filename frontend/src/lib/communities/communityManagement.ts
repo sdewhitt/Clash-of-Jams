@@ -126,6 +126,24 @@ export async function createCommunity(communityIcon: string, communityName: stri
     return communityId;
 }
 
+export async function updateCommunity(communityId: string, communityIcon: string, communityDescription: string, isPublic: boolean) {
+    if (communityIcon.trim().length === 0) {
+        throw new Error('Community icon cannot be empty for community creation');    
+    }
+    if (communityDescription.trim().length === 0) {
+        throw new Error('Community name cannot be empty for community creation'); 
+    }
+
+    const communityRef = doc(db, COLLECTIONS.communities, communityId);
+    const newCommunitySnapshot = await getDoc(communityRef);
+
+    if (!newCommunitySnapshot.exists()) {
+        throw new Error(`Community with the id, ${communityId}, does not exist.`);
+    }
+
+    await updateDoc(communityRef, {communityIcon: communityIcon.trim(), description: communityDescription.trim(), isPublic: isPublic});
+}
+
 export async function updateCommunityMemberRole( communityId: string, memberUid: string, role: CommunityRole ) {
     const memberRef = doc(db, communityMembersPath(communityId), memberUid);
 

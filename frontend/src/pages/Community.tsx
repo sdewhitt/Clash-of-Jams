@@ -7,7 +7,7 @@ import { NotificationButton } from "@/components/NotificationButton";
 import { LiveElo } from "@/components/LiveElo";
 import { useEffect, useState } from "react";
 import { INSTRUMENTS, type Community, type CommunityMembership, type CommunityRole, type Instrument, } from "@/lib/schema/types";
-import { updateCommunityMemberRole } from "@/lib/communities/communityManagement";
+import { updateCommunity, updateCommunityMemberRole } from "@/lib/communities/communityManagement";
 import { deleteCommunityNotification, subscribeCommunityNotifications, type CommunityNotification } from "@/lib/communities/communityNotifications";
 import { getCommunityInformation } from "@/lib/communities/communitySearch";
 import { processImage } from "@/lib/profile/userProfile";
@@ -34,13 +34,14 @@ type CommunityContentProps = {
     community: Community;
     members: CommunityMembership[]
     onRoleChange: (uid: string, role: CommunityRole) => Promise<void>;
+    refreshData: () => void;
 };
 
-function CommunityContent({selectedSetting, activeUid, community, members, onRoleChange,} : CommunityContentProps) {
+function CommunityContent({selectedSetting, activeUid, community, members, onRoleChange, refreshData} : CommunityContentProps) {
     const navigate = useNavigate();
 
     const [communityIcon, setCommunityIcon] = useState<string | null>(community.communityIcon);
-    const [communityName, setCommunityName] = useState<string>(community.name);
+    // const [communityName, setCommunityName] = useState<string>(community.name);
     const [description, setDescription] = useState<string>(community.description);
     const [isPublic, setIsPublic] = useState(community.isPublic);
 
@@ -119,6 +120,35 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
         }
     }
 
+    async function handleCommunintyUpdates(mode: string) {
+        if (mode === 'save') {
+            try {
+                setSubmitting(true);
+                setError(null);
+    
+                await updateCommunity(community.id, communityIcon ?? "", description, isPublic);
+                refreshData();
+            } catch (error) {
+                console.error("Failed to update member role:", error);
+    
+                setError(
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to change user role."
+                );
+            }
+            finally {
+                setSubmitting(false);
+            }
+        } 
+        else {
+            setCommunityIcon(community.communityIcon);
+            // setCommunityName(community.name);
+            setDescription(community.description);
+            setIsPublic(community.isPublic);
+        }
+    }
+
     useEffect(() => {
         if (selectedSetting !== "announcements" || !memberRole) {
             setNotifications([]);
@@ -193,7 +223,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
     switch(selectedSetting) {
         case "announcements":
             return (
-                <div className="w-full h-full rounded-lg border-2 border-ink inset-shadow-sm">
+                <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-base-start inset-shadow-sm">
                     <div className="flex flex-col gap-4 m-6">
                         {notificationsLoading ? (
                             <p className={`
@@ -287,7 +317,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
                                             hover:scale-101
                                             active:brightness-90
                                             active:scale-99
-                                            p-4
+                                            p-2
                                         `}
                                     >
                                         Create New Notification
@@ -310,7 +340,8 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
                 <div className="
                     w-full h-full
                     rounded-lg
-                    border-2 border-ink
+                    bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end
+                    border-2 border-accent-base-start
                     inset-shadow-sm
                     flex flex-col
                     overflow-hidden
@@ -435,7 +466,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
             );
         case "members":
             return (
-                <div className="w-full h-full rounded-lg border-2 border-ink inset-shadow-sm">
+                <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-base-start inset-shadow-sm">
                     <div className="flex flex-col overflow-y-auto overscroll-contain gap-4 m-6">
                         {members.map((member) => {
                             const isCommunityOwner = member.uid === community.ownerUid;
@@ -543,7 +574,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
             );
         case "settings":
             return (
-                <div className="w-full h-full rounded-lg border-2 border-ink inset-shadow-sm">
+                <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-base-start inset-shadow-sm overflow-scroll overscroll-contain">
                     <div className="flex flex-col items-center gap-4 m-6">
                         <div className="flex flex-col gap-2">
                             <div className="w-full flex text-left text-md font-medium text-accent-start select-none">
@@ -678,6 +709,47 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
                                 {error}
                             </p>
                         )}
+                        <footer className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => handleCommunintyUpdates('cancel')}
+                                disabled={submitting}
+                                className="
+                                    rounded-lg
+                                    bg-radial
+                                    from-accent-start
+                                    via-accent-middle 
+                                    to-accent-end
+                                    px-5 py-2 font-semibold text-inverse-ink
+                                    border border-2 border-ink
+                                    hover:brightness-110
+                                    disabled:cursor-not-allowed
+                                    disabled:opacity-80
+                                "
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleCommunintyUpdates('save')}
+                                disabled={submitting}
+                                className="
+                                    rounded-lg
+                                    bg-radial
+                                    from-accent-start
+                                    via-accent-middle 
+                                    to-accent-end
+                                    px-5 py-2 font-semibold text-inverse-ink
+                                    border border-2 border-ink
+                                    hover:brightness-110
+                                    disabled:cursor-not-allowed
+                                    disabled:opacity-80
+                                "
+                            >
+                                {submitting ? "Saving..." : "Save Changes"}
+                            </button>
+                        </footer>
                     </div>
                 </div>
             );
@@ -689,6 +761,8 @@ export function UserCommunity() {
     const { user, profile } = useAuth();
     const { communityId } = useParams<{ communityId: string }>();
     const navigate = useNavigate();
+
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const [community, setCommunity] = useState<Community | null>(null);
     const [members, setMembers] = useState<CommunityMembership[]>([]);
@@ -768,7 +842,7 @@ export function UserCommunity() {
         return () => {
             isActive = false;
         };
-    }, [communityId]);
+    }, [communityId, refreshTrigger]);
 
     return (
         <main className="h-screen flex flex-col overflow-hidden">
@@ -785,7 +859,7 @@ export function UserCommunity() {
             `}>
                 <div className="flex ml-12">
                     <BackButton onClick={() => navigate('/home')}></BackButton>
-                    <h1 className="ml-4 text-4xl font-bold text-ink">My Friends</h1>
+                    <h1 className="ml-4 text-4xl font-bold text-ink">{community?.name ?? "..."}</h1>
                 </div>
                 <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
                     <NotificationButton uid={profile?.uid ?? ""}/>
@@ -919,6 +993,7 @@ export function UserCommunity() {
                             community={community}
                             members={members}
                             onRoleChange={handleMemberRoleChange}
+                            refreshData={() => setRefreshTrigger(prev => prev + 1)}
                         />
                     </div>
                 </div>
