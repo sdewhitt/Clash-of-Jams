@@ -58,6 +58,8 @@ type ScenarioPlayerProps = {
   onFinish: (run: FinishedRun) => void
   /** The previous run's choices, when replaying. Falls back to defaultInstrument and the microphone. */
   initialSetup?: PlayerSetup | null
+  /** Told when the count-in starts and when the run ends, so the page can hide its chrome. */
+  onPlayingChange?: (playing: boolean) => void
 }
 
 /** Everything that exists only while a scenario is being played. */
@@ -113,6 +115,7 @@ export function ScenarioPlayer({
   latencyMs,
   initialSetup,
   onFinish,
+  onPlayingChange,
 }: ScenarioPlayerProps) {
   const [instrument, setInstrument] = useState<Instrument>(
     initialSetup?.instrument ?? defaultInstrument,
@@ -315,6 +318,10 @@ export function ScenarioPlayer({
 
   const playing = elapsedMs !== null
   const countIn = playing && elapsedMs < 0
+
+  useEffect(() => {
+    onPlayingChange?.(playing)
+  }, [playing, onPlayingChange])
 
   // Score only the notes whose time has already passed, so the live score is fair mid-song.
   let liveScore: number | null = null

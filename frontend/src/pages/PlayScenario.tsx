@@ -95,6 +95,10 @@ export function PlayScenario() {
     const [attempt, setAttempt] = useState(0)
     const [checkingReplay, setCheckingReplay] = useState(false)
     const [replayError, setReplayError] = useState<string | null>(null)
+    const [performing, setPerforming] = useState(false)
+    // Only setup shows site navigation. A run exits through "Stop and see results",
+    // and the results screen through Next, whose rating dialog leads home.
+    const hideHeader = phase === "results" || performing
 
     useEffect(() => {
         if (!scenarioId || !user) return
@@ -131,6 +135,8 @@ export function PlayScenario() {
 
     function finishRun(finished: FinishedRun) {
         setRun(finished)
+        // The player unmounts before it can report the run ended.
+        setPerforming(false)
         setSetup({
             instrument: finished.instrument,
             inputKind: finished.inputKind,
@@ -220,7 +226,7 @@ export function PlayScenario() {
 
     return (
         <main className="h-screen flex flex-col">
-            <header
+            {!hideHeader && <header
                 className={`
                     flex
                     items-center
@@ -234,7 +240,7 @@ export function PlayScenario() {
                 `}
             >
                 <div className="flex ml-12">
-                    <BackButton></BackButton>
+                    <BackButton onClick={() => navigate("/scenario_search")}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Play Scenario</h1>
                 </div>
 
@@ -247,7 +253,7 @@ export function PlayScenario() {
                     userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
-            </header>
+            </header>}
 
             {phase === "playing" ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6">
@@ -262,6 +268,7 @@ export function PlayScenario() {
                             latencyMs={playable.latencyMs}
                             initialSetup={setup}
                             onFinish={finishRun}
+                            onPlayingChange={setPerforming}
                         />
                     )}
                     {!playable && !loadError && <p className="text-muted">Loading scenario…</p>}
