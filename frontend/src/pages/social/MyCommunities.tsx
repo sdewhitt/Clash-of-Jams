@@ -218,6 +218,7 @@ export function MyCommunities() {
                                     key={community.id}
                                     community={community}
                                     activeUid={profile?.uid ?? ""}
+                                    activeDisplayName={profile?.displayName ?? profile?.username ?? "..."}
                                     member={true}
                                 />
                             ))}
@@ -228,6 +229,7 @@ export function MyCommunities() {
             {showCommunityCreation && profile?.uid && (
                 <CreateCommunityCard
                     ownerUid={profile?.uid}
+                    ownerDisplayName={profile?.displayName ?? profile?.username ?? "..."}
                     onClose={() => setShowCommunityCreation(false)}
                 />
             )}

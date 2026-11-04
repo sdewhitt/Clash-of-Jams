@@ -6,6 +6,7 @@ import { processImage } from "@/lib/profile/userProfile";
 
 type CreateCommunityCardProps = {
     ownerUid: string;
+    ownerDisplayName: string;
     onClose: () => void;
 }
 
@@ -58,7 +59,7 @@ export function CreateCommunityCard(props: CreateCommunityCardProps) {
             setSubmitting(true);
             setError(null);
 
-            const communityId = await createCommunity(communityIcon ?? "", communityName ?? "", description ?? "", props.ownerUid, isPublic);
+            const communityId = await createCommunity(communityIcon ?? "", communityName ?? "", description ?? "", props.ownerUid, props.ownerDisplayName, isPublic);
 
             navigate(`/community/${encodeURIComponent(communityId)}`, { replace: true });
         } catch (err) {

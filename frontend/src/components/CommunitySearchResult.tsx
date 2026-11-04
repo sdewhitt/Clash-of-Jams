@@ -6,10 +6,11 @@ import { useNavigate } from "react-router"
 interface CommunitySearchResultProps {
     community: Community;
     activeUid: string,
+    activeDisplayName: string,
     member: boolean
 }
   
-export default function CommunitySearchResult({ community, activeUid, member, }: CommunitySearchResultProps) {
+export default function CommunitySearchResult({ community, activeUid, activeDisplayName, member, }: CommunitySearchResultProps) {
     const navigate = useNavigate();
     const initials = community.name?.charAt(0) || "?";
     const [joining, setJoining] = useState(false);
@@ -23,7 +24,7 @@ export default function CommunitySearchResult({ community, activeUid, member, }:
             setJoining(true);
             setError(null);
 
-            await joinCommunity(community.id, activeUid);
+            await joinCommunity(community.id, activeUid, activeDisplayName);
 
             navigate(`/community/${encodeURIComponent(community.id)}`, { replace: true });
         } catch (err) {

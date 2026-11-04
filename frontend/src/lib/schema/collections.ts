@@ -481,7 +481,7 @@ export function newFriendship(args: {
 export function newCommunity(args: {
   id: string
   name: string
-  communityIcon: string | null
+  communityIcon: string
   ownerUid: string
   description?: string
   isPublic?: boolean
@@ -500,11 +500,13 @@ export function newCommunity(args: {
 
 export function newCommunityMembership(args: {
   uid: string
+  userDisplayName: string
   communityId: string
   role?: CommunityMembership['role']
 }): WithFieldValue<CommunityMembership> {
   return {
     uid: args.uid,
+    userDisplayName: args.userDisplayName,
     communityId: args.communityId,
     role: args.role ?? 'member',
     joinedAt: serverTimestamp(),

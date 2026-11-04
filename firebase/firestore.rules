@@ -480,20 +480,18 @@ service cloud.firestore {
     // --------------------------------------------------
 
     match /userStatus/{uid} {
-
-      // Authenticated users can see other users' presence.
       allow read: if signedIn();
 
-      // Users can only write their own presence.
-      allow create, update: if isSelf(uid) &&
-        request.resource.data.keys().hasOnly([
-          'dnd',
-          'lastHeartbeat'
-        ]) &&
-        request.resource.data.dnd is bool &&
-        request.resource.data.lastHeartbeat is timestamp;
+      allow create: if isSelf(uid)
+          && request.resource.data.keys().hasOnly(['lastHeartbeat'])
+          && request.resource.data.lastHeartbeat == request.time;
 
-      allow delete: if isSelf(uid);
+      allow update: if isSelf(uid)
+          && request.resource.data.diff(resource.data)
+              .affectedKeys().hasOnly(['lastHeartbeat'])
+          && request.resource.data.lastHeartbeat == request.time;
+
+      allow delete: if false;
     }
 
     match /communities/{communityId} {
@@ -513,9 +511,7 @@ service cloud.firestore {
       match /announcements/{announcementId} {
         allow read: if signedIn();
         allow create: if isSelf(request.resource.data.announcerUid) && canPostAnnouncement(communityId, request.resource.data.announcerUid);
-        allow update, delete: if isSelf(request.resource.data.announcerUid)
-          || canPostAnnouncement(communityId, request.resource.data.announcerUid)
-          || isAdmin();
+        allow update, delete: if signedIn() || isAdmin();
       }
     }
 

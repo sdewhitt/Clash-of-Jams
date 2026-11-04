@@ -492,7 +492,7 @@ export interface FriendRequest {
 export interface Community {
   id: string
   name: string
-  communityIcon: string | null
+  communityIcon: string
   description: string
   ownerUid: string
   memberCount: number
@@ -503,6 +503,7 @@ export interface Community {
 /** communities/{communityId}/members/{uid} */
 export interface CommunityMembership {
   uid: string
+  userDisplayName: string
   communityId: string
   role: CommunityRole
   joinedAt: Timestamp

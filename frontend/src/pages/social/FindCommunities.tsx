@@ -236,6 +236,7 @@ export function FindCommunities() {
                                             key={community.id}
                                             community={community}
                                             activeUid={profile?.uid ?? ""}
+                                            activeDisplayName={profile?.displayName ?? profile?.username ?? "..."}
                                             member={false}
                                         />
                                     ))}
@@ -254,6 +255,7 @@ export function FindCommunities() {
                                                 key={community.id}
                                                 community={community}
                                                 activeUid={profile?.uid ?? ""}
+                                                activeDisplayName={profile?.displayName ?? profile?.username ?? "..."}
                                                 member={false}
                                             />
                                         ))}
