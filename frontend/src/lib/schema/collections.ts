@@ -19,7 +19,6 @@ import type {
   ModerationAction,
   NoteChart,
   Playlist,
-  PlaylistItem,
   RecordingShare,
   ScoreShare,
   Run,
@@ -93,9 +92,6 @@ export const ratingHistoryPath = (uid: string, instrument: Instrument) =>
 
 export const communityMembersPath = (communityId: string) =>
   `${COLLECTIONS.communities}/${communityId}/members`
-
-export const playlistItemsPath = (playlistId: string) =>
-  `${COLLECTIONS.playlists}/${playlistId}/items`
 
 /* --------------------------------------------------------- derived ids */
 
@@ -523,24 +519,9 @@ export function newPlaylist(args: {
     name: args.name,
     description: args.description ?? '',
     isPublic: args.isPublic ?? false,
-    itemCount: 0,
+    scenarioIds: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  }
-}
-
-export function newPlaylistItem(args: {
-  id: string
-  playlistId: string
-  scenarioId: string
-  position: number
-}): WithFieldValue<PlaylistItem> {
-  return {
-    id: args.id,
-    playlistId: args.playlistId,
-    scenarioId: args.scenarioId,
-    position: args.position,
-    addedAt: serverTimestamp(),
   }
 }
 

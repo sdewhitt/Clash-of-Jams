@@ -11,10 +11,18 @@ moves between the TypeScript side and this one without either side renaming
 anything.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FiniteFloat,
+    StringConstraints,
+    field_validator,
+)
 from pydantic.alias_generators import to_camel
 
 
@@ -187,6 +195,28 @@ class RunValidationResult(ApiModel):
     reason: str | None = None
 
 
+class PlayHistoryEntry(ApiModel):
+    """One of the caller's runs, with what the history page needs to know about its scenario."""
+
+    run_id: str
+    scenario_id: str
+    scenario_version_id: str
+    scenario_title: str | None  # None once the scenario is deleted or made private
+    instrument: Instrument
+    final_score: float
+    played_at: datetime
+    validation: RunValidation
+    match_id: str | None = None
+    scenario_available: bool  # False when the scenario can no longer be opened or played
+    is_current_version: bool  # False when the scenario has been updated since this run
+
+
+class PlayHistoryResponse(ApiModel):
+    entries: list[PlayHistoryEntry]
+    # Pass back as ?before= to get the next page; None on the last page.
+    next_before: datetime | None = None
+
+
 class LeaderboardResponse(ApiModel):
     entries: list[LeaderboardEntry]
     my_entry: LeaderboardEntry | None = None
@@ -197,6 +227,65 @@ class LeaderboardResponse(ApiModel):
     latest_played_at: datetime | None = None
 
 
+class ScoreSummary(ApiModel):
+    """subscores from the scoring engine"""
+
+    pitch_accuracy: float
+    rhythm_accuracy: float
+    completeness: float
+    notes_hit: int
+    notes_missed: int
+    extra_notes: int
+
+
+class ScenarioAttempt(ApiModel):
+    """one run on a single scenario"""
+    run_id: str
+    scenario_version_id: str
+    instrument: Instrument
+    final_score: float
+    played_at: datetime
+    validation: RunValidation
+    match_id: str | None = None
+    breakdown: ScoreSummary
+
+
+class ScenarioScoreStats(ApiModel):
+    """summary of non-rejected runs"""
+    attempt_count: int
+    best_score: float
+    average_score: float
+    most_recent_score: float
+    first_score: float
+    improvement: float | None # difference btwn most recent and first, none if no attempts
+
+
+class ScenarioScoreHistory(ApiModel):
+    scenario_id: str
+    stats: ScenarioScoreStats | None # none until we have a non-rejected run
+    attempts: list[ScenarioAttempt]
+
+
+class ScoreTrendPoint(ApiModel):
+    """scenario scores on one day == one point on chart"""
+    scenario_id: str
+    day: date # callers local day
+    best_score: float
+    average_score: float
+    attempts: int
+
+
+class PlayedScenario(ApiModel):
+    """a scenario the caller has played"""
+
+    scenario_id: str
+    title: str | None # none if scenario deleted or made private
+    last_played_at: datetime
+
+
+class ScoreTrends(ApiModel):
+    scenarios: list[PlayedScenario] # list of scenarios caller has played
+    points: list[ScoreTrendPoint] # list of scores per day, oldest day first
 
 
 
@@ -230,3 +319,50 @@ class HealthResponse(ApiModel):
     status: str
     app: str
     version: str
+
+
+PlaylistName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
+
+
+class PlaylistCreate(ApiModel):
+    name: PlaylistName
+    description: str = Field(default = "", max_length=200)
+    is_public: bool = False
+
+
+class PlaylistUpdate(ApiModel):
+    """only provided fields are changed"""
+    name: PlaylistName | None = None
+    description: str | None = Field(default=None, max_length=200)
+    is_public: bool | None = None
+
+
+class Playlist(ApiModel):
+    """playlists/{playlistId}"""
+    id: str
+    owner_uid: str
+    name: str
+    description: str
+    is_public: bool
+    scenario_ids: list[str]
+    created_at: datetime
+    updated_at: datetime
+
+
+class PlaylistAdd(ApiModel):
+    scenario_id: str = Field(min_length=1)
+
+
+class PlaylistReorder(ApiModel):
+    """same scenario ids, just in desired order"""
+    scenario_ids: list[str]
+
+
+class PlaylistEntry(ApiModel):
+    scenario_id: str
+    title: str | None # none if scenario unavailable
+    available: bool
+
+class PlaylistDetail(Playlist):
+    """playlist w/ each scenario looked up in play order"""
+    entries: list[PlaylistEntry]

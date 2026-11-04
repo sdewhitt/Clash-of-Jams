@@ -51,7 +51,6 @@ import {
   newMediaAsset,
   newModerationAction,
   newPlaylist,
-  newPlaylistItem,
   newPublicProfile,
   newRecordingShare,
   newScoreShare,
@@ -66,7 +65,6 @@ import {
   newUserSettings,
   newUserStatus,
   newUsernameReservation,
-  playlistItemsPath,
   scenarioReviewId,
   scenarioVersionsPath,
   skillRatingsPath,
@@ -101,7 +99,6 @@ const RUN_ID = `${PREFIX}run`
 const MATCH_ID = `${PREFIX}match`
 const COMMUNITY_ID = `${PREFIX}community`
 const PLAYLIST_ID = `${PREFIX}playlist`
-const PLAYLIST_ITEM_ID = `${PREFIX}playlist_item`
 const REPORT_ID = `${PREFIX}report`
 const ACTION_ID = `${PREFIX}moderation_action`
 const INVITATION_ID = `${PREFIX}invitation`
@@ -333,18 +330,8 @@ function buildPlan(): Plan[] {
       entity: 'Playlist',
       data: {
         ...newPlaylist({ id: PLAYLIST_ID, ownerUid: UID_A, name: 'Seed Playlist' }),
-        itemCount: 1,
+        scenarioIds: [SCENARIO_ID],
       },
-    },
-    {
-      path: `${playlistItemsPath(PLAYLIST_ID)}/${PLAYLIST_ITEM_ID}`,
-      entity: 'PlaylistItem',
-      data: newPlaylistItem({
-        id: PLAYLIST_ITEM_ID,
-        playlistId: PLAYLIST_ID,
-        scenarioId: SCENARIO_ID,
-        position: 0,
-      }),
     },
     {
       path: `${COLLECTIONS.scenarioReviews}/${scenarioReviewId(SCENARIO_ID, UID_B)}`,

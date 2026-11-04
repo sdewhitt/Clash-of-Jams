@@ -8,6 +8,7 @@ lives in one dict keyed by document path ("scenarios/abc").
 
 from copy import deepcopy
 from typing import Any
+from uuid import uuid4
 
 from google.cloud.firestore_v1.base_query import FieldFilter, Or
 
@@ -18,6 +19,7 @@ _OPS = {
     "<=": lambda a, b: a <= b,
     ">": lambda a, b: a > b,
     ">=": lambda a, b: a >= b,
+    "in": lambda a, b: a in b,
 }
 
 
@@ -123,8 +125,9 @@ class FakeCollection(FakeQuery):
     def __init__(self, db: FakeFirestore, path: str) -> None:
         super().__init__(db, path)
 
-    def document(self, doc_id: str) -> FakeDocRef:
-        return FakeDocRef(self.db, f"{self.path}/{doc_id}")
+    def document(self, doc_id: str | None = None) -> FakeDocRef:
+        # Like Firestore, no id means a fresh random one.
+        return FakeDocRef(self.db, f"{self.path}/{doc_id or uuid4().hex[:20]}")
 
 
 class FakeTransaction:

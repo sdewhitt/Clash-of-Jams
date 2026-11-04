@@ -161,6 +161,23 @@ def test_a_rejected_run_does_not_count_as_playing(client, fake_db, me) -> None:
     assert rate(client, 5).status_code == 403
 
 
+def test_one_rejected_run_does_not_hide_an_accepted_one(client, fake_db, me) -> None:
+    add_user(fake_db, me)
+    add_run(fake_db, me, validation="rejected")
+    add_run(fake_db, me, validation="accepted")
+    add_scenario(fake_db)
+
+    assert rate(client, 5).status_code == 200
+
+
+def test_a_pending_run_counts_as_playing(client, fake_db, me) -> None:
+    add_user(fake_db, me)
+    add_run(fake_db, me, validation="pending")
+    add_scenario(fake_db)
+
+    assert rate(client, 5).status_code == 200
+
+
 def test_banned_users_cannot_rate(client, fake_db, me) -> None:
     add_user(fake_db, me, banned=True)
     add_run(fake_db, me)
