@@ -1,7 +1,7 @@
-import { doc, runTransaction, arrayUnion, getDoc, collection, setDoc, increment, arrayRemove } from 'firebase/firestore'
+import { doc, runTransaction, arrayUnion, getDoc, collection, setDoc, increment, arrayRemove, updateDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { COLLECTIONS, newCommunity, communityMembersPath, newCommunityMembership, communityAnnouncementsPath, newCommunityAnnouncement } from "@/lib/schema/collections";
-import type { CommunityMembership } from "@/lib/schema/types";
+import type { CommunityMembership, CommunityRole } from "@/lib/schema/types";
 import { getPublicProfile } from '@/lib/profile/publicProfile'
 
 export async function getCommunityMembership(communityId: string, uid: string): Promise<CommunityMembership | null> {
@@ -16,7 +16,7 @@ export async function getCommunityMembership(communityId: string, uid: string): 
     return null;
 }
 
-export async function joinCommunity(communityId: string, uid: string) {
+export async function joinCommunity(communityId: string, uid: string, userDisplayName: string) {
     await getPublicProfile(uid);
 
     const userRef = doc(db, COLLECTIONS.users, uid);
@@ -34,7 +34,7 @@ export async function joinCommunity(communityId: string, uid: string) {
         transaction.update(userRef, {communities: arrayUnion(communityId)});
         transaction.update(publicRef, {communities: arrayUnion(communityId)});
         transaction.update(communityRef, {memberCount: increment(1)});
-        transaction.set(communityMemberRef, newCommunityMembership({uid, communityId, role: 'member'}));
+        transaction.set(communityMemberRef, newCommunityMembership({uid, communityId, userDisplayName: userDisplayName, role: 'member'}));
     })
 }
 
@@ -60,7 +60,7 @@ export async function leaveCommunity(communityId: string, uid: string) {
     })
 }
 
-export async function createCommunity(communityIcon: string, communityName: string, communityDescription: string, uid: string, isPublic: boolean) {
+export async function createCommunity(communityIcon: string, communityName: string, communityDescription: string, uid: string, displayName: string, isPublic: boolean) {
     await getPublicProfile(uid);
 
     if (communityIcon.trim().length === 0) {
@@ -112,7 +112,7 @@ export async function createCommunity(communityIcon: string, communityName: stri
                 transaction.update(userRef, {communities: arrayUnion(communityId)})
             }
             transaction.set(communityRef, newCommunity({id: communityId, name: communityName.trim(), communityIcon: communityIcon.trim(), ownerUid: uid, description: communityDescription.trim(), isPublic: isPublic}));
-            transaction.set(communityMemberRef, newCommunityMembership({uid: uid, communityId: communityId, role: 'owner'}));
+            transaction.set(communityMemberRef, newCommunityMembership({uid: uid, userDisplayName: displayName, communityId: communityId, role: 'owner'}));
         }
     })
 
@@ -124,4 +124,10 @@ export async function createCommunity(communityIcon: string, communityName: stri
     }));
 
     return communityId;
+}
+
+export async function updateCommunityMemberRole( communityId: string, memberUid: string, role: CommunityRole ) {
+    const memberRef = doc(db, communityMembersPath(communityId), memberUid);
+
+    await updateDoc(memberRef, { role, });
 }
