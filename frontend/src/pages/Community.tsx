@@ -1,16 +1,19 @@
 import { useNavigate, useParams } from "react-router";
 import { useAuth } from "@/lib/auth/useAuth";
+import { apiFetch } from "@/lib/api";
 import { BackButton } from "@/components/BackButton";
 import { ProfileButton } from "@/components/ProfileButton";
 import { NotificationButton } from "@/components/NotificationButton";
 import { LiveElo } from "@/components/LiveElo";
 import { useEffect, useState } from "react";
-import type { Community, CommunityMembership, CommunityRole, } from "@/lib/schema/types";
+import { INSTRUMENTS, type Community, type CommunityMembership, type CommunityRole, type Instrument, } from "@/lib/schema/types";
 import { updateCommunityMemberRole } from "@/lib/communities/communityManagement";
 import { deleteCommunityNotification, subscribeCommunityNotifications, type CommunityNotification } from "@/lib/communities/communityNotifications";
 import { getCommunityInformation } from "@/lib/communities/communitySearch";
 import { processImage } from "@/lib/profile/userProfile";
 import { CreateCommunityAnnouncement } from "@/components/CreateCommunityAnnouncement";
+import type { LeaderboardResponse } from "@/lib/leaderboards";
+import { LeaderboardRow, LeaderboardStat, MyStanding } from "@/components/Leaderboard";
 
 type CommunitySections =
     | "announcements"
@@ -44,6 +47,20 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
     const [uploading, setUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const [instrument, setInstrument] = useState<Instrument>("piano");
+
+    const [loadedLeaderboard, setLoadedLeaderboard] = useState<{
+        instrument: Instrument;
+        board: LeaderboardResponse | null;
+    } | null>(null);
+
+    const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+
+    const currentLeaderboard =
+        loadedLeaderboard?.instrument === instrument
+            ? loadedLeaderboard.board
+            : null;
 
     const [showNotificationCreation, setShowNotificationCreation] = useState(false);
     const [notifications, setNotifications] = useState<CommunityNotification[]>([]);
@@ -133,6 +150,45 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
         };
     
     }, [selectedSetting, community.id, memberRole]);
+
+    useEffect(() => {
+        if (selectedSetting !== "elos") {
+            return;
+        }
+    
+        let cancelled = false;
+    
+        setLoadedLeaderboard(null);
+        setLeaderboardError(null);
+    
+        apiFetch<LeaderboardResponse>(
+            `/leaderboards/communities/${community.id}/elo?instrument=${instrument}`
+        )
+            .then((board) => {
+                if (!cancelled) {
+                    setLoadedLeaderboard({
+                        instrument,
+                        board
+                    });
+                }
+            })
+            .catch((error) => {
+                console.error("Failed to load community leaderboard:", error);
+    
+                if (!cancelled) {
+                    setLeaderboardError(
+                        error instanceof Error
+                            ? error.message
+                            : "Failed to load community leaderboard."
+                    );
+                }
+            });
+    
+        return () => {
+            cancelled = true;
+        };
+    
+    }, [selectedSetting, community.id, instrument]);
 
     switch(selectedSetting) {
         case "announcements":
@@ -251,98 +307,192 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
             );
         case "elos":
             return (
-                <div className="w-full h-full rounded-lg border-2 border-ink inset-shadow-sm">
-                    Stupid
+                <div className="
+                    w-full h-full
+                    rounded-lg
+                    border-2 border-ink
+                    inset-shadow-sm
+                    flex flex-col
+                    overflow-hidden
+                ">
+                    <header className="
+                        flex 
+                        items-center 
+                        justify-between
+                        gap-4
+                        border-b-2 border-line
+                        bg-linear-to-r
+                        from-accent-start
+                        via-accent-middle
+                        to-accent-end
+                        p-4
+                    ">
+                        <div>
+                            <h2 className="text-2xl font-bold text-ink">
+                                Community ELO Rankings
+                            </h2>
+        
+                            <p className="text-sm text-inverse-ink">
+                                Compete against members of {community.name}
+                            </p>
+                        </div>
+        
+                        <div className="flex items-center gap-3">
+                            {currentLeaderboard && (
+                                <span className="text-sm text-ink">
+                                    {currentLeaderboard.totalPlayers} ranked players
+                                </span>
+                            )}
+        
+                            <select
+                                value={instrument}
+                                onChange={(e) =>
+                                    setInstrument(e.target.value as Instrument)
+                                }
+                                aria-label="Instrument"
+                                className="
+                                    rounded-lg
+                                    border-2 border-contrast-start
+                                    bg-inverse-ink
+                                    px-3 py-2
+                                    text-ink
+                                    capitalize
+                                "
+                            >
+                                {INSTRUMENTS.map((name) => (
+                                    <option key={name} value={name}>
+                                        {name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </header>
+        
+                    <div className="
+                        flex-1 min-h-0
+                        overflow-y-auto
+                        bg-linear-to-br
+                        from-accent-start
+                        via-accent-middle
+                        to-accent-end
+                        p-4
+                    ">
+                        {leaderboardError ? (
+                            <p className="py-8 text-center text-ink">
+                                {leaderboardError}
+                            </p>
+                        ) : currentLeaderboard === null ? (
+                            <p className="py-8 text-center text-ink">
+                                Loading community leaderboard...
+                            </p>
+                        ) : currentLeaderboard.entries.length === 0 ? (
+                            <p className="py-8 text-center text-ink">
+                                No ranked {instrument} players in this community yet.
+                            </p>
+                        ) : (
+                            <ul className="flex flex-col gap-3">
+                                {currentLeaderboard.entries.map((entry) => (
+                                    <LeaderboardRow
+                                        key={entry.uid}
+                                        entry={entry}
+                                        highlighted={entry.uid === activeUid}
+                                    >
+                                        <LeaderboardStat label="ELO">
+                                            {Math.round(entry.key)}
+                                        </LeaderboardStat>
+        
+                                        <LeaderboardStat label="Tier">
+                                            <span className="capitalize">
+                                                {entry.skillRating?.tier ?? "—"}
+                                            </span>
+                                        </LeaderboardStat>
+        
+                                        <LeaderboardStat label="Games">
+                                            {entry.skillRating?.gamesPlayed ?? "—"}
+        
+                                            {entry.skillRating?.isProvisional && (
+                                                <span
+                                                    title="Provisional: fewer than 10 games played"
+                                                    className="ml-1 text-xs font-normal text-muted"
+                                                >
+                                                    (prov.)
+                                                </span>
+                                            )}
+                                        </LeaderboardStat>
+                                    </LeaderboardRow>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+        
+                    {currentLeaderboard && (
+                        <MyStanding
+                            board={currentLeaderboard}
+                            emptyMessage={`Play an online ${instrument} match to get ranked.`}
+                        />
+                    )}
                 </div>
             );
-            case "members":
-                return (
-                    <div className="w-full h-full rounded-lg border-2 border-ink inset-shadow-sm">
-                        <div className="flex flex-col overflow-y-auto overscroll-contain gap-4 m-6">
-                            {members.map((member) => {
-                                const isCommunityOwner = member.uid === community.ownerUid;
-                                const canModifyRoles = community.ownerUid === activeUid && !isCommunityOwner;
-    
-                                return (
-                                    <div
-                                        key={member.uid}
-                                        onClick={() => {
-                                            if (member.uid === activeUid) return;
-                                        
-                                            navigate(`/profile/${encodeURIComponent(member.uid)}`, {
-                                                replace: true,
-                                            });
-                                        }}
-                                        className="
-                                            rounded-lg
-                                            flex flex-row
-                                            items-center
-                                            justify-between
-                                            gap-4
-                                            bg-radial
-                                            from-accent-start
-                                            via-accent-middle
-                                            to-accent-end
-                                            py-3 px-6
-                                            cursor-pointer
-                                            transition
-                                            hover:brightness-110
-                                        "
-                                    >
-                                        <div className="flex flex-col min-w-0">
-                                            <div className="text-xl font-semibold truncate">
-                                                {member.userDisplayName}
-                                            </div>
-    
-                                            <div className="text-sm">
-                                                Member Since:{" "}
-                                                {member.joinedAt.toDate().toLocaleDateString()}
-                                            </div>
+        case "members":
+            return (
+                <div className="w-full h-full rounded-lg border-2 border-ink inset-shadow-sm">
+                    <div className="flex flex-col overflow-y-auto overscroll-contain gap-4 m-6">
+                        {members.map((member) => {
+                            const isCommunityOwner = member.uid === community.ownerUid;
+                            const canModifyRoles = community.ownerUid === activeUid && !isCommunityOwner;
+
+                            return (
+                                <div
+                                    key={member.uid}
+                                    onClick={() => {
+                                        if (member.uid === activeUid) return;
+                                    
+                                        navigate(`/profile/${encodeURIComponent(member.uid)}`, {
+                                            replace: true,
+                                        });
+                                    }}
+                                    className="
+                                        rounded-lg
+                                        flex flex-row
+                                        items-center
+                                        justify-between
+                                        gap-4
+                                        bg-radial
+                                        from-accent-start
+                                        via-accent-middle
+                                        to-accent-end
+                                        py-3 px-6
+                                        cursor-pointer
+                                        transition
+                                        hover:brightness-110
+                                    "
+                                >
+                                    <div className="flex flex-col min-w-0">
+                                        <div className="text-xl font-semibold truncate">
+                                            {member.userDisplayName}
                                         </div>
-    
-                                        {canModifyRoles ? (
-                                            <div
-                                                className="shrink-0 w-32 h-10"
-                                                onClick={(event) => event.stopPropagation()}
-                                            >
-                                                <select
-                                                    value={member.role}
-                                                    onChange={(event) =>
-                                                        handleRoleChange(
-                                                            member.uid,
-                                                            event.target.value as CommunityRole
-                                                        )
-                                                    }
-                                                    className="
-                                                        w-full h-full
-                                                        rounded-full
-                                                        border-2 border-ink
-                                                        bg-radial
-                                                        from-contrast-start
-                                                        via-contrast-middle
-                                                        to-contrast-end
-                                                        text-ink
-                                                        text-sm font-semibold
-                                                        text-center
-                                                        cursor-pointer
-                                                        outline-none
-                                                        focus:border-accent-soft
-                                                        hover:brightness-125
-                                                        transition
-                                                    "
-                                                >
-                                                    <option value="member">Member</option>
-                                                    <option value="moderator">Moderator</option>
-                                                </select>
-                                            </div>
-                                        ) : (
-                                            <div
+
+                                        <div className="text-sm">
+                                            Member Since:{" "}
+                                            {member.joinedAt.toDate().toLocaleDateString()}
+                                        </div>
+                                    </div>
+
+                                    {canModifyRoles ? (
+                                        <div
+                                            className="shrink-0 w-32 h-10"
+                                            onClick={(event) => event.stopPropagation()}
+                                        >
+                                            <select
+                                                value={member.role}
+                                                onChange={(event) =>
+                                                    handleRoleChange(
+                                                        member.uid,
+                                                        event.target.value as CommunityRole
+                                                    )
+                                                }
                                                 className="
-                                                    shrink-0
-                                                    inline-flex
-                                                    items-center
-                                                    justify-center
-                                                    h-10 w-32
+                                                    w-full h-full
                                                     rounded-full
                                                     border-2 border-ink
                                                     bg-radial
@@ -351,18 +501,46 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
                                                     to-contrast-end
                                                     text-ink
                                                     text-sm font-semibold
-                                                    capitalize
+                                                    text-center
+                                                    cursor-pointer
+                                                    outline-none
+                                                    focus:border-accent-soft
+                                                    hover:brightness-125
+                                                    transition
                                                 "
                                             >
-                                                {member.role}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                                <option value="member">Member</option>
+                                                <option value="moderator">Moderator</option>
+                                            </select>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            className="
+                                                shrink-0
+                                                inline-flex
+                                                items-center
+                                                justify-center
+                                                h-10 w-32
+                                                rounded-full
+                                                border-2 border-ink
+                                                bg-radial
+                                                from-contrast-start
+                                                via-contrast-middle
+                                                to-contrast-end
+                                                text-ink
+                                                text-sm font-semibold
+                                                capitalize
+                                            "
+                                        >
+                                            {member.role}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
-                );
+                </div>
+            );
         case "settings":
             return (
                 <div className="w-full h-full rounded-lg border-2 border-ink inset-shadow-sm">
@@ -524,10 +702,6 @@ export function UserCommunity() {
     async function handleMemberRoleChange( uid: string, role: CommunityRole ) {
         if (!community || !profile) {
             throw new Error("Community information is unavailable.");
-        }
-    
-        if (community.ownerUid !== profile.uid) {
-            throw new Error("You are not authorized to modify member roles.");
         }
     
         if (uid === community.ownerUid) {

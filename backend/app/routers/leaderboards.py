@@ -196,6 +196,125 @@ def get_scenario_leaderboard(
     )
 
 
+@router.get("/communities/{community_id}/elo", response_model=LeaderboardResponse)
+def get_community_elo_leaderboard(user: CurrentUserDep, community_id: str, instrument: Instrument, limit: Annotated[int, Query(ge=1, le=250)] = 100) -> LeaderboardResponse:
+    community_ref = db.collection("communities").document(community_id)
+
+    # Retrieve member documents of the community
+    member_docs = (
+        community_ref.collection("members")
+        .stream()
+    )
+
+    # Extract the members uids from the documents for querying skill rating
+    member_uids = [doc.id for doc in member_docs]
+
+    # Return an empty leaderboard response if there are no members (**should never occur**)
+    if not member_uids:
+        return LeaderboardResponse(
+            entries=[],
+            my_entry=None,
+            total_players=0,
+            percentile=None
+        )
+
+    # Create references to user profile information for each member
+    profile_refs = [
+        db.collection("users").document(uid)
+        for uid in member_uids
+    ]
+
+    profiles = {}
+
+    # Loop through profile references to determine whether their profile should be grabbed
+    for snap in db.get_all(profile_refs):
+        if not snap.exists:
+            continue
+
+        profile = snap.to_dict()
+
+        # Apply the same eligibility rules as the global leaderboard
+        if profile.get("isBanned", False):
+            continue
+
+        if profile.get("isSocialRestricted", False):
+            continue
+
+        # Private profiles only see themselves
+        if not profile.get("isProfilePublic", False):
+            if snap.id != user.uid:
+                continue
+
+        profiles[snap.id] = profile
+
+    # Retrieve the corresponding skill ratings for each valid user
+    rating_refs = [
+        db.collection("users")
+        .document(uid)
+        .collection("skillRatings")
+        .document(instrument)
+        for uid in profiles
+    ]
+
+    ratings: list[SkillRating] = []
+
+    for snap in db.get_all(rating_refs):
+        if not snap.exists:
+            continue
+
+        ratings.append(SkillRating(**snap.to_dict()))
+
+    # Sort users by their current elo ranking
+    ratings.sort(
+        key=lambda rating: rating.elo,
+        reverse=True
+    )
+
+    # Construct leaderboard entries list
+    leaderboard_entries: list[LeaderboardEntry] = []
+
+    my_entry = None
+    position = 0
+    rank = 1
+    prev_elo = None
+
+    for rating in ratings:
+
+        profile = profiles[rating.uid]
+
+        if prev_elo is not None and rating.elo != prev_elo:
+            rank = position + 1
+
+        entry = LeaderboardEntry(
+            uid=rating.uid,
+            display_name=profile["displayName"],
+            ranking=rank,
+            key=rating.elo,
+            skill_rating=rating
+        )
+
+        if rating.uid == user.uid:
+            my_entry = entry
+
+        leaderboard_entries.append(entry)
+
+        position += 1
+        prev_elo = rating.elo
+
+    # Calculate user percentile in leaderboard
+    percentile = None
+
+    if my_entry is not None and position > 0:
+        percentile = my_entry.ranking / position
+
+    # Return the compiled leaderboard response
+    return LeaderboardResponse(
+        entries=leaderboard_entries[:limit],
+        my_entry=my_entry,
+        total_players=position,
+        percentile=percentile
+    )
+
 def _as_utc(value: datetime | None) -> datetime | None:
     """Treat a timezone-less query param as UTC, so it can be compared with Firestore timestamps."""
     if value is not None and value.tzinfo is None:
