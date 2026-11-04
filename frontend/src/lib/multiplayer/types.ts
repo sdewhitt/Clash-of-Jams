@@ -16,6 +16,7 @@ export interface SessionPlayer {
   reconnectUntilMs: number | null
   score: number
   beatsHit: number
+  allowSpectators?: boolean
 }
 
 export interface SessionSnapshot {
@@ -37,7 +38,7 @@ export interface SessionSnapshot {
   beatMs: number
   totalBeats: number
   participants: SessionPlayer[]
-  messages: { id: number; uid: string; text: string; atMs: number }[]
+  messages: { id: number; uid: string; text: string; atMs: number; system?: boolean; reactions?: Record<string, number> }[]
   finalizing: boolean
   completionReason: string | null
   ratingEvents: (Omit<RatingEvent, 'appliedAt'> & { appliedAt: string })[]
@@ -46,7 +47,8 @@ export interface SessionSnapshot {
 export interface SessionEvent {
   eventId: string
   sequence: number
-  kind: 'ready' | 'demo_hit' | 'emote' | 'resign'
+  kind: 'ready' | 'demo_hit' | 'emote' | 'resign' | 'spectating'
+  allowSpectators?: boolean
   phrase?: (typeof PRESET_MESSAGES)[number]['id']
 }
 

@@ -1,4 +1,4 @@
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
+import { deleteDoc, doc, getDoc, setDoc, Timestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { describe, it } from 'vitest'
 
 import { ALICE, as, assertFails, assertSucceeds, BOB, seed, setupRulesEnv } from './env.ts'
@@ -33,5 +33,43 @@ describe('server-owned multiplayer state', () => {
     await assertFails(updateDoc(doc(db, match), { state: 'complete', winnerUid: ALICE }))
     await assertFails(deleteDoc(doc(db, match)))
     await assertFails(setDoc(doc(db, 'matches/forged'), { participantUids: [ALICE, BOB] }))
+  })
+})
+
+describe('friendship consent for spectators', () => {
+  it('requires the recipient to accept and create the friendship atomically', async () => {
+    const sender = as(env(), ALICE)
+    const recipient = as(env(), BOB)
+    const key = ALICE + '_' + BOB
+    const request = 'friendRequests/' + key
+    const friendship = 'friendships/' + key
+    const data = {
+      id: key,
+      uidA: ALICE,
+      uidB: BOB,
+      friends: [ALICE, BOB],
+      uidAWins: 0,
+      uidBWins: 0,
+      totalFriendlies: 0,
+      matchHistory: [],
+      createdAt: Timestamp.now(),
+    }
+    await assertSucceeds(setDoc(doc(sender, request), {
+      potentialFriends: [ALICE, BOB],
+      initiatorUid: ALICE,
+      status: 'pending',
+      createdAt: Timestamp.now(),
+    }))
+    await assertFails(setDoc(doc(sender, friendship), data))
+    await assertFails(updateDoc(doc(recipient, request), { status: 'accepted' }))
+
+    function accept(db: typeof sender) {
+      const batch = writeBatch(db)
+      batch.update(doc(db, request), { status: 'accepted' })
+      batch.set(doc(db, friendship), data)
+      return batch.commit()
+    }
+    await assertFails(accept(sender))
+    await assertSucceeds(accept(recipient))
   })
 })
