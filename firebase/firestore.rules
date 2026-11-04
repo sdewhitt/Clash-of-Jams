@@ -513,6 +513,16 @@ service cloud.firestore {
         allow create: if isSelf(request.resource.data.announcerUid) && canPostAnnouncement(communityId, request.resource.data.announcerUid);
         allow update, delete: if signedIn() || isAdmin();
       }
+
+      match /requests/{requestId} {
+        allow read, create, update, delete: if signedIn() 
+          && (
+            isSelf(request.resource.data.memberUid)
+            || isSelf(request.resource.data.outsiderUid) 
+            || isSelf(get(/databases/$(database)/documents/communities/$(communityId)).data.ownerUid) 
+            || isAdmin()
+          );
+      }
     }
 
     match /playlists/{playlistId} {

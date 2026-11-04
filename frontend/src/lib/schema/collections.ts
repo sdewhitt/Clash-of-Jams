@@ -41,6 +41,7 @@ import type {
   MatchInvitation,
   CommunityAnnouncement,
   CommunityRole,
+  CommunityRequest,
 } from './types.ts'
 
 /** Bumped whenever a document shape changes in a way that needs a migration. */
@@ -96,6 +97,9 @@ export const communityMembersPath = (communityId: string) =>
 
 export const communityAnnouncementsPath = (communityId: string) =>
   `${COLLECTIONS.communities}/${communityId}/announcements`
+
+export const communityRequestsPath = (communityId: string) =>
+  `${COLLECTIONS.communities}/${communityId}/requests`
 
 export const playlistItemsPath = (playlistId: string) =>
   `${COLLECTIONS.playlists}/${playlistId}/items`
@@ -445,7 +449,7 @@ export function newScenarioTheme(args: {
   }
 }
 
-export function newFriendRequests(args: {
+export function newFriendRequest(args: {
   uidOne: string
   uidTwo: string
   initiatorUid: string
@@ -525,6 +529,20 @@ export function newCommunityAnnouncement(args: {
     announcement: args.announcement,
     announcementViewers: args.announcementViewers,
     postedAt: serverTimestamp(),
+  }
+}
+
+export function newCommunityRequest(args: {
+  memberUid: string
+  outsiderUid: string
+  requestType: string
+}): WithFieldValue<CommunityRequest> {
+  return {
+    memberUid: args.memberUid,
+    outsiderUid: args.outsiderUid,
+    requestType: args.requestType,
+    status: 'pending',
+    createdAt: serverTimestamp(),
   }
 }
 

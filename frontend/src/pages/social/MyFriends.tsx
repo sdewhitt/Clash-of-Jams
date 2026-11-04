@@ -240,6 +240,7 @@ export function MyFriends() {
                                 <UserSearchResult
                                     key={friend.uid}
                                     profile={friend}
+                                    communitySearch={false}
                                 />
                             ))}
                         </div>

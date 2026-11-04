@@ -14,6 +14,7 @@ import { processImage } from "@/lib/profile/userProfile";
 import { CreateCommunityAnnouncement } from "@/components/CreateCommunityAnnouncement";
 import type { LeaderboardResponse } from "@/lib/leaderboards";
 import { LeaderboardRow, LeaderboardStat, MyStanding } from "@/components/Leaderboard";
+import { CommunityInviteCard } from "@/components/CommunityInviteCard";
 
 type CommunitySections =
     | "announcements"
@@ -67,6 +68,8 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
     const [notifications, setNotifications] = useState<CommunityNotification[]>([]);
     const [notificationsLoading, setNotificationsLoading] = useState(false);
     const [notificationsError, setNotificationsError] = useState<string | null>(null);
+
+    const [showInviteMembers, setShowInviteMembers] = useState(false);
 
     const currentMembership = members.find(
         (member) => member.uid === activeUid
@@ -309,9 +312,9 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
                                             rounded-lg
                                             border border-line
                                             bg-radial
-                                            from-accent-start
-                                            via-accent-middle
-                                            to-accent-end
+                                            from-contrast-start
+                                            via-contrast-middle
+                                            to-contrast-end
                                             text-lg font-semibold
                                             hover:brightness-110
                                             hover:scale-101
@@ -492,6 +495,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
                                         from-accent-start
                                         via-accent-middle
                                         to-accent-end
+                                        border border-line
                                         py-3 px-6
                                         cursor-pointer
                                         transition
@@ -569,7 +573,34 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
                                 </div>
                             );
                         })}
+                        <button
+                            type="button"
+                            onClick={() => setShowInviteMembers(true)}
+                            className={`
+                                rounded-lg
+                                border border-line
+                                bg-radial
+                                from-contrast-start
+                                via-contrast-middle
+                                to-contrast-end
+                                text-lg font-semibold
+                                hover:brightness-110
+                                active:brightness-90
+                                active:scale-99
+                                p-2
+                            `}
+                        >
+                            + Invite Users to {community.name}
+                        </button>
                     </div>
+                    {showInviteMembers && (
+                        <CommunityInviteCard
+                            communityId={community.id}
+                            searcherUid={activeUid}
+                            members={members}
+                            onClose={() => setShowInviteMembers(false)}
+                        />
+                    )}
                 </div>
             );
         case "settings":

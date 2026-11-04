@@ -332,6 +332,7 @@ export function FindFriends() {
                                         <UserSearchResult
                                             key={profile.uid}
                                             profile={profile}
+                                            communitySearch={false}
                                         />
                                     ))}
                                 </div>
@@ -348,6 +349,7 @@ export function FindFriends() {
                                             <UserSearchResult
                                                 key={profile.uid}
                                                 profile={profile}
+                                                communitySearch={false}
                                             />
                                         ))}
                                     </div>

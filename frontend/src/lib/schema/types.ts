@@ -73,8 +73,9 @@ export type ReportState = (typeof REPORT_STATES)[number]
 export const INVITATION_STATES = ['pending', 'accepted', 'declined', 'expired', 'cancelled'] as const
 export type InvitationState = (typeof INVITATION_STATES)[number]
 
-export const FRIENDSHIP_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
-export type FriendshipState = (typeof FRIENDSHIP_STATES)[number]
+export const REQUEST_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
+export type FriendshipState = (typeof REQUEST_STATES)[number]
+export type  CommunityState = (typeof REQUEST_STATES)[number]
 
 export const COMMUNITY_ROLES = ['owner', 'moderator', 'member'] as const
 export type CommunityRole = (typeof COMMUNITY_ROLES)[number]
@@ -518,6 +519,13 @@ export interface CommunityAnnouncement {
   postedAt: Timestamp
 }
 
+export interface CommunityRequest {
+  memberUid: string
+  outsiderUid: string
+  requestType: string
+  status: CommunityState
+  createdAt: Timestamp
+}
 
 /** playlists/{playlistId} */
 export interface Playlist {
