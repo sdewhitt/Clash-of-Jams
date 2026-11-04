@@ -6,18 +6,10 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { saveCachedSearch, type ScenarioWithAuthor } from '@/lib/scenarios/searchCache'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { stubApi } from '@/test/api'
 import { renderWithAuth, signedIn } from '@/test/render'
-
-const FILTER_BOUNDS = {
-  minPlays: 0,
-  maxPlays: 10,
-  minRating: 0,
-  maxRating: 5,
-  minDifficulty: 1,
-  maxDifficulty: 10,
-}
 
 function scenario(id: string, title: string, authorName: string) {
   return {
@@ -82,6 +74,7 @@ vi.mock('@/components/LiveElo', () => ({
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  localStorage.clear()
 })
 
 describe('ScenarioSearch API responses', () => {

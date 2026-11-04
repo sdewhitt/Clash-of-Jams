@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import type { SampleBlock } from '@/audio/frame-processor'
 import { openAudioInput, type AudioInput } from '@/audio/input'
 import { getInstrumentProfile, keepNotesInRange, notesOutOfRange } from '@/audio/instruments'
 import {
@@ -10,6 +11,7 @@ import {
   type MidiInputConnection,
 } from '@/audio/midi-input'
 import { toPerformedNotes } from '@/audio/performance'
+import type { RunTake } from '@/audio/run-audio'
 import { pitchName } from '@/lib/chart/notes'
 import { buildTimeline } from '@/lib/play/timeline'
 import {
@@ -40,6 +42,10 @@ export interface FinishedRun extends PlayerSetup {
   performed: PerformedNote[]
   result: ScoreResult
   explanation: ScoreExplanation
+  /** What was captured of the player, for exporting the run's audio. */
+  take?: RunTake
+  /** From beat 0 to the moment the run ended. */
+  durationMs?: number
 }
 
 type ScenarioPlayerProps = {
@@ -61,6 +67,8 @@ interface Session {
   startTime: number
   microphone: AudioInput | null
   midi: MidiInputConnection | null
+  /** Everything the microphone heard, kept so the run's audio can be exported. */
+  blocks: SampleBlock[]
   animationFrame: number
 }
 
@@ -197,6 +205,7 @@ export function ScenarioPlayer({
     const context = new AudioContext({ latencyHint: 'interactive' })
     let microphone: AudioInput | null = null
     let midi: MidiInputConnection | null = null
+    const blocks: SampleBlock[] = []
     // startTime is set below, once we know when the count-in begins.
     let startTime = 0
 
@@ -208,6 +217,7 @@ export function ScenarioPlayer({
           context,
           analyzer: profile.analyzer,
           segmenter: profile.segmenter,
+          onSamples: (block) => blocks.push(block),
           onNote: (note) => {
             for (const performed of toPerformedNotes([note], startTime, latencyMs)) {
               addLiveNote(performed)
@@ -247,7 +257,7 @@ export function ScenarioPlayer({
       microphone?.takeNotes()
       midi?.start(audioTimeToPerformanceMs(context, startTime) + latencyMs)
 
-      session.current = { context, startTime, microphone, midi, animationFrame: 0 }
+      session.current = { context, startTime, microphone, midi, blocks, animationFrame: 0 }
       tick()
     } catch (e) {
       setError(errorMessage(e))
@@ -275,12 +285,23 @@ export function ScenarioPlayer({
     const current = session.current
     if (!current) return
 
+    const durationMs = Math.max(0, (current.context.currentTime - current.startTime) * 1000)
     let performed: PerformedNote[] = []
+    let take: RunTake | undefined
     if (current.microphone) {
       performed = toPerformedNotes(current.microphone.takeNotes(), current.startTime, latencyMs)
+      take = {
+        kind: 'microphone',
+        blocks: current.blocks,
+        sampleRate: current.context.sampleRate,
+        beatZeroTime: current.startTime,
+        latencyMs,
+      }
     }
     if (current.midi) {
       performed = current.midi.takeNotes()
+      // Everything pressed is heard in the export, even notes the scoring range drops.
+      take = { kind: 'midi', notes: performed }
     }
     performed = keepNotesInRange(performed, profile)
     stopSession()
@@ -288,7 +309,8 @@ export function ScenarioPlayer({
 
     const result = scorePerformance({ expected, tempoMap, performed, rules })
     const explanation = explainScore({ result, expected, rules })
-    onFinish({ instrument, inputKind, midiDeviceId, performed, result, explanation })
+    onFinish({ instrument, inputKind, midiDeviceId, performed, result, explanation, take, durationMs })
+    // From seth branch before merge: onFinish({ instrument, performed, result, explanation, take, durationMs })
   }
 
   const playing = elapsedMs !== null

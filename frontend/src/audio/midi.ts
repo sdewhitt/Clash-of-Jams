@@ -15,17 +15,8 @@ export interface AnswerKey {
  */
 export function answerKeyFromMidi(bytes: ArrayBuffer | ArrayLike<number>): AnswerKey {
   const midi = new Midi(bytes)
-  const { ppq, tempos, timeSignatures } = midi.header
-  const latest = <T extends { ticks: number }>(events: T[], ticks: number) =>
-    events.filter((e) => e.ticks <= ticks).at(-1)
-
-  const changes = new Set([0, ...tempos.map((t) => t.ticks), ...timeSignatures.map((t) => t.ticks)])
-  const tempoMap = [...changes]
-    .sort((a, b) => a - b)
-    .map((ticks) => {
-      const [timeSigNum, timeSigDen] = latest(timeSignatures, ticks)?.timeSignature ?? [4, 4]
-      return { atBeat: ticks / ppq, bpm: latest(tempos, ticks)?.bpm ?? 120, timeSigNum, timeSigDen }
-    })
+  const { ppq } = midi.header
+  const tempoMap = tempoMapFromMidi(midi)
 
   const expected = midi.tracks
     .flatMap((track) => track.notes)
@@ -39,6 +30,25 @@ export function answerKeyFromMidi(bytes: ArrayBuffer | ArrayLike<number>): Answe
     }))
   if (expected.length === 0) throw new Error('The MIDI file has no notes.')
   return { expected, tempoMap }
+}
+
+/**
+ * The file's tempo and time-signature changes as a chart tempo map, in quarter-note beats.
+ * MIDI stores tempo as whole microseconds per beat, so bpm is rounded back off that grid.
+ */
+export function tempoMapFromMidi(midi: Midi): TempoMapEntry[] {
+  const { ppq, tempos, timeSignatures } = midi.header
+  const latest = <T extends { ticks: number }>(events: T[], ticks: number) =>
+    events.filter((e) => e.ticks <= ticks).at(-1)
+
+  const changes = new Set([0, ...tempos.map((t) => t.ticks), ...timeSignatures.map((t) => t.ticks)])
+  return [...changes]
+    .sort((a, b) => a - b)
+    .map((ticks) => {
+      const [timeSigNum, timeSigDen] = latest(timeSignatures, ticks)?.timeSignature ?? [4, 4]
+      const bpm = Math.round((latest(tempos, ticks)?.bpm ?? 120) * 1000) / 1000
+      return { atBeat: ticks / ppq, bpm, timeSigNum, timeSigDen }
+    })
 }
 
 /** Pitch-bend range assumed by General MIDI players, in semitones. */

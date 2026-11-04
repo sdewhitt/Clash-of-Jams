@@ -7,7 +7,7 @@
  */
 import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { EDITOR_LIMITS, addNote } from '@/lib/chart/edits'
 import {
@@ -105,6 +105,7 @@ describe('saving a new scenario', () => {
     renderEditor()
 
     await userEvent.type(screen.getByLabelText('Title'), 'Chromatic Warmup')
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
     fireEvent.change(screen.getByLabelText('Tempo (BPM)'), { target: { value: '90' } })
     fireEvent.pointerDown(screen.getByRole('application'), { button: 0, ...at(2, 60) })
     await userEvent.click(screen.getByRole('button', { name: 'Save Scenario' }))
@@ -173,6 +174,87 @@ describe('saving a new scenario', () => {
   })
 })
 
+describe('toolbar drawers', () => {
+  it('keeps the settings out of the way until a toolbar button opens them', async () => {
+    renderEditor()
+
+    expect(screen.getByRole('application')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Tempo (BPM)')).not.toBeInTheDocument()
+
+    const details = screen.getByRole('button', { name: 'Details' })
+    await userEvent.click(details)
+    expect(details).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('region', { name: 'Details' })).toBeInTheDocument()
+
+    // One drawer at a time: opening Tempo closes Details.
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Tempo (BPM)')).toHaveValue(120)
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByLabelText('Tempo (BPM)')).not.toBeInTheDocument()
+  })
+
+  it('closes a drawer from its close button', async () => {
+    renderEditor()
+
+    await userEvent.click(screen.getByRole('button', { name: 'File' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Close File' }))
+
+    expect(screen.queryByRole('button', { name: 'Export MIDI' })).not.toBeInTheDocument()
+  })
+})
+
+describe('sheet music view', () => {
+  beforeEach(() => localStorage.clear())
+  afterEach(() => localStorage.clear())
+
+  it('shows the same notes as sheet music, and edits there reach the save', async () => {
+    vi.mocked(saveScenarioDraft).mockResolvedValue({
+      scenarioId: 'abc',
+      versionId: 'abc-v1',
+      versionNumber: 1,
+    })
+    renderEditor()
+    fireEvent.pointerDown(screen.getByRole('application'), { button: 0, ...at(0, 60) })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sheet Music' }))
+
+    expect(screen.getByRole('application')).toHaveAccessibleName('Sheet music, 1 note placed')
+    expect(screen.getByRole('button', { name: 'C4 at beat 0' })).toBeInTheDocument()
+
+    fireEvent.keyDown(screen.getByRole('application'), { key: 'e' })
+    await userEvent.type(screen.getByLabelText('Title'), 'Two Notes')
+    await userEvent.click(screen.getByRole('button', { name: 'Save Scenario' }))
+
+    const { draft } = vi.mocked(saveScenarioDraft).mock.calls[0][0]
+    expect(draft.chart.parts[0].notes.map((note) => note.midiPitch)).toEqual([60, 64])
+  })
+
+  it('remembers the chosen view', async () => {
+    const { unmount } = renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Sheet Music' }))
+    unmount()
+
+    renderEditor()
+
+    expect(screen.getByRole('button', { name: 'Sheet Music' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('sets the key signature the sheet music is written in', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
+
+    await userEvent.selectOptions(screen.getByLabelText('Key signature'), '-2')
+
+    expect(screen.getByRole('button', { name: /^Tempo/ })).toHaveTextContent('B♭')
+  })
+})
+
 describe('reopening a saved scenario', () => {
   it('restores the notes and metadata that were saved', async () => {
     vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
@@ -181,10 +263,12 @@ describe('reopening a saved scenario', () => {
     expect(screen.getByText('Loading scenario...')).toBeInTheDocument()
     expect(await screen.findByLabelText('Title')).toHaveValue('Chromatic Warmup')
     expect(loadScenario).toHaveBeenCalledWith('abc')
+    await userEvent.click(screen.getByRole('button', { name: 'Details' }))
     expect(screen.getByLabelText('Description')).toHaveValue('Four bars, slowly.')
     expect(screen.getByLabelText('Instrument')).toHaveValue('guitar')
     expect(screen.getByLabelText('Visibility')).toHaveValue('public')
     expect(screen.getByLabelText(/Difficulty/)).toHaveValue('6')
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
     expect(screen.getByLabelText('Tempo (BPM)')).toHaveValue(90)
     expect(screen.getByText(/^2 notes · 90 BPM · 4\/4/)).toBeInTheDocument()
     expect(screen.getByTitle(/^C4 at beat 0$/)).toBeInTheDocument()

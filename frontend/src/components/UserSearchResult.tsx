@@ -17,9 +17,9 @@ export default function UserSearchResult({ profile, }: UserSearchResultProps) {
 
         case "friendOfFriend":
             return `${profile.mutualFriendCount} mutual ${
-            profile.mutualFriendCount === 1
-                ? "friend"
-                : "friends"
+                profile.mutualFriendCount === 1
+                    ? "friend"
+                    : "friends"
             }`;
 
         default:
@@ -64,7 +64,7 @@ export default function UserSearchResult({ profile, }: UserSearchResultProps) {
                 <div
                 className="
                     flex h-12 w-12 shrink-0 items-center
-                    justify-center rounded-full bg-base
+                    justify-center rounded-full bg-accent-base-start
                     text-lg font-semibold text-ink
                 "
                 >

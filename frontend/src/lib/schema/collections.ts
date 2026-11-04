@@ -20,6 +20,7 @@ import type {
   NoteChart,
   Playlist,
   RecordingShare,
+  ScoreShare,
   Run,
   Scenario,
   ScenarioReview,
@@ -65,6 +66,7 @@ export const COLLECTIONS = {
   matchInvitations: 'matchInvitations',
   friendMatchInvitationLocks: 'friendMatchInvitationLocks',
   recordingShares: 'recordingShares',
+  scoreShares: 'scoreShares',
   importJobs: 'importJobs',
 } as const
 
@@ -214,6 +216,7 @@ export function newUserSettings(args: {
     publicGenres: true,
     publicElos: [],
     inputLatencyOffsetMs: 0,
+    midiLatencyOffsetMs: 0,
     masterVolume: 0.8,
     metronomeEnabled: true,
     updatedAt: serverTimestamp(),
@@ -483,7 +486,7 @@ export function newCommunity(args: {
     communityIcon: args.communityIcon,
     description: args.description ?? '',
     ownerUid: args.ownerUid,
-    members: [args.ownerUid],
+    memberCount: 1,
     announcements: [],
     isPublic: args.isPublic ?? true,
     createdAt: serverTimestamp(),
@@ -628,6 +631,29 @@ export function newRecordingShare(args: {
     mediaAssetId: args.mediaAssetId,
     caption: args.caption ?? '',
     visibility: args.visibility ?? 'private',
+    createdAt: serverTimestamp(),
+  }
+}
+
+export function newScoreShare(args: {
+  id: string
+  ownerUid: string
+  runId: string
+  scenarioId: string
+  scenarioTitle: string
+  finalScore: number
+  recipientUids: string[]
+  message?: string
+}): WithFieldValue<ScoreShare> {
+  return {
+    id: args.id,
+    ownerUid: args.ownerUid,
+    runId: args.runId,
+    scenarioId: args.scenarioId,
+    scenarioTitle: args.scenarioTitle,
+    finalScore: args.finalScore,
+    message: args.message ?? '',
+    recipientUids: args.recipientUids,
     createdAt: serverTimestamp(),
   }
 }

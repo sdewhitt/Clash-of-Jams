@@ -15,7 +15,7 @@
  *    separate documents, as the design document requires.
  */
 import type { Timestamp } from 'firebase/firestore'
-import type { PRESET_MESSAGES } from '@/lib/multiplayer/types'
+import type { PRESET_MESSAGES } from '../multiplayer/types.ts'
 
 /* ------------------------------------------------------------------ enums */
 
@@ -158,6 +158,11 @@ export interface UserSettings {
   publicElos: Instrument[]
   /** Milliseconds of input latency the gameplay engine compensates for. **/
   inputLatencyOffsetMs: number
+  /**
+   * The same for a MIDI controller, which skips the microphone and runs far lower. Calibrated
+   * from the scenario editor and subtracted from notes recorded there. Older documents lack it.
+   */
+  midiLatencyOffsetMs?: number
   masterVolume: number
   metronomeEnabled: boolean
   updatedAt: Timestamp
@@ -495,7 +500,7 @@ export interface Community {
   communityIcon: string | null
   description: string
   ownerUid: string
-  members: string[]
+  memberCount: number
   announcements: string[]
   isPublic: boolean
   createdAt: Timestamp
@@ -624,6 +629,25 @@ export interface RecordingShare {
   mediaAssetId: string
   caption: string
   visibility: Visibility
+  createdAt: Timestamp
+}
+
+/**
+ * scoreShares/{shareId} -- a run's result, sent to friends from the results screen.
+ *
+ * The title and score are copied from the scenario and run when it is sent, so a recipient
+ * sees them without reading a scenario that may be private. The rules check the copied score
+ * against the run itself, so it cannot be inflated.
+ */
+export interface ScoreShare {
+  id: string
+  ownerUid: string
+  runId: string
+  scenarioId: string
+  scenarioTitle: string
+  finalScore: number
+  message: string
+  recipientUids: string[]
   createdAt: Timestamp
 }
 
