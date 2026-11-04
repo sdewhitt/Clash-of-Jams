@@ -86,7 +86,10 @@ export default function UserSearchResult({ profile, communitySearch, communityFu
             {communitySearch ? 
                 <button
                     type="button"
-                    onClick={communityFunction}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        communityFunction;
+                    }}
                     className={`
                         rounded-lg
                         bg-linear-to-b
