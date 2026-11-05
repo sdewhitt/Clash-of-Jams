@@ -519,17 +519,30 @@ service cloud.firestore {
     // User presence
     // --------------------------------------------------
 
+    // dnd is optional: sign-up writes it, but the heartbeat's merge write can
+    // create the document on its own for accounts made before it existed.
+    function isValidUserStatus(d) {
+      return d.keys().hasAll(['lastHeartbeat'])
+        && d.keys().hasOnly(['dnd', 'lastHeartbeat'])
+        && d.get('dnd', false) is bool
+        && d.lastHeartbeat is timestamp;
+    }
+
     match /userStatus/{uid} {
       allow read: if signedIn();
 
       allow create: if isSelf(uid)
-          && request.resource.data.keys().hasOnly(['lastHeartbeat'])
+          && isValidUserStatus(request.resource.data)
           && request.resource.data.lastHeartbeat == request.time;
 
+      // The heartbeat is pinned to the server clock whenever it moves; a dnd
+      // toggle alone leaves it untouched.
       allow update: if isSelf(uid)
+          && isValidUserStatus(request.resource.data)
           && request.resource.data.diff(resource.data)
-              .affectedKeys().hasOnly(['lastHeartbeat'])
-          && request.resource.data.lastHeartbeat == request.time;
+              .affectedKeys().hasOnly(['dnd', 'lastHeartbeat'])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastHeartbeat'])
+              || request.resource.data.lastHeartbeat == request.time);
 
       allow delete: if false;
     }
