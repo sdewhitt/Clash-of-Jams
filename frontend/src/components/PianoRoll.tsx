@@ -11,7 +11,7 @@
  * through onChange, and in-flight drags live in local state as a preview so a
  * half-finished gesture never reaches the draft.
  */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 
 import {
@@ -55,16 +55,28 @@ interface PianoRollProps {
   chart: NoteChart
   partId: string
   onChange: (chart: NoteChart) => void
+  /** Shows the notes without the tools, and ignores every edit gesture. */
+  readOnly?: boolean
 }
 
-export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
+export function PianoRoll({ chart, partId, onChange, readOnly = false }: PianoRollProps) {
   const [snapBeats, setSnapBeats] = useState(0.25)
   const [lengthBeats, setLengthBeats] = useState(1)
   const [selected, setSelected] = useState<number | null>(null)
   const [drag, setDrag] = useState<Drag | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
+  const scrollerRef = useRef<HTMLDivElement>(null)
 
   const notes = findPart(chart, partId)?.notes ?? []
+  const highestPitch = notes.length > 0 ? Math.max(...notes.map((n) => n.midiPitch)) : null
+
+  // A read-only roll has nothing to click, so it opens on the notes it is showing
+  // rather than on an empty stretch at the top of the range.
+  useEffect(() => {
+    if (!readOnly || highestPitch === null || !scrollerRef.current) return
+    scrollerRef.current.scrollTop = (EDITOR_LIMITS.maxPitch - highestPitch - 2) * ROW_HEIGHT
+  }, [readOnly, highestPitch])
+
   const barBeats = beatsPerBar(tempoAt(chart, 0))
   const bars = Math.max(MIN_BARS, Math.ceil((chartEndBeat(chart) + barBeats) / barBeats))
   const totalBeats = bars * barBeats
@@ -104,7 +116,7 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
   }
 
   function handleGridPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.button !== 0) return
+    if (readOnly || event.button !== 0) return
     const point = pointAt(event)
     if (!point) return
 
@@ -130,7 +142,7 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
     note: ExpectedNote,
     mode: 'move' | 'resize',
   ) {
-    if (event.button !== 0) return
+    if (readOnly || event.button !== 0) return
     event.stopPropagation()
     const point = pointAt(event)
     if (!point) return
@@ -185,7 +197,7 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (selected === null || !selectedNote) return
+    if (readOnly || selected === null || !selectedNote) return
 
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault()
@@ -208,37 +220,40 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-4">
-        <ToolbarSelect
-          id="piano-roll-snap"
-          label="Snap"
-          value={snapBeats}
-          choices={SNAP_CHOICES}
-          onChange={setSnapBeats}
-        />
-        <ToolbarSelect
-          id="piano-roll-length"
-          label="New note"
-          value={lengthBeats}
-          choices={LENGTH_CHOICES}
-          onChange={setLengthBeats}
-        />
-        <button
-          type="button"
-          disabled={selected === null}
-          onClick={() => selected !== null && deleteNote(selected)}
-          className="rounded-lg border-2 border-base-middle px-4 py-2 text-sm font-bold text-ink
+      {!readOnly && (
+        <div className="flex flex-wrap items-center gap-4">
+          <ToolbarSelect
+            id="piano-roll-snap"
+            label="Snap"
+            value={snapBeats}
+            choices={SNAP_CHOICES}
+            onChange={setSnapBeats}
+          />
+          <ToolbarSelect
+            id="piano-roll-length"
+            label="New note"
+            value={lengthBeats}
+            choices={LENGTH_CHOICES}
+            onChange={setLengthBeats}
+          />
+          <button
+            type="button"
+            disabled={selected === null}
+            onClick={() => selected !== null && deleteNote(selected)}
+            className="rounded-lg border-2 border-base-middle px-4 py-2 text-sm font-bold text-ink
             transition-colors hover:border-accent-start hover:bg-accent-base-middle
             disabled:cursor-not-allowed disabled:text-faint disabled:hover:bg-transparent"
-        >
-          Delete note
-        </button>
-        <p className="text-sm text-faint">
-          Click to place, drag to move, drag the right edge to resize, right-click to delete.
-        </p>
-      </div>
+          >
+            Delete note
+          </button>
+          <p className="text-sm text-faint">
+            Click to place, drag to move, drag the right edge to resize, right-click to delete.
+          </p>
+        </div>
+      )}
 
       <div
+        ref={scrollerRef}
         className="overflow-auto rounded-xl border-2 border-base-middle bg-base-end"
         style={{ maxHeight: 440 }}
       >
@@ -283,6 +298,7 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
               ref={gridRef}
               role="application"
               aria-label={`Note grid, ${notes.length} notes placed`}
+              aria-readonly={readOnly || undefined}
               tabIndex={0}
               className="relative shrink-0 touch-none select-none"
               style={{ width: totalBeats * BEAT_WIDTH, height: pitches.length * ROW_HEIGHT }}
@@ -317,10 +333,10 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
                     onContextMenu={(event) => {
                       event.preventDefault()
                       event.stopPropagation()
-                      deleteNote(index)
+                      if (!readOnly) deleteNote(index)
                     }}
                     title={`${pitchName(view.midiPitch)} at beat ${round(view.startBeat)}`}
-                    className={`absolute cursor-grab rounded border-2 ${
+                    className={`absolute rounded border-2 ${readOnly ? '' : 'cursor-grab'} ${
                       isSelected
                         ? 'border-ink bg-accent-start'
                         : 'border-accent-end bg-accent-base-middle'
@@ -332,10 +348,14 @@ export function PianoRoll({ chart, partId, onChange }: PianoRollProps) {
                       height: ROW_HEIGHT - 2,
                     }}
                   >
-                    <div
-                      onPointerDown={(event) => handleNotePointerDown(event, index, note, 'resize')}
-                      className="absolute top-0 right-0 h-full w-2 cursor-ew-resize"
-                    />
+                    {!readOnly && (
+                      <div
+                        onPointerDown={(event) =>
+                          handleNotePointerDown(event, index, note, 'resize')
+                        }
+                        className="absolute top-0 right-0 h-full w-2 cursor-ew-resize"
+                      />
+                    )}
                   </div>
                 )
               })}

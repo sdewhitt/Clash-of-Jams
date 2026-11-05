@@ -104,6 +104,10 @@ export function PlayScenario() {
                 const { scenario, version } = await loadScenario(id, versionId)
                 const part = version?.chart.parts.find((candidate) => candidate.notes.length > 0)
                 const notes = part?.notes ?? []
+                if (versionId && !version) {
+                    setLoadError("This version of the scenario is no longer available.")
+                    return
+                }
                 if (!version || !part || notes.length === 0) {
                     setLoadError("This scenario has no notes to play yet.")
                     return

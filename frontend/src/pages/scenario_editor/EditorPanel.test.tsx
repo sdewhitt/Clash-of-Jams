@@ -15,12 +15,13 @@ import {
   listMyScenarios,
   loadScenario,
   saveScenarioDraft,
+  ScenarioConflictError,
 } from '@/lib/scenarios/store'
 import { emptyChart } from '@/lib/schema/collections'
 import type { Scenario, ScenarioVersion } from '@/lib/schema/types'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { EditorPanel } from '@/pages/scenario_editor/EditorPanel'
-import { withOpeningTempo } from '@/pages/scenario_editor/draft'
+import { draftFromDocuments, withOpeningTempo } from '@/pages/scenario_editor/draft'
 import { LocationProbe, renderAtRoute, SIGNED_OUT, signedIn } from '@/test/render'
 
 vi.mock('@/lib/scenarios/store', () => ({
@@ -28,6 +29,7 @@ vi.mock('@/lib/scenarios/store', () => ({
   listMyScenarios: vi.fn(),
   loadScenario: vi.fn(),
   saveScenarioDraft: vi.fn(),
+  ScenarioConflictError: class extends Error {},
 }))
 
 vi.mock('@/components/NotificationButton', () => ({
@@ -101,6 +103,7 @@ describe('saving a new scenario', () => {
       scenarioId: 'abc',
       versionId: 'abc-v1',
       versionNumber: 1,
+      outcome: 'version',
     })
     renderEditor()
 
@@ -126,6 +129,7 @@ describe('saving a new scenario', () => {
       scenarioId: 'abc',
       versionId: 'abc-v1',
       versionNumber: 1,
+      outcome: 'version',
     })
     renderEditor()
 
@@ -145,6 +149,24 @@ describe('saving a new scenario', () => {
       uid: 'user-1',
       scenarioId: 'abc',
     })
+  })
+
+  it('only offers to save while the draft differs from what was saved', async () => {
+    const { scenario, version } = savedDocuments()
+    vi.mocked(loadScenario).mockResolvedValue({ scenario, version })
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+
+    const save = await screen.findByRole('button', { name: 'Save Version' })
+    expect(save).toBeDisabled()
+
+    const title = screen.getByLabelText('Title')
+    await userEvent.type(title, '!')
+    expect(save).toBeEnabled()
+
+    // Undoing the edit by hand leaves nothing new to save.
+    await userEvent.type(title, '{Backspace}')
+    expect(save).toBeDisabled()
+    expect(save).toHaveAttribute('title', 'No changes since the last save.')
   })
 
   it('reports a failed save and leaves the draft as it was', async () => {
@@ -235,6 +257,7 @@ describe('Your Library', () => {
   it('deletes a scenario after confirmation and drops it from the list', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     vi.mocked(listMyScenarios).mockResolvedValue([savedDocuments().scenario])
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
     renderEditor('/scenario_editor?tab=library&scenario=abc')
 
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Chromatic Warmup' }))
@@ -272,5 +295,108 @@ describe('Your Library', () => {
     expect(screen.getByRole('heading', { name: 'Chromatic Warmup' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete Chromatic Warmup' })).toBeEnabled()
     confirm.mockRestore()
+  })
+})
+
+describe('conflicts and recovery (user story #27)', () => {
+  const key = 'coj:scenario-draft:v1:user-1:abc'
+
+  beforeEach(() => localStorage.clear())
+
+  async function openAndEdit() {
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+    await userEvent.type(await screen.findByLabelText('Title'), '!')
+  }
+
+  it('saves against the version it loaded', async () => {
+    vi.mocked(saveScenarioDraft).mockResolvedValue({
+      scenarioId: 'abc',
+      versionId: 'abc-v3',
+      versionNumber: 3,
+      outcome: 'version',
+    })
+    await openAndEdit()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save Version' }))
+
+    expect(vi.mocked(saveScenarioDraft).mock.calls[0][0].baseVersionId).toBe('abc-v2')
+  })
+
+  it('warns about a conflict, keeps the draft, and can reload the latest', async () => {
+    vi.mocked(saveScenarioDraft).mockRejectedValue(new ScenarioConflictError())
+    await openAndEdit()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save Version' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/saved somewhere else/)
+    expect(screen.getByLabelText('Title')).toHaveValue('Chromatic Warmup!')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reload Latest' }))
+
+    expect(await screen.findByLabelText('Title')).toHaveValue('Chromatic Warmup')
+    expect(loadScenario).toHaveBeenCalledTimes(2)
+  })
+
+  it('saves a conflicting draft as a separate private copy', async () => {
+    vi.mocked(saveScenarioDraft).mockRejectedValueOnce(new ScenarioConflictError())
+    vi.mocked(saveScenarioDraft).mockResolvedValueOnce({
+      scenarioId: 'copy',
+      versionId: 'copy-v1',
+      versionNumber: 1,
+      outcome: 'version',
+    })
+    await openAndEdit()
+    await userEvent.click(screen.getByRole('button', { name: 'Save Version' }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Save as Copy' }))
+
+    const { draft, scenarioId } = vi.mocked(saveScenarioDraft).mock.calls[1][0]
+    expect(scenarioId).toBeUndefined()
+    expect(draft).toMatchObject({ title: 'Chromatic Warmup! (copy)', visibility: 'private' })
+    expect(await screen.findByTestId('location')).toHaveTextContent('scenario=copy')
+  })
+
+  function storeDraft(uid = 'user-1') {
+    const { scenario, version } = savedDocuments()
+    localStorage.setItem(
+      `coj:scenario-draft:v1:${uid}:abc`,
+      JSON.stringify({
+        draft: { ...draftFromDocuments(scenario, version), title: 'Recovered' },
+        baseVersionId: 'abc-v2',
+        savedAt: 0,
+      }),
+    )
+  }
+
+  it('offers unsaved work back after a reload, and can restore it', async () => {
+    storeDraft()
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Restore Draft' }))
+
+    expect(screen.getByLabelText('Title')).toHaveValue('Recovered')
+    expect(screen.getByRole('button', { name: 'Save Version' })).toBeEnabled()
+  })
+
+  it('can discard the offered work', async () => {
+    storeDraft()
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Discard Draft' }))
+
+    expect(screen.getByLabelText('Title')).toHaveValue('Chromatic Warmup')
+    expect(localStorage.getItem(key)).toBeNull()
+  })
+
+  it("never offers another account's draft", async () => {
+    storeDraft('someone-else')
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+
+    await screen.findByLabelText('Title')
+    expect(screen.queryByRole('button', { name: 'Restore Draft' })).not.toBeInTheDocument()
   })
 })
