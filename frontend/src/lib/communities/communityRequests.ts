@@ -1,6 +1,5 @@
-import { collection, doc, onSnapshot, runTransaction, getDoc, arrayUnion, increment } from 'firebase/firestore'
+import { collection, doc, runTransaction, getDoc, arrayUnion, increment } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { useEffect, useState } from 'react';
 import { COLLECTIONS, communityMembersPath, communityRequestsPath, newAppNotification, newCommunityMembership, newCommunityRequest } from '@/lib/schema/collections';
   
 function requestId(communityId: string, uid: string) {
