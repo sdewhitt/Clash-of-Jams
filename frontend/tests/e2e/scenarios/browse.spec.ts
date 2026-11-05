@@ -2,7 +2,7 @@ import { newScenario } from '../../../src/lib/schema/collections.js'
 import { signIn } from '../support/auth.js'
 import { test, expect } from '../support/fixtures.js'
 
-test('an owned scenario is browsable through the real authenticated API', async ({
+test('an owned scenario is browsable through the real authenticated API @smoke', async ({
   page,
   data,
   player,

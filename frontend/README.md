@@ -33,6 +33,7 @@ downgrade Firebase to an older major version.
 | `npm test`                | Component/module tests without emulators                         |
 | `npm run test:rules`      | Firestore authorization tests                                    |
 | `npm run test:e2e`        | Starts isolated emulators, API and frontend; runs browser suites |
+| `npm run test:e2e:smoke`  | Runs the `@smoke` browser tests on desktop Chromium, as PRs do   |
 | `npm run test:e2e:report` | Opens the latest browser report                                  |
 
 ## Layout
