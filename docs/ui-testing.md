@@ -52,6 +52,8 @@ npm run test:e2e
 
 The last command starts/stops both emulators and both application servers automatically. It runs desktop Chromium, desktop WebKit, and mobile Chromium. Fixed timezone/locale keep displayed dates and numbers consistent. Failures are not retried automatically.
 
+`npm run test:e2e:smoke` does the same setup but runs only the tests tagged `@smoke`, on desktop Chromium. This is what pull requests run.
+
 On the current development machine Java 21 was prepared at `/tmp/coj-jdk21/jdk-21.0.12.1+1/Contents/Home`. Set `JAVA_HOME` to that directory if your default Java is older. Prefer an installed JDK for long-term use. The machine's system Node is older than the package requirement; the Codex bundled Node 24 runtime is also available.
 
 For a focused run, keep a dedicated emulator terminal open:
@@ -79,6 +81,10 @@ Example: `tests/e2e/scenarios/browse.spec.ts` creates a private scenario with `n
 Multiplayer specs use two isolated browser contexts with the shared identity/data fixtures. They exercise the real session server, both players' rejoin paths, preset messages, resignation, the 20-second disconnect grace, and a full one-minute completion. Difficulty ranges and instruments isolate concurrently running pairs. See [multiplayer.md](multiplayer.md) for the protocol and measured load benchmark.
 
 ## Results and CI
+
+Pull requests run the `@smoke` tests on desktop Chromium. A daily scheduled run covers every browser test on all three browser setups, and the same full run can be started by hand from the Actions tab. A bug that only a non-smoke test catches therefore shows up in the daily run, after the pull request may have merged.
+
+Tag a test `@smoke` only if it covers a core path that needs the real frontend, Firebase and API together. Keep the set small, since every tag adds time to every pull request.
 
 `npm run test:e2e:report` opens the generated HTML report. `test-results/results.json` provides machine-readable results. Failed tests retain screenshots, videos and traces; unexpected browser JavaScript exceptions fail tests. The successful two-player rating test also attaches a screenshot.
 

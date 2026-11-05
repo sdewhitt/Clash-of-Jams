@@ -109,7 +109,7 @@ async function paired(
   }
 }
 
-test('shared play, presets, both players rejoin with progress, and resignation updates Elo', async ({
+test('shared play, presets, both players rejoin with progress, and resignation updates Elo @smoke', async ({
   page,
   browser,
   data,

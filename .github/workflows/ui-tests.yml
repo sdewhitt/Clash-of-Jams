@@ -7,6 +7,8 @@ on:
       - "backend/**"
       - "firebase/**"
       - ".github/workflows/ui-tests.yml"
+  schedule:
+    - cron: "0 7 * * *" # Daily. GitHub only runs schedules from the default branch.
   workflow_dispatch:
 
 permissions:
@@ -38,7 +40,7 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
-          npx playwright install --with-deps chromium webkit
+          npx playwright install --with-deps ${{ github.event_name == 'pull_request' && 'chromium' || 'chromium webkit' }}
       - name: Unit tests and build
         working-directory: frontend
         run: |
@@ -48,9 +50,10 @@ jobs:
       - name: Firestore security-rule tests
         working-directory: frontend
         run: npm run test:rules
+      # PRs run the @smoke tests on desktop Chromium. Daily and manual runs cover every test and browser.
       - name: Browser integration tests
         working-directory: frontend
-        run: npm run test:e2e
+        run: npm run ${{ github.event_name == 'pull_request' && 'test:e2e:smoke' || 'test:e2e' }}
       - name: Upload browser reports
         if: always()
         uses: actions/upload-artifact@v4

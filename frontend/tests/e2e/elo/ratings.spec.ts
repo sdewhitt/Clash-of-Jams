@@ -4,7 +4,7 @@ import { TEST_ENV } from '../support/environment.js'
 import { test, expect } from '../support/fixtures.js'
 import { prepareResult, rating } from './data.js'
 
-test('both players receive live Elo and duplicate completion applies once', async ({
+test('both players receive live Elo and duplicate completion applies once @smoke', async ({
   page,
   browser,
   data,

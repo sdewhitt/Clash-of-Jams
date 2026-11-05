@@ -3,7 +3,7 @@ import { signIn } from '../support/auth.js'
 import { TEST_ENV } from '../support/environment.js'
 import { test, expect } from '../support/fixtures.js'
 
-test('two authenticated players receive one shared lobby, refresh and leave safely', async ({
+test('two authenticated players receive one shared lobby, refresh and leave safely @smoke', async ({
   page,
   browser,
   data,
