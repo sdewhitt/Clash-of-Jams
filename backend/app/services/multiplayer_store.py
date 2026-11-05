@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 from firebase_admin import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 from app.services.matchmaking_store import MatchmakingError
 from app.services.skill_ratings import FinalMatchResult, RatingEvent, finalize_match
@@ -11,6 +12,37 @@ from app.services.skill_ratings import FinalMatchResult, RatingEvent, finalize_m
 class FirestoreSessionStore:
     def __init__(self, database):
         self.db = database
+
+    def spectator_identity(self, uid):
+        profile = self.db.collection("users").document(uid).get().to_dict()
+        if not profile or profile.get("isBanned"):
+            raise MatchmakingError("This account cannot spectate multiplayer.", 403)
+        friendships = self.db.collection("friendships").where(
+            filter=FieldFilter("friends", "array_contains", uid)
+        )
+        pairs = {}
+        for document in friendships.stream():
+            pair = document.to_dict()
+            members = (pair.get("uidA"), pair.get("uidB"))
+            if uid in members and all(isinstance(member, str) for member in members):
+                key = "_".join(sorted(members))
+                if document.id == key:
+                    pairs[key] = set(members)
+        requests = self.db.collection("friendRequests")
+        friends = set()
+        if pairs:
+            for document in self.db.get_all(requests.document(key) for key in pairs):
+                data = document.to_dict() or {}
+                members = pairs[document.id]
+                requested = data.get("potentialFriends")
+                if (
+                    data.get("status") == "accepted"
+                    and isinstance(requested, list)
+                    and len(requested) == 2
+                    and all(member in requested for member in members)
+                ):
+                    friends.update(members - {uid})
+        return profile.get("displayName") or "Spectator", friends
 
     def load(self, match_id: str, uid: str) -> dict:
         ref = self.db.collection("matches").document(match_id)

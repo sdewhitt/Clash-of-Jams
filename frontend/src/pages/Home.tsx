@@ -4,6 +4,7 @@ import { ProfileButton } from '@/components/ProfileButton'
 import { LiveElo } from '@/components/LiveElo'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useActiveMatch } from '@/lib/matchmaking/useMatchmaking'
+import { SpectateTab } from '@/components/SpectateTab'
 import { NotificationButton } from '@/components/NotificationButton'
 
 export function Home() {
@@ -56,13 +57,16 @@ export function Home() {
             <NavButton onClick={() => navPortal('/settings')}>Settings</NavButton>
           </nav>
 
-          <section className="aspect-video w-full rounded-xl border-4 border-accent-start bg-linear-to-br from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 overflow-hidden">
-            <img
-              src="../../favicon.svg"
-              alt="Clash of Jams Preview"
-              className="w-full h-full object-cover"
-            />
-          </section>
+          <div className="min-w-0 space-y-4">
+            <div className="flex justify-end"><SpectateTab uid={user?.uid} /></div>
+            <section className="aspect-video w-full rounded-xl border-4 border-accent-start bg-linear-to-br from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 overflow-hidden">
+              <img
+                src="../../favicon.svg"
+                alt="Clash of Jams Preview"
+                className="w-full h-full object-cover"
+              />
+            </section>
+          </div>
         </div>
       </div>
     </main>

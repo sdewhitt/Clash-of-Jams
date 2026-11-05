@@ -21,6 +21,7 @@ export function MultiplayerSession() {
   const navigate = useNavigate()
   const { snapshot, receivedAt, connection, error, send, retry } = useSession(matchId, user?.uid)
   const [now, setNow] = useState(() => performance.now())
+  const [copyStatus, setCopyStatus] = useState('')
   const [leaving, setLeaving] = useState(false)
   // Keep local departure intent through the HTTP response and WebSocket abandonment update.
   const leaveRequested = useRef(false)
@@ -265,6 +266,41 @@ export function MultiplayerSession() {
               )}
             </section>
             {['lobby', 'in_progress'].includes(snapshot.state) && (
+              <details
+                className="rounded-xl border-2 border-accent-start p-5"
+                open={snapshot.state === 'lobby' ? true : undefined}
+              >
+                <summary className="cursor-pointer font-bold">Match settings</summary>
+                <label className="mt-3 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={self?.allowSpectators ?? false}
+                    disabled={connection !== 'connected' || snapshot.finalizing}
+                    onChange={(event) => send('spectating', event.target.checked)}
+                  />
+                  Allow spectators
+                </label>
+                <p className="mt-1 text-sm">Both players must allow spectators.</p>
+                <button
+                  className={button + ' mt-3'}
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const path = '/spectate/' + encodeURIComponent(snapshot.id)
+                      const url = new URL(path, window.location.origin)
+                      await navigator.clipboard.writeText(url.href)
+                      setCopyStatus('Spectator link copied.')
+                    } catch {
+                      setCopyStatus('Could not copy the spectator link.')
+                    }
+                  }}
+                >
+                  Copy spectator link
+                </button>
+                <p role="status">{copyStatus}</p>
+              </details>
+            )}
+            {['lobby', 'in_progress'].includes(snapshot.state) && (
               <section
                 aria-label="Preset messages"
                 className="rounded-xl border-2 border-accent-start p-5"
@@ -292,7 +328,13 @@ export function MultiplayerSession() {
                 >
                   {snapshot.messages.map((item) => (
                     <p key={item.id}>
-                      {item.uid === user?.uid ? 'You' : 'Opponent'}: {item.text}
+                      {!item.system && (item.uid === user?.uid ? 'You: ' : 'Opponent: ')}
+                      {item.text}
+                      {Object.entries(item.reactions ?? {}).map(([reaction, count]) => (
+                        <span key={reaction} className="ml-2">
+                          {reaction} {count}
+                        </span>
+                      ))}
                     </p>
                   ))}
                 </div>

@@ -9,7 +9,9 @@ import asyncio
 import json
 import os
 from datetime import UTC, datetime
+from math import ceil
 from pathlib import Path
+from time import monotonic, time
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 from uuid import uuid4
@@ -52,9 +54,11 @@ class Client:
         self.sequence = 0
         self.snapshot = None
 
-    async def open(self):
+    async def open(self, allow_spectators=False):
         self.socket = await connect(self.url)
-        await self.socket.send(json.dumps({"token": self.token}))
+        await self.socket.send(
+            json.dumps({"token": self.token, "allowSpectators": allow_spectators})
+        )
         self.snapshot = (await self.receive())["snapshot"]
 
     async def receive(self, predicate=lambda _reply: True):
@@ -83,9 +87,90 @@ class Client:
             await self.socket.close()
 
 
-async def run(count, base_url):
+async def sustained_load(clients, viewers, seconds, slow_count, reconnect_count):
+    async def watch(url, token, index):
+        visit = uuid4().hex
+        previous_score = None
+        reconnect_at = monotonic() + max(2, seconds / 2)
+        reconnected = False
+        while True:
+            async with connect(url, max_queue=1, close_timeout=1) as socket:
+                await socket.send(json.dumps({"token": token, "visit": visit}))
+                state = json.loads(await asyncio.wait_for(socket.recv(), timeout=15))
+                assert state["state"] == "in_progress"
+                connected.add(index)
+                if reconnected:
+                    recovered.add(index)
+                if index < slow_count:
+                    # Pause application reads long enough to fill the tiny receive queue,
+                    # then drain before the WebSocket heartbeat times out.
+                    try:
+                        while True:
+                            await asyncio.sleep(15)
+                            resume_at = time() * 1000 - 2000
+                            while state["scoreUpdatedAtMs"] < resume_at:
+                                state = json.loads(await socket.recv())
+                    finally:
+                        socket.transport.abort()
+                async for raw in socket:
+                    state = json.loads(raw)
+                    score = tuple(player["beatsHit"] for player in state["players"])
+                    if previous_score is not None and score != previous_score:
+                        delays.append(max(0, time() * 1000 - state["scoreUpdatedAtMs"]))
+                    previous_score = score
+                    if (
+                        index < slow_count + reconnect_count
+                        and not reconnected
+                        and monotonic() >= reconnect_at
+                    ):
+                        reconnected = True
+                        break
+                else:
+                    raise RuntimeError("Spectator connection ended during the load run.")
+
+    connected, recovered, delays = set(), set(), []
+    tasks = [
+        asyncio.create_task(watch(url, token, index)) for index, (url, token) in enumerate(viewers)
+    ]
+    start = monotonic()
+    full_at = start if not tasks else None
+    try:
+        while full_at is None or monotonic() - full_at < seconds:
+            tick = monotonic()
+            for task in tasks:
+                if task.done():
+                    task.result()
+            if full_at is None and len(connected) == len(tasks):
+                full_at = tick
+            if full_at is None and tick - start > 45:
+                raise RuntimeError("Timed out waiting for spectator connections.")
+            replies = await asyncio.gather(*(client.send("demo_hit") for client in clients))
+            assert all(reply["disposition"] == "accepted" for reply, _event in replies), replies[:2]
+            await asyncio.sleep(max(0, 1.1 - (monotonic() - tick)))
+        measured_seconds = monotonic() - full_at
+    finally:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+    assert len(recovered) == reconnect_count
+    delays.sort()
+    return {
+        "measuredSeconds": round(measured_seconds, 2),
+        "spectators": len(connected),
+        "spectatorNonReaders": slow_count,
+        "spectatorReconnects": len(recovered),
+        "spectatorScoreUpdateSamples": len(delays),
+        "spectatorScoreUpdateP95Ms": delays[ceil(len(delays) * 0.95) - 1] if delays else None,
+    }
+
+
+async def run(count, base_url, *, spectators=0, seconds=0, slow_count=0, reconnect_count=0):
     if count < 2 or count % 2:
         raise SystemExit("Player count must be an even number of at least two.")
+    if min(spectators, seconds, slow_count, reconnect_count) < 0:
+        raise SystemExit("Load arguments must be nonnegative.")
+    if slow_count + reconnect_count > spectators or (spectators and seconds < 5):
+        raise SystemExit("Spectator runs need at least 5 seconds and valid fault-client counts.")
     parsed = urlsplit(base_url)
     if parsed.scheme != "http" or parsed.hostname not in ("127.0.0.1", "localhost"):
         raise SystemExit("The benchmark requires a local HTTP API.")
@@ -97,7 +182,8 @@ async def run(count, base_url):
     firebase_admin.initialize_app(AnonymousCredentials(), {"projectId": PROJECT})
     db = firestore.client()
     prefix = "session-bench-" + uuid4().hex
-    accounts, matches, documents, clients = [], [], [], []
+    accounts, matches, documents, clients, friend_docs = [], [], [], [], []
+    viewer_accounts = []
     now = datetime.now(UTC)
     try:
         # Serial account setup is excluded from measured live events.
@@ -170,13 +256,20 @@ async def run(count, base_url):
                 ),
             ]
         )
+        for index in range(spectators):
+            uid = f"{prefix}-spectator-{index:03}"
+            email = uid + "@example.test"
+            auth.create_user(uid=uid, email=email, password="Benchmark123!")
+            viewer_accounts.append(uid)
+            documents.append(("users/" + uid, {"uid": uid, "displayName": "Benchmark spectator"}))
         batch_write(db, documents)
         store = FirestoreMatchmakingStore(db)
         players = [store.load_player(uid, "piano", 0, uid + "-ticket") for uid in accounts[:-1]]
         catalog = [scenario for scenario in store.load_scenarios() if scenario.id == prefix]
         policy = MatchmakingPolicy()
         tokens = {}
-        for decision in select_matches(players, catalog, 0, policy):
+        decisions = list(select_matches(players, catalog, 0, policy))
+        for decision in decisions:
             match_id = prefix + "-" + uuid4().hex
             matches.append(match_id)
             assert store.create_lobby(match_id, decision, policy)
@@ -186,13 +279,42 @@ async def run(count, base_url):
                     base_url.replace("http://", "ws://") + f"/api/v1/multiplayer/{match_id}/socket"
                 )
                 clients.append(Client(socket_url, tokens[player.uid]))
+        viewers = []
+        for index, uid in enumerate(viewer_accounts):
+            match_index = index % len(matches)
+            friend_uid = decisions[match_index].players[0].uid
+            pair = sorted((uid, friend_uid))
+            key = "_".join(pair)
+            friend_docs.extend(
+                [
+                    (f"friendships/{key}", {"friends": pair, "uidA": pair[0], "uidB": pair[1]}),
+                    (f"friendRequests/{key}", {"potentialFriends": pair, "status": "accepted"}),
+                ]
+            )
+            url = base_url.replace("http://", "ws://")
+            url += f"/api/v1/multiplayer/{matches[match_index]}/spectate"
+            viewers.append((url, sign_in(uid + "@example.test")))
+        if friend_docs:
+            batch_write(db, friend_docs)
         metrics_url = base_url + "/api/v1/multiplayer/metrics"
         before = request_json(metrics_url, token=admin_token)
         if before["sampleCount"]:
             raise SystemExit("Restart the local API before benchmarking so metrics are isolated.")
         assert len(clients) == count
-        await asyncio.gather(*(client.open() for client in clients))
+        await asyncio.gather(*(client.open(bool(seconds)) for client in clients))
         await asyncio.gather(*(client.send("ready") for client in clients))
+        if seconds:
+            load = await sustained_load(clients, viewers, seconds, slow_count, reconnect_count)
+            results = await asyncio.gather(*(client.send("resign") for client in clients[::2]))
+            assert all(reply["snapshot"]["state"] == "complete" for reply, _ in results)
+            report = request_json(metrics_url, token=admin_token)
+            return {
+                **report,
+                **load,
+                "players": count,
+                "simultaneousMatches": len(matches),
+                "environment": "local Firebase emulators",
+            }
         for _ in range(5):
             await asyncio.sleep(1.1)
             replies = await asyncio.gather(
@@ -239,6 +361,11 @@ async def run(count, base_url):
         await asyncio.gather(*(client.close() for client in clients), return_exceptions=True)
         for match_id in matches:
             db.recursive_delete(db.document("matches/" + match_id))
+        for path, _ in friend_docs:
+            db.document(path).delete()
+        for uid in viewer_accounts:
+            db.document("users/" + uid).delete()
+            auth.delete_user(uid)
         for uid in accounts:
             db.recursive_delete(db.document("users/" + uid))
             db.document("userSettings/" + uid).delete()
@@ -253,8 +380,21 @@ if __name__ == "__main__":
     parser.add_argument("--players", type=int, default=50)
     parser.add_argument("--api", default="http://127.0.0.1:8290")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--spectators", type=int, default=0)
+    parser.add_argument("--seconds", type=int, default=0)
+    parser.add_argument("--slow-spectators", type=int, default=0)
+    parser.add_argument("--reconnecting-spectators", type=int, default=0)
     args = parser.parse_args()
-    report = asyncio.run(run(args.players, args.api.rstrip("/")))
+    report = asyncio.run(
+        run(
+            args.players,
+            args.api.rstrip("/"),
+            spectators=args.spectators,
+            seconds=args.seconds,
+            slow_count=args.slow_spectators,
+            reconnect_count=args.reconnecting_spectators,
+        )
+    )
     output = json.dumps(report, indent=2) + "\n"
     print(output, end="")
     if args.output:

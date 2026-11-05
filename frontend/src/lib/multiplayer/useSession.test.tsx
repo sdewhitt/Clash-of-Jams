@@ -7,7 +7,7 @@ import { ApiError, apiFetch } from '@/lib/api'
 import { auth } from '@/lib/firebase'
 import type { SessionSnapshot } from '@/lib/multiplayer/types'
 import { sessionSnapshot } from '@/test/multiplayer'
-import { sessionSocketUrl, useSession } from './useSession'
+import { sessionSocketUrl, spectatorPreferenceKey, useSession } from './useSession'
 
 vi.mock('@/lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/api')>()),
@@ -87,6 +87,22 @@ it('authenticates once under StrictMode and closes on unmount without retrying',
   })
   expect(socket.readyState).toBe(3)
   expect(TestSocket.instances).toHaveLength(1)
+})
+
+it('initializes spectators from the queue choice and clears it after acknowledgment', async () => {
+  const key = spectatorPreferenceKey('user-1', 'match-1')
+  sessionStorage.setItem(key, 'on')
+  try {
+    renderHook(() => useSession('match-1', 'user-1'))
+    await act(async () => {})
+    const socket = TestSocket.instances[0]!
+    act(() => socket.open())
+    expect(socket.sent).toEqual([{ token: 'token', allowSpectators: true }])
+    act(() => socket.receive())
+    expect(sessionStorage.getItem(key)).toBeNull()
+  } finally {
+    sessionStorage.removeItem(key)
+  }
 })
 
 it('replays unacknowledged IDs after reconnect and continues the authoritative sequence', async () => {

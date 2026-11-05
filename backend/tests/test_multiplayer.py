@@ -21,6 +21,7 @@ class SessionTestStore:
         self.data = {
             "state": "lobby",
             "scenarioId": "riff",
+            "participantUids": ["a", "b"],
             "scenarioVersionId": "v1",
             "matchmaking": {
                 "instrument": "piano",

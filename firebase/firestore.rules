@@ -366,36 +366,37 @@ service cloud.firestore {
         isFriendRequestParticipant(resource.data)
       );
 
-      allow create: if signedIn() &&
-        request.resource.data.keys().hasOnly([
-          'potentialFriends',
-          'initiatorUid',
-          'status',
-          'createdAt'
-        ]) &&
-        request.resource.data.keys().hasAll([
-          'potentialFriends',
-          'initiatorUid',
-          'status',
-          'createdAt'
-        ]) &&
-        request.resource.data.potentialFriends is list &&
-        request.resource.data.potentialFriends.size() == 2 &&
-        request.resource.data.potentialFriends.hasAny([
-          request.auth.uid
-        ]) &&
-        request.resource.data.initiatorUid == request.auth.uid &&
-        request.resource.data.potentialFriends.hasAll([
-          request.auth.uid
-        ]) &&
-        request.resource.data.status == 'pending' &&
-        request.resource.data.createdAt is timestamp &&
-        requestId == pairId(
-          request.resource.data.potentialFriends[0],
-          request.resource.data.potentialFriends[1]
-        );
+      function validFriendRequest(data) {
+        return data.keys().hasAll(['potentialFriends', 'initiatorUid', 'status', 'createdAt'])
+          && data.keys().hasOnly(['potentialFriends', 'initiatorUid', 'status', 'createdAt'])
+          && isFriendRequestParticipant(data)
+          && data.potentialFriends[0] is string && data.potentialFriends[1] is string
+          && data.potentialFriends[0] != data.potentialFriends[1]
+          && data.potentialFriends.hasAny([data.initiatorUid])
+          && data.createdAt is timestamp
+          && requestId == pairId(data.potentialFriends[0], data.potentialFriends[1]);
+      }
 
-      allow list, update: if isFriendRequestParticipant(resource.data);
+      allow create: if validFriendRequest(request.resource.data)
+        && request.resource.data.initiatorUid == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      allow list: if isFriendRequestParticipant(resource.data);
+
+      allow update: if isFriendRequestParticipant(resource.data)
+        && validFriendRequest(request.resource.data)
+        && unchanged('potentialFriends') && unchanged('createdAt')
+        && (
+          (resource.data.status == 'pending'
+            && request.auth.uid != resource.data.initiatorUid
+            && unchanged('initiatorUid')
+            && (request.resource.data.status == 'declined'
+              || (request.resource.data.status == 'accepted'
+                && existsAfter(/databases/$(database)/documents/friendships/$(requestId)))))
+          || (resource.data.status == 'declined'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.initiatorUid == request.auth.uid)
+        );
 
       allow delete: if signedIn()
         && resource.data.potentialFriends.hasAny([request.auth.uid]);
@@ -413,6 +414,16 @@ service cloud.firestore {
       );
 
       allow list: if isFriendshipParticipant(resource.data);
+
+      function acceptingFriendRequest() {
+        let path = /databases/$(database)/documents/friendRequests/$(friendshipId);
+        let before = get(path).data;
+        let after = getAfter(path).data;
+        return before.status == 'pending'
+          && after.status == 'accepted'
+          && before.initiatorUid != request.auth.uid
+          && before.potentialFriends.hasAll([request.resource.data.uidA, request.resource.data.uidB]);
+      }
 
       allow create: if signedIn() &&
         request.resource.data.keys().hasAll([
@@ -439,6 +450,8 @@ service cloud.firestore {
         ]) &&
         request.resource.data.id == friendshipId &&
         request.resource.data.uidA < request.resource.data.uidB &&
+        friendshipId == pairId(request.resource.data.uidA, request.resource.data.uidB) &&
+        acceptingFriendRequest() &&
         request.resource.data.friends is list &&
         request.resource.data.friends.size() == 2 &&
         request.resource.data.friends.hasAll([
