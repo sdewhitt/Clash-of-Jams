@@ -1,4 +1,4 @@
-import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, serverTimestamp, writeBatch } from 'firebase/firestore'
 
 import { db } from '@/lib/firebase'
 import { COLLECTIONS } from '@/lib/schema/collections'
@@ -24,18 +24,22 @@ export async function saveProfileAppearance(uid: string, appearance: ProfileAppe
   const settingsRef = doc(db, COLLECTIONS.userSettings, uid)
   const profileRef = doc(db, COLLECTIONS.publicProfile, uid)
 
-  await runTransaction(db, async (transaction) => {
-    const profile = await transaction.get(profileRef)
-    transaction.set(settingsRef, { profileAppearance: appearance }, { merge: true })
+  const profile = await getDoc(profileRef)
 
-    if (profile.exists()) {
-      const { publicHistory } = profile.data() as PublicProfile
-      transaction.update(profileRef, {
-        profileAppearance: publicAppearance(appearance, publicHistory === true),
-        updatedAt: serverTimestamp(),
-      })
-    }
-  })
+  // Atomic like a transaction, but a batch also updates local listeners straight away,
+  // so the header shows the new accent as soon as it is saved.
+  const batch = writeBatch(db)
+  batch.set(settingsRef, { profileAppearance: appearance }, { merge: true })
+
+  if (profile.exists()) {
+    const { publicHistory } = profile.data() as PublicProfile
+    batch.update(profileRef, {
+      profileAppearance: publicAppearance(appearance, publicHistory === true),
+      updatedAt: serverTimestamp(),
+    })
+  }
+
+  await batch.commit()
 }
 
 export async function publishedScenarioTitles(scenarioIds: string[]) {

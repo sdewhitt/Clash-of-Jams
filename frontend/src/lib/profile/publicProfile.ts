@@ -1,19 +1,23 @@
-import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, setDoc, arrayRemove, runTransaction, } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, arrayRemove, runTransaction, } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { PublicProfile, UserSettings, UserStatus } from '@/lib/schema/types';
 import { COLLECTIONS } from '@/lib/schema/collections';
 import { DEFAULT_APPEARANCE, publicAppearance } from '@/lib/profile/profileAppearance';
 
-export async function getPublicProfile(uid: string): Promise<PublicProfile> {
+/** Resolves to null when the profile is private: making a profile private deletes its public document. */
+export async function findPublicProfile(uid: string): Promise<PublicProfile | null> {
     // Read by id, not by query: the rules grant userProfile/{uid} to its owner by document id, which a collection query can't be shown to satisfy.
     const snapshot = await getDoc(doc(db, COLLECTIONS.publicProfile, uid));
-    if (!snapshot.exists()) {
+    return snapshot.exists() ? { ...snapshot.data() } as PublicProfile : null;
+}
+
+export async function getPublicProfile(uid: string): Promise<PublicProfile> {
+    const profile = await findPublicProfile(uid);
+    if (!profile) {
         throw new Error("No public profile found for this user.");
     }
 
-    return {
-        ...snapshot.data(),
-    } as PublicProfile;
+    return profile;
 }
 
 export async function updatePublicProfile( uid: string, savedUsername: string, publicToggle: boolean, bio: boolean, savedBio: string, instrument: boolean, savedInstrument: string, genres: boolean, savedGenres: string[], elos: string[], acceptingFriends: boolean, avatarUrl: string, publicHistory: boolean ) {
@@ -75,34 +79,28 @@ export async function updatePublicProfile( uid: string, savedUsername: string, p
         return;
     }
 
-    const snapshot = await getDoc(docRef);
+    await runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(docRef);
+        const settings = await transaction.get(doc(db, COLLECTIONS.userSettings, uid));
+        const appearance = (settings.data() as UserSettings | undefined)?.profileAppearance ?? DEFAULT_APPEARANCE;
 
-    const profileData = {
-        uid,
-        username: savedUsername,
-        usernameLower: savedUsername.toLowerCase(),
-        displayName: savedUsername,
-        avatarUrl,
-        bio: bio ? savedBio : "",
-        preferredInstrument: instrument ? savedInstrument : "",
-        preferredGenres: genres ? savedGenres : [],
-        elos,
-        acceptingFriends,
-        updatedAt: serverTimestamp(),
-        publicHistory
-    };
-
-    await setDoc(
-        docRef,
-        {
-            ...profileData,
-            ...(!snapshot.exists() && {
-                friends: [],
-                communities: []
-            })
-        },
-        { merge: true }
-    );
+        transaction.set(docRef, {
+            ...(snapshot.exists() ? {} : { friends: [], communities: [] }),
+            uid,
+            username: savedUsername,
+            usernameLower: savedUsername.toLowerCase(),
+            displayName: savedUsername,
+            avatarUrl,
+            bio: bio ? savedBio : "",
+            preferredInstrument: instrument ? savedInstrument : "",
+            preferredGenres: genres ? savedGenres : [],
+            elos,
+            acceptingFriends,
+            updatedAt: serverTimestamp(),
+            publicHistory,
+            profileAppearance: publicAppearance(appearance, publicHistory),
+        }, { merge: true });
+    });
 }
 
 export async function updateAcceptingFriends( uid: string, accepting: boolean ) {
@@ -121,8 +119,11 @@ export async function updateEloPublicity( uid: string, elos: string[] ) {
     const publicRef = doc(db, "publicProfile", uid);
 
     await runTransaction(db, async (transaction) => {
+        const docSnap = await transaction.get(publicRef);
         transaction.update(userRef, {publicElos: elos, updatedAt: serverTimestamp(),});
-        transaction.update(publicRef, {elos: elos, updatedAt: serverTimestamp(),});
+        if (docSnap.exists()) {
+            transaction.update(publicRef, {elos: elos, updatedAt: serverTimestamp(),});
+        }
     });
 }
 

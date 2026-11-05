@@ -18,7 +18,7 @@ export function FeaturedProfileScores({ scores }: { scores: FeaturedProfileScore
   if (visible.length === 0) return null
 
   return (
-    <section className="mx-4 my-3 rounded-lg border border-line bg-base-middle p-4 text-ink">
+    <section className="mx-4 my-3 rounded-lg border-2 border-accent-start bg-accent-base-start p-4 text-ink">
       <h3 className="font-bold">Featured scores</h3>
       <ul className="mt-2 space-y-1">
         {visible.map(({ runId, scenarioId, finalScore }) => (

@@ -15,7 +15,7 @@ import { useTheme, type Theme } from "@/context/ThemeContext";
 import { UsernameEditor } from "@/components/UsernameEditor";
 import { BioEditor } from "@/components/BioEditor";
 import { getUserPreferences, updatePreferredGenres, updatePreferredInstrument } from "@/lib/profile/userPreferences"; <s></s>
-import { getPublicProfile, getUserStatus, updateDoNotDistrub, updateEloPublicity, updatePublicProfile } from "@/lib/profile/publicProfile";
+import { findPublicProfile, getUserStatus, updateDoNotDistrub, updateEloPublicity, updatePublicProfile } from "@/lib/profile/publicProfile";
 import { NotificationButton } from "@/components/NotificationButton";
 import { LiveElo } from "@/components/LiveElo";
 import { ProfileAppearanceEditor } from "./ProfileAppearanceEditor";
@@ -181,9 +181,9 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
             if (!user) {
                 return;
             }
-            setProfilePublicity(profile?.isProfilePublic ?? true)
-            const userProfile = await getPublicProfile(user.uid);
-            setPublicProfile(userProfile)
+            const userProfile = await findPublicProfile(user.uid);
+            setProfilePublicity(userProfile !== null)
+            setPublicProfile(userProfile ?? undefined)
         } catch (error) {
             console.error("Failed to load public profile:", error);
         }
@@ -368,14 +368,16 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         setIsSaving(true);
 
         try {
+            // Creating or deleting the public document has to finish before the updates that depend on it.
+            await updatePublicProfile(uid, savedUsername, profileStatus, bio, savedBio, instrument, savedInstrument, genres, savedGenres, elos, friendStatus, profile?.avatarUrl ?? "../../favicon.svg", publicHistory);
             await Promise.all([
-                updatePublicProfile(uid, savedUsername, profileStatus, bio, savedBio, instrument, savedInstrument, genres, savedGenres, elos, friendStatus, profile?.avatarUrl ?? "../../favicon.svg", publicHistory),
                 updateBioPublicity(uid, bio, savedBio),
                 updateInstrumentPublicity(uid, instrument, savedInstrument),
                 updateGenrePublicity(uid, genres, savedGenres),
                 updateEloPublicity(uid, elos),
             ]);
             
+            await loadPublicProfile();
             await loadUserSettings();
         } catch (error) {
             setError(
@@ -397,6 +399,7 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     };
 
     const handlePublicityCancel = async () => {
+        setProfilePublicity(publicProfile !== undefined);
         setBioPublicity(userSettings?.publicBio ?? true);
         setInstrumentPublicity(userSettings?.publicInstrument ?? true);
         setPublicElos(publicProfile?.elos ?? []);
