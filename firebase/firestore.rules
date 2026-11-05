@@ -137,8 +137,11 @@ service cloud.firestore {
     }
 
     function isValidScenarioVersion(d, scenarioId, versionId) {
-      return hasExactly(d, ['id', 'scenarioId', 'versionNumber', 'chart', 'scoringRules',
+      return d.keys().hasAll(['id', 'scenarioId', 'versionNumber', 'chart', 'scoringRules',
             'durationMs', 'mediaAssetIds', 'createdByUid', 'createdAt'])
+        && d.keys().hasOnly(['id', 'scenarioId', 'versionNumber', 'chart', 'scoringRules',
+            'durationMs', 'mediaAssetIds', 'createdByUid', 'createdAt', 'metadata'])
+        && d.get('metadata', {}) is map
         && d.id == versionId
         && d.scenarioId == scenarioId
         && d.versionNumber is int && d.versionNumber >= 1
@@ -320,10 +323,22 @@ service cloud.firestore {
           && isValidScenarioVersion(request.resource.data, scenarioId, versionId)
           && isSelf(request.resource.data.createdByUid)
           && stampedNow(request.resource.data.createdAt);
-        allow update: if isAdmin();
+        // An author can only label a version; its contents never change.
+        allow update: if isAdmin()
+          || (isSelf(scenarioAuthor(scenarioId))
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+              && (request.resource.data.name == null
+                  || (request.resource.data.name is string
+                      && request.resource.data.name.size() >= 1
+                      && request.resource.data.name.size() <= 60)));
         // An author may only remove versions, never rewrite them: deleting a
-        // scenario takes its versions with it in the same batch.
-        allow delete: if isSelf(scenarioAuthor(scenarioId)) || isAdmin();
+        // scenario takes its versions with it, and reverting takes the later ones.
+        // Anything else would leave a gap in the history or a dangling current version.
+        allow delete: if isAdmin()
+          || (isSelf(scenarioAuthor(scenarioId))
+              && (!existsAfter(/databases/$(database)/documents/scenarios/$(scenarioId))
+                  || resource.data.versionNumber
+                     > getAfter(/databases/$(database)/documents/scenarios/$(scenarioId)).data.currentVersionNumber));
       }
     }
 

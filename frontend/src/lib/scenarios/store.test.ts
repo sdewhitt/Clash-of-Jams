@@ -17,10 +17,13 @@ const fake = vi.hoisted(() => {
   let counter = 0
   return {
     docs,
+    /** Runs just before a transaction reads, to simulate a write from another tab. */
+    beforeTransactionRead: undefined as (() => void) | undefined,
     nextId: () => `generated-${++counter}`,
-    reset: () => {
+    reset() {
       docs.clear()
       counter = 0
+      this.beforeTransactionRead = undefined
     },
   }
 })
@@ -41,20 +44,78 @@ vi.mock('firebase/firestore', () => {
       path: source.path,
       constraints,
     }),
-    where: (field: string, _op: string, value: unknown) => ({ field, value }),
-    orderBy: () => ({}),
-    limit: () => ({}),
-    getDocs: async (built: { path: string; constraints?: { field: string; value: unknown }[] }) => {
-      const matches = [...fake.docs.entries()]
+    where: (field: string, op: string, value: unknown) => ({ field, op, value }),
+    orderBy: (orderField: string, direction: string) => ({ orderField, direction }),
+    limit: (count: number) => ({ count }),
+    updateDoc: async (target: { path: string }, data: Record<string, unknown>) => {
+      fake.docs.set(target.path, { ...fake.docs.get(target.path), ...data })
+    },
+    runTransaction: async (_db: unknown, run: (transaction: unknown) => Promise<unknown>) => {
+      const pending: (() => void)[] = []
+      const read = (target: { path: string }) => ({
+        exists: () => fake.docs.has(target.path),
+        data: () => fake.docs.get(target.path),
+      })
+      const result = await run({
+        get: async (target: { path: string }) => {
+          fake.beforeTransactionRead?.()
+          return read(target)
+        },
+        set: (target: { path: string }, data: Record<string, unknown>) =>
+          pending.push(() => fake.docs.set(target.path, data)),
+        update: (target: { path: string }, data: Record<string, unknown>) =>
+          pending.push(() =>
+            fake.docs.set(target.path, { ...fake.docs.get(target.path), ...data }),
+          ),
+        delete: (target: { path: string }) => pending.push(() => fake.docs.delete(target.path)),
+      })
+      pending.forEach((write) => write())
+      return result
+    },
+    getDocs: async (built: {
+      path: string
+      constraints?: {
+        field?: string
+        op?: string
+        value?: unknown
+        orderField?: string
+        direction?: string
+        count?: number
+      }[]
+    }) => {
+      const constraints = built.constraints ?? []
+      const compare = (
+        data: Record<string, unknown>,
+        field: string,
+        op: string,
+        value: unknown,
+      ) => {
+        if (op === '>') return (data[field] as number) > (value as number)
+        if (op === '<') return (data[field] as number) < (value as number)
+        return data[field] === value
+      }
+      let matches = [...fake.docs.entries()]
         .filter(([path]) => path.startsWith(`${built.path}/`))
         .filter(([path]) => !path.slice(built.path.length + 1).includes('/'))
         .filter(([, data]) =>
-          (built.constraints ?? []).every(
-            (constraint) =>
-              constraint.field === undefined || data[constraint.field] === constraint.value,
+          constraints.every(
+            ({ field, op, value }) =>
+              field === undefined || compare(data, field, op as string, value),
           ),
         )
-      return { docs: matches.map(([path, data]) => ({ ref: { path }, data: () => data })) }
+      for (const { orderField, direction } of constraints) {
+        if (!orderField || orderField === 'updatedAt') continue
+        const sign = direction === 'desc' ? -1 : 1
+        matches = [...matches].sort(
+          ([, x], [, y]) => sign * ((x[orderField] as number) - (y[orderField] as number)),
+        )
+      }
+      const count = constraints.find((constraint) => constraint.count !== undefined)?.count
+      if (count !== undefined) matches = matches.slice(0, count)
+      return {
+        size: matches.length,
+        docs: matches.map(([path, data]) => ({ ref: { path }, data: () => data })),
+      }
     },
     writeBatch: () => {
       const pending: (() => void)[] = []
@@ -72,8 +133,17 @@ vi.mock('firebase/firestore', () => {
   }
 })
 
-const { deleteScenario, listMyScenarios, loadScenario, saveScenarioDraft } =
-  await import('@/lib/scenarios/store')
+const {
+  deleteScenario,
+  listMyScenarios,
+  listScenarioVersions,
+  loadScenario,
+  renameScenarioVersion,
+  revertToVersion,
+  saveScenarioDraft,
+  ScenarioConflictError,
+  VERSION_PAGE_SIZE,
+} = await import('@/lib/scenarios/store')
 
 function draftWithNotes(): ScenarioDraft {
   const draft = emptyDraft()
@@ -283,5 +353,319 @@ describe('the author library', () => {
 
   it('is empty for an author who has saved nothing', async () => {
     expect(await listMyScenarios('user-1')).toEqual([])
+  })
+})
+
+describe('version history', () => {
+  /** Saves a scenario `count` times, returning the version ids oldest first. */
+  async function savedVersions(count: number) {
+    const draft = draftWithNotes()
+    const first = await saveScenarioDraft({ uid: 'user-1', draft })
+    const ids = [first.versionId]
+    for (let saved = 1; saved < count; saved++) {
+      const next = await saveScenarioDraft({
+        uid: 'user-1',
+        draft: { ...draft, title: `Take ${saved + 1}` },
+        scenarioId: first.scenarioId,
+      })
+      ids.push(next.versionId)
+    }
+    return { scenarioId: first.scenarioId, ids }
+  }
+
+  describe('listing', () => {
+    it('returns versions newest first', async () => {
+      const { scenarioId } = await savedVersions(3)
+
+      const listed = await listScenarioVersions(scenarioId)
+
+      expect(listed.map((version) => version.versionNumber)).toEqual([3, 2, 1])
+    })
+
+    it('pages through older versions', async () => {
+      const { scenarioId } = await savedVersions(VERSION_PAGE_SIZE + 2)
+
+      const firstPage = await listScenarioVersions(scenarioId)
+      const secondPage = await listScenarioVersions(scenarioId, firstPage.at(-1)?.versionNumber)
+
+      expect(firstPage).toHaveLength(VERSION_PAGE_SIZE)
+      expect(secondPage.map((version) => version.versionNumber)).toEqual([2, 1])
+    })
+  })
+
+  describe('renaming', () => {
+    it('stores a trimmed name and leaves the chart alone', async () => {
+      const { scenarioId, ids } = await savedVersions(1)
+      const before = storedVersion(scenarioId, ids[0]).chart
+
+      const stored = await renameScenarioVersion({
+        scenarioId,
+        versionId: ids[0],
+        name: '  Bridge rewrite ',
+      })
+
+      expect(stored).toBe('Bridge rewrite')
+      expect(storedVersion(scenarioId, ids[0]).name).toBe('Bridge rewrite')
+      expect(storedVersion(scenarioId, ids[0]).chart).toEqual(before)
+    })
+
+    it('clears the name when given only whitespace', async () => {
+      const { scenarioId, ids } = await savedVersions(1)
+
+      expect(await renameScenarioVersion({ scenarioId, versionId: ids[0], name: '   ' })).toBeNull()
+    })
+  })
+
+  describe('reverting', () => {
+    it('makes the target current and deletes every later version', async () => {
+      const { scenarioId, ids } = await savedVersions(4)
+
+      const result = await revertToVersion({
+        uid: 'user-1',
+        scenarioId,
+        targetVersionId: ids[1],
+        expectedCurrentVersionId: ids[3],
+      })
+
+      expect(result).toEqual({ versionNumber: 2, deletedCount: 2 })
+      expect(storedScenario(scenarioId)).toMatchObject({
+        currentVersionId: ids[1],
+        currentVersionNumber: 2,
+      })
+      const left = await listScenarioVersions(scenarioId)
+      expect(left.map((version) => version.id)).toEqual([ids[1], ids[0]])
+    })
+
+    it('numbers the next save straight after the target, under a new id', async () => {
+      const { scenarioId, ids } = await savedVersions(3)
+      await revertToVersion({
+        uid: 'user-1',
+        scenarioId,
+        targetVersionId: ids[0],
+        expectedCurrentVersionId: ids[2],
+      })
+
+      const next = await saveScenarioDraft({
+        uid: 'user-1',
+        draft: { ...draftWithNotes(), title: 'After the revert' },
+        scenarioId,
+      })
+
+      expect(next.versionNumber).toBe(2)
+      expect(ids).not.toContain(next.versionId)
+    })
+
+    it('restores recorded settings but never visibility', async () => {
+      const { scenarioId, ids } = await savedVersions(2)
+      const path = `scenarios/${scenarioId}`
+      fake.docs.set(path, { ...fake.docs.get(path), visibility: 'private' })
+      const versionPath = `${path}/versions/${ids[0]}`
+      fake.docs.set(versionPath, {
+        ...fake.docs.get(versionPath),
+        metadata: {
+          title: 'Original',
+          description: 'First pass',
+          instrument: 'guitar',
+          authorDifficulty: 2,
+          genres: [],
+          tags: [],
+        },
+      })
+
+      await revertToVersion({
+        uid: 'user-1',
+        scenarioId,
+        targetVersionId: ids[0],
+        expectedCurrentVersionId: ids[1],
+      })
+
+      expect(storedScenario(scenarioId)).toMatchObject({
+        title: 'Original',
+        instrument: 'guitar',
+        authorDifficulty: 2,
+        visibility: 'private',
+      })
+    })
+
+    it('keeps the current settings when the target recorded none', async () => {
+      const { scenarioId, ids } = await savedVersions(2)
+      const legacyPath = `scenarios/${scenarioId}/versions/${ids[0]}`
+      const { metadata: _metadata, ...legacy } = fake.docs.get(legacyPath) as Record<
+        string,
+        unknown
+      >
+      fake.docs.set(legacyPath, legacy)
+
+      await revertToVersion({
+        uid: 'user-1',
+        scenarioId,
+        targetVersionId: ids[0],
+        expectedCurrentVersionId: ids[1],
+      })
+
+      expect(storedScenario(scenarioId).title).toBe('Take 2')
+    })
+
+    it('changes nothing if the scenario moved on since the history was read', async () => {
+      const { scenarioId, ids } = await savedVersions(3)
+
+      await expect(
+        revertToVersion({
+          uid: 'user-1',
+          scenarioId,
+          targetVersionId: ids[0],
+          expectedCurrentVersionId: ids[1],
+        }),
+      ).rejects.toBeInstanceOf(ScenarioConflictError)
+
+      expect(storedScenario(scenarioId).currentVersionId).toBe(ids[2])
+      expect(await listScenarioVersions(scenarioId)).toHaveLength(3)
+    })
+
+    it('notices a save that lands after the later versions were listed', async () => {
+      const { scenarioId, ids } = await savedVersions(2)
+      fake.beforeTransactionRead = () => {
+        fake.beforeTransactionRead = undefined
+        const path = `scenarios/${scenarioId}`
+        fake.docs.set(path, { ...fake.docs.get(path), currentVersionId: 'from-another-tab' })
+      }
+
+      await expect(
+        revertToVersion({
+          uid: 'user-1',
+          scenarioId,
+          targetVersionId: ids[0],
+          expectedCurrentVersionId: ids[1],
+        }),
+      ).rejects.toBeInstanceOf(ScenarioConflictError)
+      expect(storedVersion(scenarioId, ids[1])).toBeDefined()
+    })
+
+    it.each([
+      [null, /sign in/i],
+      ['user-2', /your own/i],
+    ])('refuses uid %j', async (uid, message) => {
+      const { scenarioId, ids } = await savedVersions(2)
+
+      await expect(
+        revertToVersion({
+          uid,
+          scenarioId,
+          targetVersionId: ids[0],
+          expectedCurrentVersionId: ids[1],
+        }),
+      ).rejects.toThrow(message)
+      expect(storedVersion(scenarioId, ids[1])).toBeDefined()
+    })
+
+    it('reports a target that has already been deleted', async () => {
+      const { scenarioId, ids } = await savedVersions(1)
+
+      await expect(
+        revertToVersion({
+          uid: 'user-1',
+          scenarioId,
+          targetVersionId: 'gone',
+          expectedCurrentVersionId: ids[0],
+        }),
+      ).rejects.toThrow(/no longer available/i)
+    })
+  })
+})
+
+describe('safe saving', () => {
+  const edited = (title: string) => ({ ...draftWithNotes(), title })
+
+  it('records the settings on each version', async () => {
+    const first = await saveScenarioDraft({ uid: 'user-1', draft: draftWithNotes() })
+
+    expect(storedVersion(first.scenarioId, first.versionId).metadata).toMatchObject({
+      title: 'Chromatic Warmup',
+      description: 'Four bars, slowly.',
+      authorDifficulty: 4,
+    })
+  })
+
+  it('writes nothing when the content matches the current version', async () => {
+    const draft = draftWithNotes()
+    const first = await saveScenarioDraft({ uid: 'user-1', draft })
+
+    const again = await saveScenarioDraft({ uid: 'user-1', draft, scenarioId: first.scenarioId })
+
+    expect(again).toMatchObject({ versionId: first.versionId, outcome: 'unchanged' })
+    expect(storedScenario(first.scenarioId).currentVersionNumber).toBe(1)
+  })
+
+  it('returns the same version when a completed save is retried from a stale base', async () => {
+    const first = await saveScenarioDraft({ uid: 'user-1', draft: draftWithNotes() })
+    const args = {
+      uid: 'user-1',
+      draft: edited('Take 2'),
+      scenarioId: first.scenarioId,
+      baseVersionId: first.versionId,
+    }
+    const saved = await saveScenarioDraft(args)
+
+    const retried = await saveScenarioDraft(args)
+
+    expect(retried).toMatchObject({ versionId: saved.versionId, outcome: 'unchanged' })
+  })
+
+  it('changes only the parent for a visibility change', async () => {
+    const first = await saveScenarioDraft({ uid: 'user-1', draft: draftWithNotes() })
+
+    const result = await saveScenarioDraft({
+      uid: 'user-1',
+      draft: { ...draftWithNotes(), visibility: 'public' },
+      scenarioId: first.scenarioId,
+    })
+
+    expect(result.outcome).toBe('visibility')
+    expect(storedScenario(first.scenarioId)).toMatchObject({
+      visibility: 'public',
+      currentVersionNumber: 1,
+    })
+  })
+
+  it('refuses to save over a version it did not start from', async () => {
+    const first = await saveScenarioDraft({ uid: 'user-1', draft: draftWithNotes() })
+    const other = await saveScenarioDraft({
+      uid: 'user-1',
+      draft: edited('From another tab'),
+      scenarioId: first.scenarioId,
+      baseVersionId: first.versionId,
+    })
+
+    await expect(
+      saveScenarioDraft({
+        uid: 'user-1',
+        draft: edited('From this tab'),
+        scenarioId: first.scenarioId,
+        baseVersionId: first.versionId,
+      }),
+    ).rejects.toBeInstanceOf(ScenarioConflictError)
+
+    expect(storedScenario(first.scenarioId)).toMatchObject({
+      title: 'From another tab',
+      currentVersionId: other.versionId,
+    })
+  })
+
+  it('carries scoring rules and media forward', async () => {
+    const first = await saveScenarioDraft({ uid: 'user-1', draft: draftWithNotes() })
+    const path = `scenarios/${first.scenarioId}/versions/${first.versionId}`
+    const scoringRules = { ...DEFAULT_SCORING_RULES, hitWindowMs: 999 }
+    fake.docs.set(path, { ...fake.docs.get(path), scoringRules, mediaAssetIds: ['track'] })
+
+    const next = await saveScenarioDraft({
+      uid: 'user-1',
+      draft: edited('Take 2'),
+      scenarioId: first.scenarioId,
+    })
+
+    expect(storedVersion(first.scenarioId, next.versionId)).toMatchObject({
+      scoringRules,
+      mediaAssetIds: ['track'],
+    })
   })
 })

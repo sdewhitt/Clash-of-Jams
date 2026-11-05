@@ -152,9 +152,17 @@ describe('before a run', () => {
 
   it('says so when the scenario has nothing to play', async () => {
     vi.mocked(loadScenario).mockResolvedValue({ scenario, version: null })
-    renderPlay()
+    renderPlay('/play/s1')
 
     expect(await screen.findByText(/no notes to play/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument()
+  })
+
+  it('says a version link is unavailable once that version has been deleted', async () => {
+    vi.mocked(loadScenario).mockResolvedValue({ scenario, version: null })
+    renderPlay('/play/s1?version=deleted')
+
+    expect(await screen.findByText(/version of the scenario is no longer available/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument()
   })
 })

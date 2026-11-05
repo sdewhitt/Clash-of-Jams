@@ -16,6 +16,7 @@ import {
   getDocs,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -151,6 +152,121 @@ describe('the data access layer paths the editor uses', () => {
     // The earlier version is still there, and still cannot be rewritten.
     expect((await getDoc(doc(db, versionPath('s1', 'v1')))).get('versionNumber')).toBe(1)
     await assertFails(updateDoc(doc(db, versionPath('s1', 'v1')), { durationMs: 1 }))
+  })
+
+  describe('naming a version', () => {
+    const seedVersion = () =>
+      seed(env(), [
+        [
+          path.scenario('s1'),
+          scenarioDoc('s1', ALICE, { currentVersionId: 'v1', currentVersionNumber: 1 }),
+        ],
+        [versionPath('s1', 'v1'), versionDoc('s1', 'v1')],
+      ])
+
+    it('lets the author set and clear a name', async () => {
+      await seedVersion()
+      const target = doc(as(env(), ALICE), versionPath('s1', 'v1'))
+
+      await assertSucceeds(updateDoc(target, { name: 'Bridge rewrite' }))
+      expect((await getDoc(target)).get('name')).toBe('Bridge rewrite')
+      await assertSucceeds(updateDoc(target, { name: null }))
+    })
+
+    it('refuses anyone else', async () => {
+      await seedVersion()
+
+      await assertFails(
+        updateDoc(doc(as(env(), BOB), versionPath('s1', 'v1')), { name: 'Hijacked' }),
+      )
+    })
+
+    it.each([
+      ['an empty name', ''],
+      ['a name over 60 characters', 'x'.repeat(61)],
+      ['a name that is not text', 7],
+    ])('refuses %s', async (_label, name) => {
+      await seedVersion()
+
+      await assertFails(updateDoc(doc(as(env(), ALICE), versionPath('s1', 'v1')), { name }))
+    })
+
+    it('refuses changing anything else alongside the name', async () => {
+      await seedVersion()
+
+      await assertFails(
+        updateDoc(doc(as(env(), ALICE), versionPath('s1', 'v1')), { name: 'x', durationMs: 1 }),
+      )
+    })
+  })
+
+  it('accepts a version that records its settings', async () => {
+    await seed(env(), [[path.scenario('s1'), scenarioDoc('s1', ALICE)]])
+
+    await assertSucceeds(
+      setDoc(doc(as(env(), ALICE), versionPath('s1', 'v1')), {
+        ...versionDoc('s1', 'v1'),
+        metadata: { title: 'Scale' },
+      }),
+    )
+  })
+
+  it('refuses deleting the current or an earlier version outside a whole-scenario delete', async () => {
+    await seed(env(), [
+      [
+        path.scenario('s1'),
+        scenarioDoc('s1', ALICE, { currentVersionId: 'v2', currentVersionNumber: 2 }),
+      ],
+      [versionPath('s1', 'v1'), versionDoc('s1', 'v1')],
+      [versionPath('s1', 'v2'), { ...versionDoc('s1', 'v2'), versionNumber: 2 }],
+    ])
+    const db = as(env(), ALICE)
+
+    await assertFails(deleteDoc(doc(db, versionPath('s1', 'v1'))))
+    await assertFails(deleteDoc(doc(db, versionPath('s1', 'v2'))))
+  })
+
+  it('still deletes every version along with the scenario', async () => {
+    await seed(env(), [
+      [
+        path.scenario('s1'),
+        scenarioDoc('s1', ALICE, { currentVersionId: 'v1', currentVersionNumber: 1 }),
+      ],
+      [versionPath('s1', 'v1'), versionDoc('s1', 'v1')],
+    ])
+    const db = as(env(), ALICE)
+    const batch = writeBatch(db)
+    batch.delete(doc(db, versionPath('s1', 'v1')))
+    batch.delete(doc(db, path.scenario('s1')))
+
+    await assertSucceeds(batch.commit())
+  })
+
+  it('reverts by deleting later versions and repointing the scenario in one transaction', async () => {
+    await seed(env(), [
+      [
+        path.scenario('s1'),
+        scenarioDoc('s1', ALICE, { currentVersionId: 'v2', currentVersionNumber: 2 }),
+      ],
+      [versionPath('s1', 'v1'), versionDoc('s1', 'v1')],
+      [versionPath('s1', 'v2'), { ...versionDoc('s1', 'v2'), versionNumber: 2 }],
+    ])
+    const db = as(env(), ALICE)
+
+    await assertSucceeds(
+      runTransaction(db, async (transaction) => {
+        await transaction.get(doc(db, path.scenario('s1')))
+        transaction.delete(doc(db, versionPath('s1', 'v2')))
+        transaction.update(doc(db, path.scenario('s1')), {
+          currentVersionId: 'v1',
+          currentVersionNumber: 1,
+          updatedAt: serverTimestamp(),
+        })
+      }),
+    )
+
+    expect((await getDoc(doc(db, versionPath('s1', 'v2')))).exists()).toBe(false)
+    expect((await getDoc(doc(db, path.scenario('s1')))).get('currentVersionId')).toBe('v1')
   })
 
   it("lists the caller's own scenarios, private ones included, newest first", async () => {

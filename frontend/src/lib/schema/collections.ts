@@ -25,6 +25,7 @@ import type {
   ScenarioReview,
   ScenarioTheme,
   ScenarioVersion,
+  ScenarioVersionMetadata,
   ScoringRules,
   SkillRating,
   UserProfile,
@@ -285,6 +286,9 @@ export function newScenario(args: {
   }
 }
 
+/** Longest name an author can give a version; firestore.rules enforces the same limit. */
+export const VERSION_NAME_MAX_LENGTH = 60
+
 export function newScenarioVersion(args: {
   id: string
   scenarioId: string
@@ -294,6 +298,7 @@ export function newScenarioVersion(args: {
   durationMs?: number
   scoringRules?: ScoringRules
   mediaAssetIds?: string[]
+  metadata?: ScenarioVersionMetadata
 }): WithFieldValue<ScenarioVersion> {
   return {
     id: args.id,
@@ -305,6 +310,7 @@ export function newScenarioVersion(args: {
     mediaAssetIds: args.mediaAssetIds ?? [],
     createdByUid: args.createdByUid,
     createdAt: serverTimestamp(),
+    ...(args.metadata ? { metadata: args.metadata } : {}),
   }
 }
 

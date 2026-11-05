@@ -285,6 +285,16 @@ export interface ScoringRules {
  * versionNumber is unique per scenario (invariant 2). Leaderboards are scoped
  * to a version so every run on one was scored against identical note data.
  */
+/** The scenario settings a version records. Visibility is deliberately not one of them. */
+export interface ScenarioVersionMetadata {
+  title: string
+  description: string
+  instrument: Instrument
+  authorDifficulty: number
+  genres: Genre[]
+  tags: string[]
+}
+
 export interface ScenarioVersion {
   id: string
   scenarioId: string
@@ -294,6 +304,10 @@ export interface ScenarioVersion {
   durationMs: number
   /** MediaAsset ids backing this version (backing track, sheet images, ...). */
   mediaAssetIds: string[]
+  /** Settings at save time. Absent on versions saved before these were recorded. */
+  metadata?: ScenarioVersionMetadata
+  /** The author's label for this version. The only field an author can change later. */
+  name?: string | null
   createdByUid: string
   createdAt: Timestamp
 }

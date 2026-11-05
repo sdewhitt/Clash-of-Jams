@@ -10,7 +10,14 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AppRoutes } from '@/App'
-import { listMyScenarios, loadScenario, saveScenarioDraft } from '@/lib/scenarios/store'
+import {
+  listMyScenarios,
+  listScenarioVersions,
+  loadScenario,
+  saveScenarioDraft,
+} from '@/lib/scenarios/store'
+import { emptyChart } from '@/lib/schema/collections'
+import type { Scenario, ScenarioVersion } from '@/lib/schema/types'
 import { Home } from '@/pages/Home'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { YourLibraryPanel } from '@/pages/scenario_editor/YourLibraryPanel'
@@ -19,8 +26,13 @@ import { LocationProbe, renderAtRoute, renderWithAuth, SIGNED_OUT, signedIn } fr
 vi.mock('@/lib/scenarios/store', () => ({
   deleteScenario: vi.fn(),
   listMyScenarios: vi.fn(),
+  listScenarioVersions: vi.fn(),
   loadScenario: vi.fn(),
+  renameScenarioVersion: vi.fn(),
+  revertToVersion: vi.fn(),
+  ScenarioConflictError: class extends Error {},
   saveScenarioDraft: vi.fn(),
+  VERSION_PAGE_SIZE: 20,
 }))
 
 vi.mock('@/components/NotificationButton', () => ({
@@ -193,7 +205,7 @@ describe('editor tabs', () => {
     expect(tab('New Scenario')).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Browse Published Scenarios')
     expect(screen.getByText('No published scenarios yet')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Title')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Title')).not.toBeVisible()
 
     await userEvent.click(tab('Your Library'))
 
@@ -255,9 +267,70 @@ describe('editor tabs', () => {
   })
 })
 
+describe('Version History tab', () => {
+  const scenario = {
+    id: 's1',
+    authorUid: 'user-1',
+    title: 'Etude',
+    description: '',
+    instrument: 'piano',
+    visibility: 'private',
+    authorDifficulty: 3,
+    currentVersionId: 'v1',
+    currentVersionNumber: 1,
+    updatedAt: { toDate: () => new Date(0) },
+  } as unknown as Scenario
+  const version = {
+    id: 'v1',
+    scenarioId: 's1',
+    versionNumber: 1,
+    chart: emptyChart('piano'),
+  } as unknown as ScenarioVersion
+
+  beforeEach(() => {
+    vi.mocked(loadScenario).mockResolvedValue({ scenario, version })
+    vi.mocked(listScenarioVersions).mockReset().mockResolvedValue([version])
+  })
+
+  it('stays out of the tab strip until a scenario is open', () => {
+    renderEditor()
+
+    expect(screen.queryByRole('tab', { name: 'Version History' })).not.toBeInTheDocument()
+  })
+
+  it('falls back to the default tab when the URL names history without a scenario', () => {
+    renderEditor('/scenario_editor?tab=history')
+
+    expect(tab('New Scenario')).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('opens from a scenario\'s row in Your Library', async () => {
+    vi.mocked(listMyScenarios).mockResolvedValue([scenario])
+    renderEditor('/scenario_editor?tab=library')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Version history of Etude' }))
+
+    expect(tab('Version History')).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('heading', { name: 'Version 1' })).toBeInTheDocument()
+    expect(listScenarioVersions).toHaveBeenCalledWith('s1')
+  })
+
+  it('keeps unsaved edits in the editor while another tab is showing', async () => {
+    renderEditor('/scenario_editor?tab=new&scenario=s1')
+    const title = await screen.findByLabelText('Title')
+
+    await userEvent.type(title, ' draft')
+    await userEvent.click(tab('Version History'))
+    expect(await screen.findByRole('heading', { name: 'Version 1' })).toBeInTheDocument()
+    await userEvent.click(tab('Editing Scenario'))
+
+    expect(screen.getByLabelText('Title')).toHaveValue('Etude draft')
+  })
+})
+
 describe('Your Library while signed out', () => {
   it('prompts for sign-in instead of rendering library content', async () => {
-    renderAtRoute(<YourLibraryPanel onOpenScenario={() => {}} onCreateNew={() => {}} />, {
+    renderAtRoute(<YourLibraryPanel onOpenScenario={() => {}} onViewHistory={() => {}} onCreateNew={() => {}} />, {
       path: '/scenario_editor',
       auth: SIGNED_OUT,
     })
