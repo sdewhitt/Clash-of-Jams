@@ -88,7 +88,7 @@ export default function UserSearchResult({ profile, communitySearch, communityFu
                     type="button"
                     onClick={(event) => {
                         event.stopPropagation();
-                        communityFunction;
+                        communityFunction?.();
                     }}
                     className={`
                         rounded-lg

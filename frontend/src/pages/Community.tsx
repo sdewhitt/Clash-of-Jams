@@ -15,6 +15,7 @@ import { CreateCommunityAnnouncement } from "@/components/CreateCommunityAnnounc
 import type { LeaderboardResponse } from "@/lib/leaderboards";
 import { LeaderboardRow, LeaderboardStat, MyStanding } from "@/components/Leaderboard";
 import { CommunityInviteCard } from "@/components/CommunityInviteCard";
+import type { ChangeEvent } from "react";
 
 type CommunitySections =
     | "announcements"
@@ -77,7 +78,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
 
     const memberRole = currentMembership?.role;
 
-    async function handleUpload( event: React.ChangeEvent<HTMLInputElement> ) {
+    async function handleUpload( event: ChangeEvent<HTMLInputElement> ) {
         const file = event.target.files?.[0];
     
         if (!file) { 
@@ -784,7 +785,8 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
                     </div>
                 </div>
             );
-        
+        default:
+            return;
     }
 }
 
@@ -917,7 +919,7 @@ export function UserCommunity() {
                 <div
                     className={`
                         flex flex-col
-                        items-centers
+                        items-center
                         w-full
                     `}
                 >

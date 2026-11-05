@@ -1,8 +1,7 @@
-import { collection, doc, onSnapshot, runTransaction, getDoc } from 'firebase/firestore'
+import { collection, doc, onSnapshot, runTransaction, getDoc, arrayUnion, increment } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useEffect, useState } from 'react';
-import { COLLECTIONS, communityMembersPath, communityRequestsPath, newAppNotification, newCommunityRequest } from '@/lib/schema/collections';
-import { joinCommunity } from './communityManagement';
+import { COLLECTIONS, communityMembersPath, communityRequestsPath, newAppNotification, newCommunityMembership, newCommunityRequest } from '@/lib/schema/collections';
   
 function requestId(communityId: string, uid: string) {
     return [communityId, uid].join('_')
@@ -124,7 +123,7 @@ export function useFriendshipStatus ( actorUid: string, friendUid: string ) {
 export async function sendCommunityRequest( communityId: string, initiatorUid: string, memberUid: string, outsiderUid: string, ) {
     const requestRef = doc(db, communityRequestsPath(communityId), requestId(communityId, outsiderUid))
     const publicRef = doc(db, COLLECTIONS.publicProfile, outsiderUid);
-    const notificationRef = doc(collection(db, 'notifications'))
+    const notificationRef = doc(collection(db, 'notifications'));
 
     await runTransaction(db, async (tx) => {
         const [request, publicProfile ] = await Promise.all([
@@ -172,41 +171,55 @@ export async function sendCommunityRequest( communityId: string, initiatorUid: s
 }
 
 export async function acceptCommunityRequest( communityId: string, initiatorUid: string, memberUid: string, outsiderUid: string, ) {
-    const requestRef = doc(db, communityRequestsPath(communityId), requestId(communityId, outsiderUid),);
+    const requestRef = doc(db, communityRequestsPath(communityId), `${communityId}_${outsiderUid}`);
     const memberRef = doc(db, communityMembersPath(communityId), outsiderUid);
-    const publicRef = doc(db, 'publicProfile', outsiderUid);
-    const notificationRef = doc(collection(db, 'notifications'));
+    const publicRef = doc(db, COLLECTIONS.publicProfile, outsiderUid);
+    const userRef = doc(db, COLLECTIONS.users, outsiderUid);
+    const communityRef = doc(db, COLLECTIONS.communities, communityId);
+    const notificationRef = doc(collection(db, "notifications"));
 
     await runTransaction(db, async (tx) => {
-        const [ request, publicProfile, member] = await Promise.all([
+        // All reads must happen before writes.
+        const [request, publicProfile, member, user, community,] = await Promise.all([
             tx.get(requestRef),
             tx.get(publicRef),
             tx.get(memberRef),
+            tx.get(userRef),
+            tx.get(communityRef),
         ]);
 
-        if (!publicProfile.exists()) {
-            throw new Error('Error occurred when fetching user profiles.');
+        if (!request.exists() || request.data().status !== "pending") {
+            throw new Error("This request is no longer pending.");
         }
 
-        if (!request.exists() || request.data().status !== 'pending') {
-            throw new Error('This request is no longer pending.');
+        if (!publicProfile.exists() || !user.exists()) {
+            throw new Error("Error occurred when fetching user profiles.");
+        }
+
+        if (!community.exists()) {
+            throw new Error("Community not found.");
         }
 
         if (member.exists()) {
-            throw new Error('This user is already a member of the community.');
+            throw new Error("This user is already a member.");
         }
+        
+        const displayName = publicProfile.data().displayName ?? publicProfile.data().username ?? "...";
 
-        tx.update(requestRef, { status: 'accepted', });
-        await joinCommunity(communityId, outsiderUid, publicProfile.data().displayName ?? publicProfile.data().username ?? "...");
+        tx.update(requestRef, { status: "accepted", });
+        tx.update(userRef, { communities: arrayUnion(communityId), });
+        tx.update(publicRef, { communities: arrayUnion(communityId), });
+        tx.update(communityRef, { memberCount: increment(1), });
+        tx.set(memberRef, newCommunityMembership({ uid: outsiderUid, communityId, userDisplayName: displayName, role: "member", }));
 
         if (initiatorUid === memberUid) {
-            tx.set(notificationRef, newAppNotification({ notifiedUid: outsiderUid, notifierUid: memberUid, notificationType: 'community_knock_request_accepted', requestId: requestRef.id, }))
-        }
-        else {
-            tx.set(notificationRef, newAppNotification({ notifiedUid: memberUid, notifierUid: outsiderUid, notificationType: 'community__invitation_request_accepted', requestId: requestRef.id, }))
+            tx.set(notificationRef, newAppNotification({ notifiedUid: outsiderUid, notifierUid: memberUid, notificationType: "community_knock_request_accepted", requestId: requestRef.id, }));
+        } else {
+            tx.set(notificationRef, newAppNotification({ notifiedUid: memberUid, notifierUid: outsiderUid, notificationType: "community_invitation_request_accepted", requestId: requestRef.id, }));
         }
     });
 }
+
 
 export async function declineCommunityRequest( communityId: string, initiatorUid: string, memberUid: string, outsiderUid: string, ) {
     const requestRef = doc( db, communityRequestsPath(communityId), requestId(communityId, outsiderUid), );
@@ -220,11 +233,13 @@ export async function declineCommunityRequest( communityId: string, initiatorUid
         }
 
         tx.update(requestRef, { status: 'declined', })
+        console.log(initiatorUid)
+        console.log(memberUid)
         if (initiatorUid === memberUid) {
             tx.set(notificationRef, newAppNotification({ notifiedUid: outsiderUid, notifierUid: memberUid, notificationType: 'community_knock_request_declined', requestId: requestRef.id, }))
         }
         else {
-            tx.set(notificationRef, newAppNotification({ notifiedUid: memberUid, notifierUid: outsiderUid, notificationType: 'community__invitation_request_declined', requestId: requestRef.id, }))
+            tx.set(notificationRef, newAppNotification({ notifiedUid: memberUid, notifierUid: outsiderUid, notificationType: 'community_invitation_request_declined', requestId: requestRef.id, }))
         }
     })
 }
