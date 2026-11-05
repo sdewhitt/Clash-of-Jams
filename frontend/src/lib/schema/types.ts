@@ -70,7 +70,13 @@ export type JobState = (typeof JOB_STATES)[number]
 export const REPORT_STATES = ['open', 'reviewing', 'resolved', 'dismissed'] as const
 export type ReportState = (typeof REPORT_STATES)[number]
 
-export const INVITATION_STATES = ['pending', 'accepted', 'declined', 'expired', 'cancelled'] as const
+export const INVITATION_STATES = [
+  'pending',
+  'accepted',
+  'declined',
+  'expired',
+  'cancelled',
+] as const
 export type InvitationState = (typeof INVITATION_STATES)[number]
 
 export const FRIENDSHIP_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
@@ -84,7 +90,7 @@ export type HitVerdict = (typeof HIT_VERDICTS)[number]
 
 export type ModerationTargetType = 'user' | 'scenario' | 'recording'
 
-export type RelationshipStatus = "friend" | "friendOfFriend" | "none";
+export type RelationshipStatus = 'friend' | 'friendOfFriend' | 'none'
 
 /* ------------------------------------------------------- primary database */
 
@@ -146,8 +152,8 @@ export interface PublicProfile {
 
 /** Interface used to query public users for friend-of-friends **/
 export interface SearchProfile extends PublicProfile {
-  relationship: RelationshipStatus;
-  mutualFriendCount: number;
+  relationship: RelationshipStatus
+  mutualFriendCount: number
 }
 
 /** usernames/{usernameLower} — reservation document enforcing invariant 1. **/
@@ -171,6 +177,11 @@ export interface UserSettings {
   publicElos: Instrument[]
   /** Milliseconds of input latency the gameplay engine compensates for. **/
   inputLatencyOffsetMs: number
+  /**
+   * The same for a MIDI controller, which skips the microphone and runs far lower. Calibrated
+   * from the scenario editor and subtracted from notes recorded there. Older documents lack it.
+   */
+  midiLatencyOffsetMs?: number
   /** The audio interface or microphone to play through; null is the browser default. */
   audioInputDeviceId?: string | null
   /** The device's name when it was chosen, to find it again if its id changes. */
@@ -528,7 +539,7 @@ export interface Community {
   communityIcon: string | null
   description: string
   ownerUid: string
-  members: string[]
+  memberCount: number
   announcements: string[]
   isPublic: boolean
   createdAt: Timestamp
@@ -641,11 +652,11 @@ export interface FriendMatchInvitationResponse {
 }
 
 export interface DeclineFriendMatchRequest {
-  invitationId: string;
+  invitationId: string
 }
 
 export interface CancelFriendMatchRequest {
-  invitationId: string;
+  invitationId: string
 }
 
 /** recordingShares/{shareId} — a run recording the owner chose to publish. */
@@ -657,6 +668,25 @@ export interface RecordingShare {
   mediaAssetId: string
   caption: string
   visibility: Visibility
+  createdAt: Timestamp
+}
+
+/**
+ * scoreShares/{shareId} -- a run's result, sent to friends from the results screen.
+ *
+ * The title and score are copied from the scenario and run when it is sent, so a recipient
+ * sees them without reading a scenario that may be private. The rules check the copied score
+ * against the run itself, so it cannot be inflated.
+ */
+export interface ScoreShare {
+  id: string
+  ownerUid: string
+  runId: string
+  scenarioId: string
+  scenarioTitle: string
+  finalScore: number
+  message: string
+  recipientUids: string[]
   createdAt: Timestamp
 }
 

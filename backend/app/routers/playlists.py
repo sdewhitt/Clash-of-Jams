@@ -107,7 +107,7 @@ def remove_scenario(playlist_id: str, scenario_id: str, user: CurrentUserDep) ->
             status_code=status.HTTP_404_NOT_FOUND, detail="Scenario is not in this playlist"
         )
 
-    remaining_scenarios = [scenario for scenario in playlist["scenarioIds"] is scenario != scenario_id]
+    remaining_scenarios = [scenario for scenario in playlist["scenarioIds"] if scenario != scenario_id]
     return _save_order(playlist, remaining_scenarios, user.uid)
 
 

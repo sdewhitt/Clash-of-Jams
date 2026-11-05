@@ -29,10 +29,12 @@
     "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
+    "@fontsource/noto-music": "^5.3.0",
     "@tonejs/midi": "^2.0.28",
     "fflate": "^0.8.3",
     "firebase": "^12.19.0",
     "lucide-react": "^1.66.0",
+    "obscenity": "^0.4.6",
     "pitchy": "^4.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

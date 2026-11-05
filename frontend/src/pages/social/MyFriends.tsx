@@ -118,8 +118,8 @@ export function MyFriends() {
                             flex flex-row
                             justify-between
                             px-6
-                            py-4`
-                        }>
+                            py-4
+                        `}>
                             <h1 className="text-2xl font-bold mt-2">Your Friends</h1>
                             <button 
                                 className={`
@@ -139,6 +139,25 @@ export function MyFriends() {
                                 onClick={() => navigate("/friends/find_friends")}
                             >
                                 Add a Friend
+                            </button>
+                            <button
+                                className={`
+                                    rounded-lg
+                                    bg-linear-to-b
+                                    from-contrast-start
+                                    via-contrast-middle
+                                    to-contrast-end
+                                    outline-3
+                                    outline-contrast-middle
+                                    text-ink
+                                    hover:brightness-125
+                                    active:scale-95
+                                    px-3
+                                    py-3`
+                                }
+                                onClick={() => navigate("/friends/shared_scores")}
+                            >
+                                Shared With You
                             </button>
                         </div>
                         <div
