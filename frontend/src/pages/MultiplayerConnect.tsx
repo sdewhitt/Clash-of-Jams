@@ -7,6 +7,8 @@ import { ProfileButton } from '@/components/ProfileButton'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useMatchmaking } from '@/lib/matchmaking/useMatchmaking'
 import { navigateToMatch } from '@/lib/matchmaking/navigation'
+import { spectatorPreferenceKey } from '@/lib/multiplayer/useSession'
+import { SpectateTab } from '@/components/SpectateTab'
 import { NotificationButton } from '@/components/NotificationButton'
 
 export function MultiplayerConnect() {
@@ -16,6 +18,7 @@ export function MultiplayerConnect() {
   const { status, receivedAt, error, leaving, cancel, retry } = useMatchmaking(user?.uid)
   const match = status?.match
 
+  const [allowSpectators, setAllowSpectators] = useState(false)
   const [now, setNow] = useState(() => performance.now())
   
   const queued = status?.state === 'queued'
@@ -29,14 +32,17 @@ export function MultiplayerConnect() {
 
   useEffect(() => {
     if (match) {
+      if (allowSpectators && user) {
+        sessionStorage.setItem(spectatorPreferenceKey(user.uid, match.id), 'on')
+      }
       navigateToMatch(navigate, match.id);
     }
-  }, [match, navigate]);
+  }, [match, navigate, allowSpectators, user]);
 
-  async function leave() {
+  async function leave(destination = '/home') {
     try {
       await cancel()
-      navigate('/home')
+      navigate(destination)
     } catch {
       /* The hook displays the error and keeps the page available. */
     }
@@ -63,6 +69,13 @@ export function MultiplayerConnect() {
             />
         </div>
       </header>
+      <div className="ml-auto px-4 pt-4">
+        <SpectateTab
+          uid={user?.uid}
+          joining={leaving || Boolean(match)}
+          onJoin={(path) => { void leave(path) }}
+        />
+      </div>
       <div className="flex flex-1 items-center justify-center px-4 py-12">
         <section
           aria-label="Matchmaking queue"
@@ -80,6 +93,15 @@ export function MultiplayerConnect() {
               Time in queue · {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}
             </p>
           )}
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={allowSpectators}
+              disabled={Boolean(match)}
+              onChange={(event) => setAllowSpectators(event.target.checked)}
+            />
+            Allow spectators
+          </label>
           {error && (
             <div className="flex flex-col gap-3">
               <p role="alert">{error}</p>

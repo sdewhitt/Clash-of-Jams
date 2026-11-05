@@ -1,7 +1,8 @@
 import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, setDoc, arrayRemove, runTransaction, } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { PublicProfile, UserStatus } from '@/lib/schema/types';
+import type { PublicProfile, UserSettings, UserStatus } from '@/lib/schema/types';
 import { COLLECTIONS } from '@/lib/schema/collections';
+import { DEFAULT_APPEARANCE, publicAppearance } from '@/lib/profile/profileAppearance';
 
 export async function getPublicProfile(uid: string): Promise<PublicProfile> {
     // Read by id, not by query: the rules grant userProfile/{uid} to its owner by document id, which a collection query can't be shown to satisfy.

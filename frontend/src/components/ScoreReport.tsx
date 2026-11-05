@@ -1,13 +1,23 @@
+import { describeTempo } from '@/lib/play/speed'
+import type { TempoMapEntry } from '@/lib/schema/types'
 import type { ScoreExplanation } from '@/scoring/explain'
 import { MAX_SCORE } from '@/scoring/score'
 
 type ScoreReportProps = {
   finalScore: number
   explanation: ScoreExplanation
+  /** The speed the run was played at; shown with the tempo when the tempo map is given. */
+  speedMultiplier?: number
+  tempoMap?: TempoMapEntry[]
 }
 
 /** The results-screen breakdown of one performance: final score, subscores and note problems. */
-export function ScoreReport({ finalScore, explanation }: ScoreReportProps) {
+export function ScoreReport({
+  finalScore,
+  explanation,
+  speedMultiplier = 1,
+  tempoMap,
+}: ScoreReportProps) {
   return (
     <section
       aria-label="Your score"
@@ -33,6 +43,12 @@ export function ScoreReport({ finalScore, explanation }: ScoreReportProps) {
         <span className="text-5xl font-bold tabular-nums">{finalScore.toLocaleString()}</span>
         <span className="text-muted">/ {MAX_SCORE.toLocaleString()}</span>
       </div>
+      {tempoMap && tempoMap.length > 0 && (
+        <p aria-label="Played tempo" className="text-sm text-muted">
+          Played at {describeTempo(tempoMap, speedMultiplier)}
+          {speedMultiplier !== 1 && '. Only full-speed runs count toward the leaderboard.'}
+        </p>
+      )}
       <p className="font-semibold">{explanation.summary}</p>
 
       <div className="grid grid-cols-3 gap-3">

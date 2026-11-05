@@ -69,9 +69,9 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 | `users/{uid}/skillRatings/{instrument}`                   | `SkillRating`         | One per instrument. Created at sign-up, then server-written.                  |
 | `users/{uid}/skillRatings/{instrument}/history/{matchId}` | `RatingEvent`         | Owner-readable, server-created immutable Elo update and replay inputs.        |
 | `usernames/{usernameLower}`                               | `UsernameReservation` | Reservation doc; the key is what makes usernames unique.                      |
-| `userSettings/{uid}`                                      | `UserSettings`        | Theme, accessibility, instrument preferences.                                 |
+| `userSettings/{uid}`                                      | `UserSettings`        | Theme, accessibility, instrument, input latency, audio interface and input. |
 | `scenarios/{scenarioId}`                                  | `Scenario`            | Ownership, metadata and aggregates.                                           |
-| `scenarios/{scenarioId}/versions/{versionId}`             | `ScenarioVersion`     | Immutable musical content; removed only when its scenario is deleted.         |
+| `scenarios/{scenarioId}/versions/{versionId}`             | `ScenarioVersion`     | Immutable musical content, plus an editable `name`. Removed when its scenario is deleted, or when the author reverts to an earlier version. |
 | `scenarios/{scenarioId}/difficultyEstimates/{versionId}` | Server aggregate | Version-scoped band scores, difficulty, coverage/confidence, part/speed and computation metadata; no raw players. |
 | `mediaAssets/{assetId}`                                   | `MediaAsset`          | Pointer into Cloud Storage plus its owner.                                    |
 | `runs/{runId}`                                            | `Run`                 | One completed attempt, with its embedded `ScoreBreakdown`.                    |
@@ -92,6 +92,7 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 | `moderationActions/{actionId}`            | `ModerationAction`    |                                           |
 | `matchInvitations/{invitationId}`         | `MatchInvitation`     |                                           |
 | `recordingShares/{shareId}`               | `RecordingShare`      |                                           |
+| `scoreShares/{shareId}`                   | `ScoreShare`          | A run's result, sent to friends.          |
 | `importJobs/{jobId}`                      | `ImportJob`           | MIDI, MusicXML and sheet-image ingestion. |
 
 `_schema/meta` holds the schema version and the collection list the script last
@@ -133,6 +134,19 @@ rather than a change to the chart.
 of the rules in force when the run happened, so changing a scenario's rules
 later cannot silently rewrite old scores.
 
+**Shared scores are snapshots.** Sending a result to friends writes a
+`scoreShares` document holding the scenario title and final score as they were,
+plus the `recipientUids` it went to. Recipients read the snapshot rather than the
+scenario, which may be private; the rules compare the copied score with the run it
+names, so a client cannot send a better score than it played. "Shared with me" is
+an `array-contains` query on `recipientUids`, ordered by `createdAt`. Exported run
+audio is downloaded on the player's device and never stored.
+
+**Two latencies, not one.** `UserSettings.inputLatencyOffsetMs` is the whole
+microphone loop; `midiLatencyOffsetMs` is a MIDI controller's, which is a fraction
+of it and is calibrated from the scenario editor. Documents written before the
+field existed lack it, and readers treat a missing value as 0.
+
 ## How the invariants are enforced
 
 | Design document invariant                     | Mechanism                                                                                                                                                                            |
@@ -157,7 +171,9 @@ status, instrument and scenario difficulty/source/target. Participants gain opti
 migration; see [matchmaking implementation and demo](matchmaking.md). The queue
 itself is transient server memory, separate from durable lobby assignments.
 
-Invariants 1 and 2 still need transactional writes in the data access layer.
+Invariant 1 still needs a transactional write in the data access layer. Saving a
+new scenario version is transactional, so invariant 2 holds; numbers are reused
+after a revert, but version ids never are, so runs cannot attach to the wrong one.
 
 Scenario difficulty publication atomically saves the version aggregate and the
 parent's `crowdDifficulty`/optional `crowdDifficultyVersionId`. A stale version

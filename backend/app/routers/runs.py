@@ -20,8 +20,9 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 
 # Scores are rounded to two decimals client-side, so recomputed values can differ slightly.
 SCORE_TOLERANCE = 0.02
-MIN_SPEED = 0.25
-MAX_SPEED = 2.0
+# Mirrors MIN_SPEED and MAX_SPEED in frontend/src/lib/play/speed.ts.
+MIN_SPEED = 0.3
+MAX_SPEED = 3.0
 # Mirrors MAX_SCORE in frontend/src/scoring/score.ts: finalScore is on a 0-100,000 scale,
 # while the breakdown accuracies stay 0-100.
 MAX_SCORE = 100_000

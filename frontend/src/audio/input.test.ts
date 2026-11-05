@@ -6,13 +6,41 @@ vi.mock('./frame-processor.ts?worker&url', () => ({ default: '/frame-processor.j
 
 const SR = 48000
 
-class FakeTrack {
+class FakeTrack extends EventTarget {
   stopped = false
+  channelCount = 1
   stop() {
     this.stopped = true
   }
   getSettings(): MediaTrackSettings {
-    return { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    return {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: this.channelCount,
+    }
+  }
+  /** What the browser does when the device is unplugged. */
+  unplug() {
+    this.dispatchEvent(new Event('ended'))
+  }
+}
+
+class FakeNode {
+  connections: { target: unknown; output?: number }[] = []
+  connect = vi.fn((target: unknown, output?: number) => {
+    this.connections.push({ target, output })
+    return target
+  })
+  disconnect = vi.fn()
+}
+
+class FakeAnalyser extends FakeNode {
+  fftSize = 2048
+  samples = new Float32Array(0)
+  getFloatTimeDomainData(into: Float32Array) {
+    into.fill(0)
+    into.set(this.samples.subarray(0, into.length))
   }
 }
 
@@ -20,19 +48,28 @@ class FakeContext {
   sampleRate = SR
   closed = false
   audioWorklet = { addModule: vi.fn(async () => {}) }
-  source = { connect: vi.fn(), disconnect: vi.fn() }
+  source = new FakeNode()
+  splitter: (FakeNode & { outputs: number }) | null = null
+  analyser = new FakeAnalyser()
   resume = vi.fn(async () => {})
   close = vi.fn(async () => {
     this.closed = true
   })
   createMediaStreamSource = vi.fn(() => this.source)
+  createChannelSplitter = vi.fn((outputs: number) => {
+    this.splitter = Object.assign(new FakeNode(), { outputs })
+    return this.splitter
+  })
+  createGain = vi.fn(() => new FakeNode())
+  createAnalyser = vi.fn(() => this.analyser)
 }
 
-class FakeWorkletNode {
+class FakeWorkletNode extends FakeNode {
   static last: FakeWorkletNode
   port: { onmessage: ((event: { data: unknown }) => void) | null } = { onmessage: null }
   readonly name: string
   constructor(_context: unknown, name: string) {
+    super()
     this.name = name
     FakeWorkletNode.last = this
   }
@@ -141,6 +178,58 @@ describe('openAudioInput', () => {
   it('surfaces a denied permission', async () => {
     getUserMedia.mockRejectedValueOnce(new DOMException('Permission denied', 'NotAllowedError'))
     await expect(openAudioInput()).rejects.toThrow('Permission denied')
+  })
+
+  it('analyzes only the chosen input of a multi-input interface', async () => {
+    track.channelCount = 4
+    const input = await openAudioInput({ deviceId: 'usb-interface', channel: 2 })
+    const context = input.context as unknown as FakeContext
+
+    expect(getUserMedia.mock.calls[0][0].audio.channelCount).toEqual({ ideal: 3 })
+    expect(context.createChannelSplitter).toHaveBeenCalledWith(4)
+    // The splitter feeds a single node from output 2, and only that node reaches the detector.
+    const picked = context.splitter!.connections
+    expect(picked).toHaveLength(1)
+    expect(picked[0].output).toBe(2)
+    expect(context.source.connections.map((c) => c.target)).toEqual([context.splitter])
+    expect(input.channel).toBe(2)
+  })
+
+  it('refuses an input the device does not have', async () => {
+    track.channelCount = 2
+    await expect(openAudioInput({ channel: 5 })).rejects.toThrow('Input 6 is not available')
+    expect(track.stopped).toBe(true)
+  })
+
+  it('reports the level of the analyzed signal, including clipping', async () => {
+    const input = await openAudioInput()
+    const context = input.context as unknown as FakeContext
+    context.analyser.samples = new Float32Array(2048).fill(0.5)
+    expect(input.readLevel().rmsDb).toBeCloseTo(-6.02, 1)
+    expect(input.readLevel().clipped).toBe(false)
+    context.analyser.samples = new Float32Array(2048).fill(1)
+    expect(input.readLevel().clipped).toBe(true)
+  })
+
+  it('reports an unplugged device and keeps the note that was sounding', async () => {
+    const onEnded = vi.fn()
+    const input = await openAudioInput({ onEnded })
+    play(FakeWorkletNode.last, null, 0.2, 0)
+    play(FakeWorkletNode.last, 330, 0.4, 0.2)
+
+    track.unplug()
+
+    expect(onEnded).toHaveBeenCalledTimes(1)
+    expect(input.isLive()).toBe(false)
+    expect(input.takeNotes()).toHaveLength(1)
+  })
+
+  it('does not report a device it stopped itself', async () => {
+    const onEnded = vi.fn()
+    const input = await openAudioInput({ onEnded })
+    await input.stop()
+    track.unplug()
+    expect(onEnded).not.toHaveBeenCalled()
   })
 
   it('explains that capture needs a secure context', async () => {

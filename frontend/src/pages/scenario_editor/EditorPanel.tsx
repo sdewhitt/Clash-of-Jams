@@ -1,19 +1,36 @@
 /**
- * The editor's main panel: scenario metadata above, the note grid below.
+ * The editor's main panel: the note grid, with everything else behind a toolbar.
+ *
+ * The piano roll is the page. Metadata, tempo, file import/export and MIDI
+ * recording each sit in a drawer that a toolbar button opens, so they are a
+ * click away without crowding the grid.
  *
  * It holds the draft for the whole editing session. With no scenarioId it
  * starts from emptyDraft(); with one it loads that scenario and the version it
  * points at, which is what makes a save-then-reopen round trip land on the
  * notes and metadata that were saved. Saving is refused without a signed-in
  * author or a title, so a half-formed scenario never reaches Firestore.
+ *
+ * Notes can also come from outside the grid: a MusicXML or MIDI file replaces
+ * the chart, and a MIDI controller records into it (user stories #26 and #30).
+ * Any chart can be exported back out as a .mid file.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 
 import { PianoRoll } from '@/components/PianoRoll'
+import { SheetMusic } from '@/components/SheetMusic'
+import { addNotes } from '@/lib/chart/edits'
+import type { NoteInput } from '@/lib/chart/edits'
 import { chartDurationMs } from '@/lib/chart/notes'
 import { useAuth } from '@/lib/auth/useAuth'
+import { downloadBytes, fileNameFor } from '@/lib/download'
+import { MIDI_ACCEPT, chartToMidi, midiTrackImport, readMidiUpload } from '@/lib/import/midiFile'
+import type { MidiFile, MidiImport } from '@/lib/import/midiFile'
+import type { MusicXmlImport } from '@/lib/import/musicxml'
 import { MUSICXML_ACCEPT, importMusicXmlFile } from '@/lib/import/musicxmlFile'
-import { loadScenario, saveScenarioDraft } from '@/lib/scenarios/store'
+import { STEP_NAMES, clampFifths, spellPitch } from '@/lib/notation/spelling'
+import { ScenarioConflictError, loadScenario, saveScenarioDraft } from '@/lib/scenarios/store'
 import { INSTRUMENTS, VISIBILITIES } from '@/lib/schema/types'
 import type { Instrument, Visibility } from '@/lib/schema/types'
 import {
@@ -21,6 +38,7 @@ import {
   INSTRUMENT_LABELS,
   VISIBILITY_LABELS,
   draftFromDocuments,
+  draftsEqual,
   emptyDraft,
   noteCount,
   openingTempo,
@@ -29,6 +47,13 @@ import {
   withOpeningTempo,
 } from '@/pages/scenario_editor/draft'
 import type { ScenarioDraft } from '@/pages/scenario_editor/draft'
+import {
+  clearRecoverableDraft,
+  readRecoverableDraft,
+  writeRecoverableDraft,
+} from '@/pages/scenario_editor/draftRecovery'
+import type { RecoverableDraft } from '@/pages/scenario_editor/draftRecovery'
+import { MidiRecordPanel } from '@/pages/scenario_editor/MidiRecordPanel'
 import { PlayTest } from '@/pages/scenario_editor/PlayTest'
 
 const FIELD_CLASS =
@@ -37,13 +62,90 @@ const FIELD_CLASS =
 
 const LABEL_CLASS = 'mb-1 block text-sm font-bold text-muted'
 
+const TOOL_CLASS =
+  'rounded-lg border-2 border-base-middle px-4 py-2 text-sm font-bold text-ink ' +
+  'transition-colors hover:border-accent-start hover:bg-accent-base-middle ' +
+  'disabled:cursor-not-allowed disabled:text-faint disabled:hover:border-base-middle ' +
+  'disabled:hover:bg-transparent'
+
 const TIME_SIG_DENOMINATORS = [2, 4, 8, 16]
+
+/** The toolbar buttons that open a drawer; at most one drawer is open at a time. */
+const DRAWERS = [
+  { id: 'details', label: 'Details' },
+  { id: 'tempo', label: 'Tempo & Key' },
+  { id: 'file', label: 'File' },
+  { id: 'record', label: 'Record' },
+] as const
+
+type DrawerId = (typeof DRAWERS)[number]['id']
+
+const drawerId = (id: DrawerId) => `scenario-editor-${id}-drawer`
+
+/** Two views of the same chart; switching never changes a note. */
+const EDITOR_VIEWS = [
+  { id: 'roll', label: 'Piano Roll' },
+  { id: 'sheet', label: 'Sheet Music' },
+] as const
+
+type EditorView = (typeof EDITOR_VIEWS)[number]['id']
+
+const EDITOR_VIEW_KEY = 'scenario-editor-view'
+
+function loadEditorView(): EditorView {
+  try {
+    return localStorage.getItem(EDITOR_VIEW_KEY) === 'sheet' ? 'sheet' : 'roll'
+  } catch {
+    return 'roll'
+  }
+}
+
+/** Every major key, seven flats to seven sharps, named by its major and relative minor. */
+const KEY_SIGNATURES = Array.from({ length: 15 }, (_, at) => {
+  const fifths = at - 7
+  const count = Math.abs(fifths)
+  const sign = fifths > 0 ? '♯' : '♭'
+  return {
+    fifths,
+    label: `${keyName(fifths)} major / ${minorName(fifths)} minor${count ? ` (${count}${sign})` : ''}`,
+  }
+})
+
+/** The major key with this many sharps (positive) or flats (negative). */
+function keyName(fifths: number) {
+  const tonic = spellPitch(mod(clampFifths(fifths) * 7, 12), clampFifths(fifths))
+  return noteLetter(tonic.step, tonic.alter)
+}
+
+function minorName(fifths: number) {
+  const tonic = spellPitch(mod(clampFifths(fifths) * 7 + 9, 12), clampFifths(fifths))
+  return noteLetter(tonic.step, tonic.alter)
+}
+
+function noteLetter(step: number, alter: number) {
+  return `${STEP_NAMES[step]}${alter > 0 ? '♯' : alter < 0 ? '♭' : ''}`
+}
+
+function mod(value: number, by: number) {
+  return ((value % by) + by) % by
+}
+/** firestore.rules caps a scenario title at this length. */
+const TITLE_MAX_LENGTH = 120
+const COPY_SUFFIX = ' (copy)'
+
+const NOTICE_CLASS =
+  'flex flex-wrap items-center gap-3 rounded-xl border-2 border-accent-start bg-base-end px-4 py-3'
+const NOTICE_BUTTON_CLASS =
+  'rounded-lg border-2 border-base-middle px-4 py-2 text-sm font-bold text-ink ' +
+  'transition-colors hover:border-accent-start hover:bg-accent-base-middle'
 
 type Status =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'saving' }
   | { kind: 'saved'; versionNumber: number }
+  | { kind: 'visibility' }
+  | { kind: 'conflict' }
   | { kind: 'imported'; fileName: string; notes: number; warnings: string[] }
   | { kind: 'error'; message: string }
 
@@ -58,16 +160,29 @@ interface EditorPanelProps {
 
 export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProps) {
   const { user } = useAuth()
+  const uid = user?.uid ?? null
   const [draft, setDraft] = useState<ScenarioDraft>(emptyDraft)
   const [openId, setOpenId] = useState(scenarioId)
   const [status, setStatus] = useState<Status>(() =>
     scenarioId ? { kind: 'loading' } : { kind: 'idle' },
   )
-  const [dirty, setDirty] = useState(false)
+  // What a save would be compared against: the last saved or loaded state.
+  const [baseline, setBaseline] = useState<ScenarioDraft>(emptyDraft)
+  // The version the draft started from; a save checks it is still the current one.
+  const [baseVersionId, setBaseVersionId] = useState<string | null>(null)
+  const [reloads, setReloads] = useState(0)
+  const [recoverable, setRecoverable] = useState<RecoverableDraft | null>(null)
   const [playTesting, setPlayTesting] = useState(false)
+  const [drawer, setDrawer] = useState<DrawerId | null>(null)
+  const [view, setView] = useState<EditorView>(loadEditorView)
   // The id this panel wrote itself, which therefore needs no read back.
   const [savedHere, setSavedHere] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const midiInput = useRef<HTMLInputElement>(null)
+  // A multi-track MIDI file waiting for the author to pick a track.
+  const [pendingMidi, setPendingMidi] = useState<{ file: MidiFile; fileName: string } | null>(null)
+  // A MIDI take in progress, drawn over the chart until it is committed.
+  const [take, setTake] = useState<{ notes: NoteInput[]; replace: boolean } | null>(null)
 
   // Resetting during render is React's own answer to "the prop changed, drop
   // the state derived from it"; an effect would paint the old scenario first.
@@ -78,8 +193,11 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     if (scenarioId === null || scenarioId !== savedHere) {
       setSavedHere(null)
       setDraft(emptyDraft())
-      setDirty(false)
+      setBaseline(emptyDraft())
+      setBaseVersionId(null)
+      setRecoverable(null)
       setPlayTesting(false)
+      setPendingMidi(null)
       setStatus(scenarioId ? { kind: 'loading' } : { kind: 'idle' })
     }
   }
@@ -92,9 +210,12 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     loadScenario(scenarioId)
       .then(({ scenario, version }) => {
         if (cancelled) return
-        setDraft(draftFromDocuments(scenario, version))
-        setDirty(false)
+        const loaded = draftFromDocuments(scenario, version)
+        setDraft(loaded)
+        setBaseline(loaded)
+        setBaseVersionId(scenario.currentVersionId)
         setStatus({ kind: 'idle' })
+        offerRecovery(loaded)
       })
       .catch((error: unknown) => {
         if (cancelled) return
@@ -103,20 +224,68 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     return () => {
       cancelled = true
     }
-  }, [scenarioId, savedHere])
+    // offerRecovery only reads uid and scenarioId, which are covered here.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioId, savedHere, reloads, uid])
 
-  function edit(next: ScenarioDraft) {
-    setDraft(next)
-    setDirty(true)
-    setStatus({ kind: 'idle' })
+  // A blank scenario has nothing to load, so its recovery check happens here.
+  useEffect(() => {
+    if (!scenarioId) offerRecovery(emptyDraft())
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioId, uid])
+
+  // Keeps unsaved work in this browser. Paused while a recovery offer is open,
+  // so it cannot overwrite the draft being offered.
+  useEffect(() => {
+    if (!uid || recoverable || status.kind === 'loading') return
+    const timer = setTimeout(() => {
+      if (draftsEqual(draft, baseline)) clearRecoverableDraft(uid, scenarioId)
+      else writeRecoverableDraft(uid, scenarioId, { draft, baseVersionId, savedAt: Date.now() })
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [uid, scenarioId, draft, baseline, baseVersionId, recoverable, status.kind])
+
+  function offerRecovery(saved: ScenarioDraft) {
+    if (!uid) return
+    const stored = readRecoverableDraft(uid, scenarioId)
+    if (!stored) return
+    if (draftsEqual(stored.draft, saved)) clearRecoverableDraft(uid, scenarioId)
+    else setRecoverable(stored)
   }
 
-  async function handleSave() {
+  function restoreRecovered(stored: RecoverableDraft) {
+    setDraft(stored.draft)
+    setBaseVersionId(stored.baseVersionId)
+    setRecoverable(null)
+  }
+
+  function discardRecovered() {
+    if (uid) clearRecoverableDraft(uid, scenarioId)
+    setRecoverable(null)
+  }
+
+  function reloadLatest() {
+    if (uid) clearRecoverableDraft(uid, scenarioId)
+    setSavedHere(null)
+    setStatus({ kind: 'loading' })
+    setReloads((count) => count + 1)
+  }
+
+  async function handleSaveAsCopy() {
     setStatus({ kind: 'saving' })
     try {
-      const result = await saveScenarioDraft({ uid: user?.uid ?? null, draft, scenarioId })
+      // Private, so a copy of a draft is never published by accident.
+      const copy: ScenarioDraft = {
+        ...draft,
+        title: draft.title.trim().slice(0, TITLE_MAX_LENGTH - COPY_SUFFIX.length) + COPY_SUFFIX,
+        visibility: 'private',
+      }
+      const result = await saveScenarioDraft({ uid, draft: copy })
+      if (uid) clearRecoverableDraft(uid, scenarioId)
       setSavedHere(result.scenarioId)
-      setDirty(false)
+      setDraft(copy)
+      setBaseline(copy)
+      setBaseVersionId(result.versionId)
       setStatus({ kind: 'saved', versionNumber: result.versionNumber })
       onSaved(result.scenarioId)
     } catch (error: unknown) {
@@ -124,42 +293,131 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     }
   }
 
-  async function handleImport(file: File) {
-    if (
-      noteCount(draft.chart) > 0 &&
-      !window.confirm('Importing replaces the notes already in this scenario. Continue?')
-    ) {
-      return
-    }
+  function edit(next: ScenarioDraft) {
+    setDraft(next)
+    setStatus({ kind: 'idle' })
+  }
+
+  async function handleSave() {
+    setStatus({ kind: 'saving' })
     try {
-      const imported = await importMusicXmlFile(file)
-      setDraft(withImportedScore(draft, imported))
-      setDirty(true)
-      setStatus({
-        kind: 'imported',
-        fileName: file.name,
-        notes: noteCount(imported.chart),
-        warnings: imported.warnings,
+      const result = await saveScenarioDraft({
+        uid,
+        draft,
+        scenarioId,
+        ...(scenarioId ? { baseVersionId } : {}),
       })
+      if (uid) clearRecoverableDraft(uid, scenarioId)
+      setSavedHere(result.scenarioId)
+      setBaseline(draft)
+      setBaseVersionId(result.versionId)
+      setStatus(
+        result.outcome === 'visibility'
+          ? { kind: 'visibility' }
+          : { kind: 'saved', versionNumber: result.versionNumber },
+      )
+      onSaved(result.scenarioId)
+    } catch (error: unknown) {
+      setStatus(
+        error instanceof ScenarioConflictError
+          ? { kind: 'conflict' }
+          : { kind: 'error', message: messageOf(error) },
+      )
+    }
+  }
+
+  function confirmReplace() {
+    return (
+      noteCount(draft.chart) === 0 ||
+      window.confirm('Importing replaces the notes already in this scenario. Continue?')
+    )
+  }
+
+  function applyImport(imported: MusicXmlImport | MidiImport, fileName: string) {
+    setDraft(withImportedScore(draft, imported))
+    setStatus({
+      kind: 'imported',
+      fileName,
+      notes: noteCount(imported.chart),
+      warnings: imported.warnings,
+    })
+  }
+
+  async function handleImport(file: File) {
+    if (!confirmReplace()) return
+    try {
+      applyImport(await importMusicXmlFile(file), file.name)
     } catch (error: unknown) {
       setStatus({ kind: 'error', message: messageOf(error) })
     }
   }
 
+  /** A one-track file imports straight away; with more, the author picks which one. */
+  async function handleMidiImport(file: File) {
+    try {
+      const midi = await readMidiUpload(file)
+      if (midi.tracks.length > 1) {
+        setPendingMidi({ file: midi, fileName: file.name })
+        return
+      }
+      if (!confirmReplace()) return
+      applyImport(midiTrackImport(midi, midi.tracks[0].trackIndex), file.name)
+    } catch (error: unknown) {
+      setStatus({ kind: 'error', message: messageOf(error) })
+    }
+  }
+
+  function handleTrackChosen(trackIndex: number) {
+    if (!pendingMidi) return
+    const { file, fileName } = pendingMidi
+    setPendingMidi(null)
+    if (!confirmReplace()) return
+    try {
+      applyImport(midiTrackImport(file, trackIndex), fileName)
+    } catch (error: unknown) {
+      setStatus({ kind: 'error', message: messageOf(error) })
+    }
+  }
+
+  function chooseView(next: EditorView) {
+    setView(next)
+    try {
+      localStorage.setItem(EDITOR_VIEW_KEY, next)
+    } catch {
+      // A remembered view is a convenience; private browsing can do without it.
+    }
+  }
+
+  function handleExport() {
+    const bytes = chartToMidi(draft.chart, draft.title.trim())
+    downloadBytes(bytes, `${fileNameFor(draft.title)}.mid`, 'audio/midi')
+  }
+
   const tempo = openingTempo(draft.chart)
+  const partId = draft.chart.parts[0]?.partId ?? DEFAULT_PART_ID
+  // A MIDI take in progress is drawn over the chart until it is committed.
+  const shownChart = take
+    ? addNotes(draft.chart, partId, take.notes, { replace: take.replace })
+    : draft.chart
   const notes = noteCount(draft.chart)
+  const unchanged = useMemo(() => draftsEqual(draft, baseline), [draft, baseline])
   const canSave =
-    Boolean(user) && draft.title.trim().length > 0 && status.kind !== 'saving' && dirty
+    Boolean(user) && draft.title.trim().length > 0 && status.kind !== 'saving' && !unchanged
 
   if (status.kind === 'loading') {
     return <p className="py-12 text-center text-muted">Loading scenario...</p>
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="min-w-64 flex-1">
-          <label className={LABEL_CLASS} htmlFor="scenario-title">
+    <div className="flex flex-col gap-4">
+      <div
+        role="toolbar"
+        aria-label="Scenario tools"
+        onKeyDown={(event) => event.key === 'Escape' && setDrawer(null)}
+        className="flex flex-col gap-3"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor="scenario-title">
             Title
           </label>
           <input
@@ -168,208 +426,379 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
             value={draft.title}
             placeholder="Untitled Scenario"
             onChange={(event) => edit({ ...draft, title: event.target.value })}
-            className={FIELD_CLASS}
+            className="min-w-48 flex-1 rounded-lg border-2 border-transparent bg-transparent px-2
+              py-1 text-2xl font-bold text-ink transition-colors placeholder:text-faint
+              hover:border-base-middle focus:border-accent-start focus:outline-none"
           />
-        </div>
 
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          className="rounded-lg bg-linear-to-b from-accent-start from-50 via-accent-middle
-            to-accent-end to-70 px-6 py-3 font-bold text-ink transition-all hover:brightness-125
-            active:scale-95 disabled:cursor-not-allowed disabled:bg-base-end disabled:bg-none
-            disabled:text-faint disabled:hover:brightness-100"
-        >
-          {status.kind === 'saving' ? 'Saving...' : scenarioId ? 'Save Version' : 'Save Scenario'}
-        </button>
+          {DRAWERS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              aria-expanded={drawer === id}
+              aria-controls={drawerId(id)}
+              onClick={() => setDrawer(drawer === id ? null : id)}
+              className={`${TOOL_CLASS} ${drawer === id ? 'border-accent-start bg-accent-base-middle' : ''}`}
+            >
+              {label}
+              {id === 'tempo' && (
+                <span className="ml-2 font-normal text-muted">
+                  {tempo.bpm} &middot; {tempo.timeSigNum}/{tempo.timeSigDen} &middot;{' '}
+                  {keyName(draft.chart.keySignature)}
+                </span>
+              )}
+            </button>
+          ))}
 
-        <button
-          type="button"
-          onClick={() => fileInput.current?.click()}
-          className="rounded-lg border-2 border-base-middle px-6 py-3 font-bold text-ink
-            transition-colors hover:border-accent-start hover:bg-accent-base-middle"
-        >
-          Import MusicXML
-        </button>
-        <input
-          ref={fileInput}
-          type="file"
-          accept={MUSICXML_ACCEPT}
-          aria-label="MusicXML file"
-          className="hidden"
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            // Cleared so picking the same file again still fires a change.
-            event.target.value = ''
-            if (file) void handleImport(file)
-          }}
-        />
+          <span aria-hidden="true" className="mx-1 h-8 w-0.5 bg-base-middle" />
 
-        <button
-          type="button"
-          onClick={() => setPlayTesting(true)}
-          disabled={notes === 0}
-          title={notes === 0 ? 'Add some notes to play test this scenario.' : undefined}
-          className="rounded-lg border-2 border-base-middle px-6 py-3 font-bold text-ink
-            transition-colors hover:border-accent-start hover:bg-accent-base-middle
-            disabled:cursor-not-allowed disabled:text-faint disabled:hover:border-base-middle
-            disabled:hover:bg-transparent"
-        >
-          Play Test
-        </button>
-
-        {scenarioId && (
           <button
             type="button"
-            onClick={onStartNew}
-            className="rounded-lg border-2 border-base-middle px-6 py-3 font-bold text-ink
-              transition-colors hover:border-accent-start hover:bg-accent-base-middle"
+            onClick={() => setPlayTesting(true)}
+            disabled={notes === 0}
+            title={notes === 0 ? 'Add some notes to play test this scenario.' : undefined}
+            className={TOOL_CLASS}
           >
-            New Scenario
+            Play Test
           </button>
-        )}
-      </div>
 
-      <SaveStatus status={status} signedIn={Boolean(user)} hasTitle={draft.title.trim() !== ''} />
+          {scenarioId && (
+            <button type="button" onClick={onStartNew} className={TOOL_CLASS}>
+              New Scenario
+            </button>
+          )}
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="sm:col-span-2">
-          <label className={LABEL_CLASS} htmlFor="scenario-description">
-            Description
-          </label>
-          <input
-            id="scenario-description"
-            type="text"
-            value={draft.description}
-            placeholder="What should a player know before they start?"
-            onChange={(event) => edit({ ...draft, description: event.target.value })}
-            className={FIELD_CLASS}
-          />
-        </div>
-
-        <div>
-          <label className={LABEL_CLASS} htmlFor="scenario-instrument">
-            Instrument
-          </label>
-          <select
-            id="scenario-instrument"
-            value={draft.instrument}
-            onChange={(event) => edit(withInstrument(draft, event.target.value as Instrument))}
-            className={FIELD_CLASS}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!canSave}
+            title={unchanged ? 'No changes since the last save.' : undefined}
+            className="rounded-lg bg-linear-to-b from-accent-start from-50 via-accent-middle
+              to-accent-end to-70 px-5 py-2 text-sm font-bold text-ink transition-all
+              hover:brightness-125 active:scale-95 disabled:cursor-not-allowed
+              disabled:bg-base-end disabled:bg-none disabled:text-faint
+              disabled:hover:brightness-100"
           >
-            {INSTRUMENTS.map((instrument) => (
-              <option key={instrument} value={instrument}>
-                {INSTRUMENT_LABELS[instrument]}
-              </option>
-            ))}
-          </select>
+            {status.kind === 'saving' ? 'Saving...' : scenarioId ? 'Save Version' : 'Save Scenario'}
+          </button>
         </div>
 
-        <div>
-          <label className={LABEL_CLASS} htmlFor="scenario-visibility">
-            Visibility
-          </label>
-          <select
-            id="scenario-visibility"
-            value={draft.visibility}
-            onChange={(event) => edit({ ...draft, visibility: event.target.value as Visibility })}
-            className={FIELD_CLASS}
-          >
-            {VISIBILITIES.map((visibility) => (
-              <option key={visibility} value={visibility}>
-                {VISIBILITY_LABELS[visibility]}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SaveStatus status={status} signedIn={Boolean(user)} hasTitle={draft.title.trim() !== ''} />
 
-        <div>
-          <label className={LABEL_CLASS} htmlFor="scenario-tempo">
-            Tempo (BPM)
-          </label>
-          <input
-            id="scenario-tempo"
-            type="number"
-            min={20}
-            max={300}
-            value={tempo.bpm}
-            onChange={(event) =>
-              edit({
-                ...draft,
-                chart: withOpeningTempo(draft.chart, {
-                  bpm: clampNumber(Number(event.target.value), 20, 300),
-                }),
-              })
-            }
-            className={FIELD_CLASS}
-          />
-        </div>
-
-        <div>
-          <span className={LABEL_CLASS}>Time signature</span>
-          <div className="flex items-center gap-2">
-            <input
-              aria-label="Beats per bar"
-              type="number"
-              min={1}
-              max={16}
-              value={tempo.timeSigNum}
-              onChange={(event) =>
-                edit({
-                  ...draft,
-                  chart: withOpeningTempo(draft.chart, {
-                    timeSigNum: clampNumber(Number(event.target.value), 1, 16),
-                  }),
-                })
-              }
-              className={FIELD_CLASS}
-            />
-            <span className="text-muted">/</span>
-            <select
-              aria-label="Beat unit"
-              value={tempo.timeSigDen}
-              onChange={(event) =>
-                edit({
-                  ...draft,
-                  chart: withOpeningTempo(draft.chart, {
-                    timeSigDen: Number(event.target.value),
-                  }),
-                })
-              }
-              className={FIELD_CLASS}
+        {status.kind === 'conflict' && (
+          <div role="alert" className={NOTICE_CLASS}>
+            <p className="min-w-0 flex-1 basis-64 text-sm text-ink">
+              This scenario was saved somewhere else since you opened it. Your edits are still here
+              and nothing was overwritten.
+            </p>
+            <button type="button" onClick={reloadLatest} className={NOTICE_BUTTON_CLASS}>
+              Reload Latest
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSaveAsCopy()}
+              className={NOTICE_BUTTON_CLASS}
             >
-              {TIME_SIG_DENOMINATORS.map((denominator) => (
-                <option key={denominator} value={denominator}>
-                  {denominator}
-                </option>
-              ))}
-            </select>
+              Save as Copy
+            </button>
           </div>
-        </div>
+        )}
 
-        <div className="sm:col-span-2">
-          <label className={LABEL_CLASS} htmlFor="scenario-difficulty">
-            Difficulty -- {draft.authorDifficulty} of 10
-          </label>
-          <input
-            id="scenario-difficulty"
-            type="range"
-            min={1}
-            max={10}
-            step={1}
-            value={draft.authorDifficulty}
-            onChange={(event) => edit({ ...draft, authorDifficulty: Number(event.target.value) })}
-            className="w-full accent-accent-start"
+        {recoverable && (
+          <div role="status" className={NOTICE_CLASS}>
+            <p className="min-w-0 flex-1 basis-64 text-sm text-ink">
+              You have unsaved work from {new Date(recoverable.savedAt).toLocaleString()}.
+            </p>
+            <button
+              type="button"
+              onClick={() => restoreRecovered(recoverable)}
+              className={NOTICE_BUTTON_CLASS}
+            >
+              Restore Draft
+            </button>
+            <button type="button" onClick={discardRecovered} className={NOTICE_BUTTON_CLASS}>
+              Discard Draft
+            </button>
+          </div>
+        )}
+
+        {drawer === 'details' && (
+          <Drawer id={drawerId('details')} label="Details" onClose={() => setDrawer(null)}>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS} htmlFor="scenario-description">
+                  Description
+                </label>
+                <input
+                  id="scenario-description"
+                  type="text"
+                  value={draft.description}
+                  placeholder="What should a player know before they start?"
+                  onChange={(event) => edit({ ...draft, description: event.target.value })}
+                  className={FIELD_CLASS}
+                />
+              </div>
+
+              <div>
+                <label className={LABEL_CLASS} htmlFor="scenario-instrument">
+                  Instrument
+                </label>
+                <select
+                  id="scenario-instrument"
+                  value={draft.instrument}
+                  onChange={(event) =>
+                    edit(withInstrument(draft, event.target.value as Instrument))
+                  }
+                  className={FIELD_CLASS}
+                >
+                  {INSTRUMENTS.map((instrument) => (
+                    <option key={instrument} value={instrument}>
+                      {INSTRUMENT_LABELS[instrument]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={LABEL_CLASS} htmlFor="scenario-visibility">
+                  Visibility
+                </label>
+                <select
+                  id="scenario-visibility"
+                  value={draft.visibility}
+                  onChange={(event) =>
+                    edit({ ...draft, visibility: event.target.value as Visibility })
+                  }
+                  className={FIELD_CLASS}
+                >
+                  {VISIBILITIES.map((visibility) => (
+                    <option key={visibility} value={visibility}>
+                      {VISIBILITY_LABELS[visibility]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS} htmlFor="scenario-difficulty">
+                  Difficulty -- {draft.authorDifficulty} of 10
+                </label>
+                <input
+                  id="scenario-difficulty"
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={draft.authorDifficulty}
+                  onChange={(event) =>
+                    edit({ ...draft, authorDifficulty: Number(event.target.value) })
+                  }
+                  className="w-full accent-accent-start"
+                />
+              </div>
+            </div>
+          </Drawer>
+        )}
+
+        {drawer === 'tempo' && (
+          <Drawer id={drawerId('tempo')} label="Tempo & Key" onClose={() => setDrawer(null)}>
+            <div className="flex flex-wrap items-end gap-5">
+              <div className="w-32">
+                <label className={LABEL_CLASS} htmlFor="scenario-tempo">
+                  Tempo (BPM)
+                </label>
+                <input
+                  id="scenario-tempo"
+                  type="number"
+                  min={20}
+                  max={300}
+                  value={tempo.bpm}
+                  onChange={(event) =>
+                    edit({
+                      ...draft,
+                      chart: withOpeningTempo(draft.chart, {
+                        bpm: clampNumber(Number(event.target.value), 20, 300),
+                      }),
+                    })
+                  }
+                  className={FIELD_CLASS}
+                />
+              </div>
+
+              <div className="w-48">
+                <span className={LABEL_CLASS}>Time signature</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    aria-label="Beats per bar"
+                    type="number"
+                    min={1}
+                    max={16}
+                    value={tempo.timeSigNum}
+                    onChange={(event) =>
+                      edit({
+                        ...draft,
+                        chart: withOpeningTempo(draft.chart, {
+                          timeSigNum: clampNumber(Number(event.target.value), 1, 16),
+                        }),
+                      })
+                    }
+                    className={FIELD_CLASS}
+                  />
+                  <span className="text-muted">/</span>
+                  <select
+                    aria-label="Beat unit"
+                    value={tempo.timeSigDen}
+                    onChange={(event) =>
+                      edit({
+                        ...draft,
+                        chart: withOpeningTempo(draft.chart, {
+                          timeSigDen: Number(event.target.value),
+                        }),
+                      })
+                    }
+                    className={FIELD_CLASS}
+                  >
+                    {TIME_SIG_DENOMINATORS.map((denominator) => (
+                      <option key={denominator} value={denominator}>
+                        {denominator}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="w-56">
+                <label className={LABEL_CLASS} htmlFor="scenario-key">
+                  Key signature
+                </label>
+                <select
+                  id="scenario-key"
+                  value={clampFifths(draft.chart.keySignature)}
+                  onChange={(event) =>
+                    edit({
+                      ...draft,
+                      chart: { ...draft.chart, keySignature: Number(event.target.value) },
+                    })
+                  }
+                  className={FIELD_CLASS}
+                >
+                  {KEY_SIGNATURES.map((key) => (
+                    <option key={key.fifths} value={key.fifths}>
+                      {key.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </Drawer>
+        )}
+
+        {drawer === 'file' && (
+          <Drawer id={drawerId('file')} label="File" onClose={() => setDrawer(null)}>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                className={TOOL_CLASS}
+              >
+                Import MusicXML
+              </button>
+              <button
+                type="button"
+                onClick={() => midiInput.current?.click()}
+                className={TOOL_CLASS}
+              >
+                Import MIDI
+              </button>
+              <button
+                type="button"
+                onClick={handleExport}
+                disabled={notes === 0}
+                title={notes === 0 ? 'Add some notes to export this scenario.' : undefined}
+                className={TOOL_CLASS}
+              >
+                Export MIDI
+              </button>
+            </div>
+          </Drawer>
+        )}
+
+        {/* Kept mounted while closed, so a take in progress or a connected controller
+            survives the author closing the drawer to look at the roll. */}
+        <Drawer
+          id={drawerId('record')}
+          label="Record"
+          hidden={drawer !== 'record'}
+          onClose={() => setDrawer(null)}
+        >
+          <MidiRecordPanel
+            chart={draft.chart}
+            uid={user?.uid ?? null}
+            onPreview={setTake}
+            onCommit={(recorded, replace) =>
+              edit({ ...draft, chart: addNotes(draft.chart, partId, recorded, { replace }) })
+            }
           />
-        </div>
+        </Drawer>
       </div>
 
-      <PianoRoll
-        chart={draft.chart}
-        partId={draft.chart.parts[0]?.partId ?? DEFAULT_PART_ID}
-        onChange={(chart) => edit({ ...draft, chart })}
+      {/* Outside the File drawer, so they exist whether or not it is open. */}
+      <input
+        ref={fileInput}
+        type="file"
+        accept={MUSICXML_ACCEPT}
+        aria-label="MusicXML file"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          // Cleared so picking the same file again still fires a change.
+          event.target.value = ''
+          if (file) void handleImport(file)
+        }}
       />
+      <input
+        ref={midiInput}
+        type="file"
+        accept={MIDI_ACCEPT}
+        aria-label="MIDI file"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          event.target.value = ''
+          if (file) void handleMidiImport(file)
+        }}
+      />
+
+      <div role="group" aria-label="Editor view" className="flex gap-1 self-start">
+        {EDITOR_VIEWS.map((choice) => (
+          <button
+            key={choice.id}
+            type="button"
+            aria-pressed={view === choice.id}
+            onClick={() => chooseView(choice.id)}
+            className={`${TOOL_CLASS} ${view === choice.id ? 'border-accent-start bg-accent-base-middle' : ''}`}
+          >
+            {choice.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'sheet' ? (
+        <SheetMusic
+          chart={shownChart}
+          partId={partId}
+          instrument={draft.instrument}
+          readOnly={take !== null}
+          onChange={(chart) => edit({ ...draft, chart })}
+        />
+      ) : (
+        <PianoRoll
+          chart={shownChart}
+          partId={partId}
+          readOnly={take !== null}
+          onChange={(chart) => edit({ ...draft, chart })}
+        />
+      )}
 
       <p className="text-sm text-muted">
         {notes} {notes === 1 ? 'note' : 'notes'} &middot; {tempo.bpm} BPM &middot;{' '}
@@ -377,9 +806,113 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
         {(chartDurationMs(draft.chart) / 1000).toFixed(1)}s
       </p>
 
+      {pendingMidi && (
+        <MidiTrackPicker
+          fileName={pendingMidi.fileName}
+          tracks={pendingMidi.file.tracks}
+          onPick={handleTrackChosen}
+          onCancel={() => setPendingMidi(null)}
+        />
+      )}
+
       {playTesting && (
         <PlayTest draft={draft} uid={user?.uid ?? null} onClose={() => setPlayTesting(false)} />
       )}
+    </div>
+  )
+}
+
+/** The settings behind one toolbar button, opened beneath the toolbar. */
+function Drawer({
+  id,
+  label,
+  hidden = false,
+  onClose,
+  children,
+}: {
+  id: string
+  label: string
+  hidden?: boolean
+  onClose: () => void
+  children: ReactNode
+}) {
+  return (
+    <section
+      id={id}
+      aria-label={label}
+      hidden={hidden}
+      className="relative rounded-xl border-2 border-base-middle bg-base-start p-4 pr-12"
+    >
+      {children}
+      <button
+        type="button"
+        aria-label={`Close ${label}`}
+        onClick={onClose}
+        className="absolute top-2 right-2 rounded-lg px-2 text-lg font-bold text-muted
+          hover:text-ink"
+      >
+        &times;
+      </button>
+    </section>
+  )
+}
+
+function MidiTrackPicker({
+  fileName,
+  tracks,
+  onPick,
+  onCancel,
+}: {
+  fileName: string
+  tracks: MidiFile['tracks']
+  onPick: (trackIndex: number) => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="midi-track-title"
+        onKeyDown={(event) => event.key === 'Escape' && onCancel()}
+        className="flex max-h-full w-full max-w-md flex-col gap-4 overflow-y-auto rounded-xl
+          border-4 border-accent-start bg-base-start p-6"
+      >
+        <h2 id="midi-track-title" className="text-xl font-bold text-ink">
+          Choose a track
+        </h2>
+        <p className="text-sm text-muted">
+          {fileName} has {tracks.length} tracks. A scenario is one part, so pick the one to play.
+        </p>
+        <ul className="flex flex-col gap-2">
+          {tracks.map((track) => (
+            <li key={track.trackIndex}>
+              <button
+                type="button"
+                onClick={() => onPick(track.trackIndex)}
+                className="flex w-full items-center justify-between rounded-lg border-2
+                  border-base-middle px-4 py-2 text-left text-ink transition-colors
+                  hover:border-accent-start hover:bg-accent-base-middle"
+              >
+                <span className="font-bold">{track.name}</span>
+                <span className="text-sm text-muted">
+                  {track.noteCount} {track.noteCount === 1 ? 'note' : 'notes'}
+                  {track.percussion ? ' -- drums' : ''}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          autoFocus
+          onClick={onCancel}
+          className="self-end rounded-lg border-2 border-base-middle px-4 py-2 text-sm font-bold
+            text-ink hover:border-accent-start"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }
@@ -398,6 +931,9 @@ function SaveStatus({
   }
   if (status.kind === 'saved') {
     return <p className="text-sm text-muted">Saved as version {status.versionNumber}.</p>
+  }
+  if (status.kind === 'visibility') {
+    return <p className="text-sm text-muted">Visibility updated. No new version was needed.</p>
   }
   if (status.kind === 'imported') {
     return (

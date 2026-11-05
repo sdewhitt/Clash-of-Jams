@@ -12,11 +12,15 @@ interface Entry {
   receivedAt: number
 }
 
-export function sessionSocketUrl(matchId: string) {
+export function sessionSocketUrl(matchId: string, endpoint = 'socket') {
   const origin = (import.meta.env.VITE_API_BASE_URL ?? '').trim() || window.location.origin
-  const url = new URL('/api/v1/multiplayer/' + encodeURIComponent(matchId) + '/socket', origin)
+  const url = new URL('/api/v1/multiplayer/' + encodeURIComponent(matchId) + '/' + endpoint, origin)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   return url.toString()
+}
+
+export function spectatorPreferenceKey(uid: string, matchId: string) {
+  return `allow-spectators:${uid}:${matchId}`
 }
 
 /** One subscription; retry pending IDs after reconnect and use the server's sequence. */
@@ -89,7 +93,10 @@ export function useSession(matchId: string | undefined, uid: string | undefined)
             setError(lookupError)
           })
         current.onopen = () => {
-          if (active) current.send(JSON.stringify({ token }))
+          if (!active) return
+          const allowSpectators = sessionStorage.getItem(spectatorPreferenceKey(uid!, matchId!))
+          const firstFrame = allowSpectators === 'on' ? { token, allowSpectators: true } : { token }
+          current.send(JSON.stringify(firstFrame))
         }
         current.onmessage = (message) => {
           if (!active || channel.current !== current) return
@@ -114,6 +121,7 @@ export function useSession(matchId: string | undefined, uid: string | undefined)
             setError(reply.error)
             if (!resumed) {
               resumed = true
+              sessionStorage.removeItem(spectatorPreferenceKey(uid!, matchId!))
               if (terminal) state.pending.clear()
               else for (const event of state.pending.values()) current.send(JSON.stringify(event))
             }
@@ -186,7 +194,7 @@ export function useSession(matchId: string | undefined, uid: string | undefined)
     }
   }, [matchId, uid, attempt])
 
-  function send(kind: SessionEvent['kind'], phrase?: SessionEvent['phrase']) {
+  function send(kind: SessionEvent['kind'], option?: SessionEvent['phrase'] | boolean) {
     const socket = channel.current
     if (!socket || socket.readyState !== WebSocket.OPEN || connection !== 'connected') return
     const event: SessionEvent = {
@@ -194,7 +202,8 @@ export function useSession(matchId: string | undefined, uid: string | undefined)
       sequence: ++protocol.current.sequence,
       kind,
     }
-    if (phrase) event.phrase = phrase
+    if (typeof option === 'boolean') event.allowSpectators = option
+    else if (option) event.phrase = option
     protocol.current.pending.set(event.eventId, event)
     socket.send(JSON.stringify(event))
     setError(null)

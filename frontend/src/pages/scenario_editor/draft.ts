@@ -65,13 +65,15 @@ export function draftFromDocuments(
   scenario: Scenario,
   version: ScenarioVersion | null,
 ): ScenarioDraft {
+  const settings = version?.metadata ?? scenario
   return {
-    title: scenario.title,
-    description: scenario.description,
-    instrument: scenario.instrument,
+    title: settings.title,
+    description: settings.description,
+    instrument: settings.instrument,
+    // Not versioned: it is who may see the scenario now, not part of its content.
     visibility: scenario.visibility,
-    authorDifficulty: scenario.authorDifficulty,
-    chart: version?.chart ?? emptyChart(scenario.instrument),
+    authorDifficulty: settings.authorDifficulty,
+    chart: version?.chart ?? emptyChart(settings.instrument),
   }
 }
 
@@ -92,11 +94,14 @@ export function withInstrument(draft: ScenarioDraft, instrument: Instrument): Sc
 }
 
 /**
- * Replaces the draft's chart with an imported score. The score's title only
+ * Replaces the draft's chart with an imported score (MusicXML or MIDI). The score's title only
  * fills a blank one, and its instrument wins only when the import could tell
  * what it was, so a file never overwrites what the author already chose.
  */
-export function withImportedScore(draft: ScenarioDraft, imported: MusicXmlImport): ScenarioDraft {
+export function withImportedScore(
+  draft: ScenarioDraft,
+  imported: Pick<MusicXmlImport, 'title' | 'instrument' | 'chart'>,
+): ScenarioDraft {
   return withInstrument(
     {
       ...draft,
@@ -113,6 +118,55 @@ export function withOpeningTempo(chart: NoteChart, patch: Partial<TempoMapEntry>
     ...chart,
     tempoMap: chart.tempoMap.map((entry, index) => (index === 0 ? { ...entry, ...patch } : entry)),
   }
+}
+
+/**
+ * Whether two drafts would save as the same scenario. A draft that has been
+ * edited and then edited back compares equal, and so does one read back from
+ * Firestore, which returns map keys in its own order. Note `index` is left out
+ * because it only restates a note's position in the sorted list.
+ */
+export function draftsEqual(a: ScenarioDraft, b: ScenarioDraft) {
+  return canonicalDraft(a) === canonicalDraft(b)
+}
+
+/** Equal apart from visibility, so saving them would not need a new version. */
+export function draftContentEqual(a: ScenarioDraft, b: ScenarioDraft) {
+  return draftsEqual({ ...a, visibility: b.visibility }, b)
+}
+
+function canonicalDraft(draft: ScenarioDraft) {
+  return JSON.stringify(
+    sortedKeys({
+      ...draft,
+      title: draft.title.trim(),
+      chart: {
+        ...draft.chart,
+        parts: draft.chart.parts.map((part) => ({
+          ...part,
+          notes: [...part.notes]
+            .sort(
+              (x, y) =>
+                x.startBeat - y.startBeat ||
+                x.midiPitch - y.midiPitch ||
+                x.durationBeats - y.durationBeats ||
+                x.velocity - y.velocity,
+            )
+            .map(({ index: _index, ...note }) => note),
+        })),
+      },
+    }),
+  )
+}
+
+function sortedKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortedKeys)
+  if (value === null || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([x], [y]) => (x < y ? -1 : 1))
+      .map(([key, entry]) => [key, sortedKeys(entry)]),
+  )
 }
 
 export function noteCount(chart: NoteChart) {

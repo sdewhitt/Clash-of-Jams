@@ -31,9 +31,11 @@ def fake_db(monkeypatch: pytest.MonkeyPatch) -> FakeFirestore:
     Applies to every test automatically; ask for it by name to seed or inspect the data.
     """
     import app.routers
-    from app.routers import ratings
+    from app.routers import ratings, scenarios
+    from app.services import account_deletion
 
     db = FakeFirestore()
+    monkeypatch.setattr(account_deletion, "get_firestore_client", lambda: db)
     for module_info in pkgutil.iter_modules(app.routers.__path__):
         module = importlib.import_module(f"app.routers.{module_info.name}")
         if hasattr(module, "db"):
@@ -42,6 +44,8 @@ def fake_db(monkeypatch: pytest.MonkeyPatch) -> FakeFirestore:
     monkeypatch.setattr(
         ratings, "upsert_review_transaction", ratings.upsert_review_transaction.to_wrap
     )
+    # The public catalog cache would otherwise carry one test's scenarios into the next.
+    monkeypatch.setattr(scenarios, "_public_catalog", None)
     return db
 
 

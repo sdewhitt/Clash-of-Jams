@@ -1,11 +1,11 @@
-import { Timestamp } from 'firebase/firestore'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
 import { LiveElo } from '@/components/LiveElo'
+import { MatchResults } from '@/components/MatchResults'
 import { ProfileButton } from '@/components/ProfileButton'
-import { RatingResult } from '@/components/RatingResult'
 import { useAuth } from '@/lib/auth/useAuth'
+import { useProfileAccent } from '@/lib/profile/useProfileAccent'
 import { useSession } from '@/lib/multiplayer/useSession'
 import { NotificationButton } from '@/components/NotificationButton'
 import { PRESET_MESSAGES } from '@/lib/multiplayer/types'
@@ -20,6 +20,7 @@ export function MultiplayerSession() {
   const navigate = useNavigate()
   const { snapshot, receivedAt, connection, error, send, retry } = useSession(matchId, user?.uid)
   const [now, setNow] = useState(() => performance.now())
+  const [copyStatus, setCopyStatus] = useState('')
   const [leaving, setLeaving] = useState(false)
   // Keep local departure intent through the HTTP response and WebSocket abandonment update.
   const leaveRequested = useRef(false)
@@ -37,6 +38,8 @@ export function MultiplayerSession() {
   }, [messageCooldown])
   const self = snapshot?.participants.find((p) => p.uid === user?.uid)
   const opponent = snapshot?.participants.find((p) => p.uid !== user?.uid)
+  const selfAccent = useProfileAccent(user?.uid, true)
+  const opponentAccent = useProfileAccent(opponent?.uid, false)
   const serverNow = (snapshot?.serverTimeMs ?? 0) + Math.max(0, now - receivedAt)
   const elapsed = snapshot?.startedAtMs == null ? 0 : serverNow - snapshot.startedAtMs
   const countdown = Math.max(0, Math.ceil(-elapsed / 1000))
@@ -44,7 +47,6 @@ export function MultiplayerSession() {
   const running = snapshot?.state === 'in_progress' && !snapshot.finalizing
   const playable = running && elapsed >= 0 && remaining > 0 && connection === 'connected'
   const currentBeat = Math.max(0, Math.floor(elapsed / (snapshot?.beatMs ?? 1000)) + 1)
-  const result = snapshot?.ratingEvents.find((event) => event.uid === user?.uid)
 
   useEffect(() => {
     if (
@@ -165,27 +167,32 @@ export function MultiplayerSession() {
               </p>
               <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {[self, opponent]
-                  .filter((p) => !!p)
-                  .map((p) => (
-                    <article
-                      key={p!.uid}
-                      aria-label={
-                        p!.uid === user?.uid ? 'Your performance' : 'Opponent performance'
-                      }
-                      className="min-w-0 rounded-lg border-2 border-accent-start p-4"
-                    >
-                      <h3 className="font-bold wrap-anywhere">
-                        {p!.uid === user?.uid ? 'You' : p!.displayName} · {Math.round(p!.elo)} Elo
-                      </h3>
-                      <p className="mt-2 text-3xl font-bold">{Math.round(p!.score * 100)}%</p>
-                      <p className="text-sm">
-                        {p!.beatsHit}/{snapshot.totalBeats} demo beats
-                      </p>
-                      {snapshot.state === 'lobby' && (
-                        <p className="mt-2">{p!.isReady ? 'Ready' : 'Not ready'}</p>
-                      )}
-                    </article>
-                  ))}
+                  .filter((p) => p !== undefined)
+                  .map((p) => {
+                    const isSelf = p.uid === user?.uid
+                    const accent = isSelf ? selfAccent : opponentAccent
+                    return (
+                      <article
+                        key={p.uid}
+                        aria-label={
+                          isSelf ? 'Your performance' : 'Opponent performance'
+                        }
+                        className="min-w-0 rounded-lg border-2 border-accent-start p-4"
+                        style={{ borderColor: accent }}
+                      >
+                        <h3 className="font-bold wrap-anywhere">
+                          {isSelf ? 'You' : p.displayName} · {Math.round(p.elo)} Elo
+                        </h3>
+                        <p className="mt-2 text-3xl font-bold">{Math.round(p.score * 100)}%</p>
+                        <p className="text-sm">
+                          {p.beatsHit}/{snapshot.totalBeats} demo beats
+                        </p>
+                        {snapshot.state === 'lobby' && (
+                          <p className="mt-2">{p.isReady ? 'Ready' : 'Not ready'}</p>
+                        )}
+                      </article>
+                    )
+                  })}
               </div>
               {opponent &&
                 connection === 'connected' &&
@@ -257,6 +264,41 @@ export function MultiplayerSession() {
               )}
             </section>
             {['lobby', 'in_progress'].includes(snapshot.state) && (
+              <details
+                className="rounded-xl border-2 border-accent-start p-5"
+                open={snapshot.state === 'lobby' ? true : undefined}
+              >
+                <summary className="cursor-pointer font-bold">Match settings</summary>
+                <label className="mt-3 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={self?.allowSpectators ?? false}
+                    disabled={connection !== 'connected' || snapshot.finalizing}
+                    onChange={(event) => send('spectating', event.target.checked)}
+                  />
+                  Allow spectators
+                </label>
+                <p className="mt-1 text-sm">Both players must allow spectators.</p>
+                <button
+                  className={button + ' mt-3'}
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const path = '/spectate/' + encodeURIComponent(snapshot.id)
+                      const url = new URL(path, window.location.origin)
+                      await navigator.clipboard.writeText(url.href)
+                      setCopyStatus('Spectator link copied.')
+                    } catch {
+                      setCopyStatus('Could not copy the spectator link.')
+                    }
+                  }}
+                >
+                  Copy spectator link
+                </button>
+                <p role="status">{copyStatus}</p>
+              </details>
+            )}
+            {['lobby', 'in_progress'].includes(snapshot.state) && (
               <section
                 aria-label="Preset messages"
                 className="rounded-xl border-2 border-accent-start p-5"
@@ -284,24 +326,25 @@ export function MultiplayerSession() {
                 >
                   {snapshot.messages.map((item) => (
                     <p key={item.id}>
-                      {item.uid === user?.uid ? 'You' : 'Opponent'}: {item.text}
+                      {!item.system && (item.uid === user?.uid ? 'You: ' : 'Opponent: ')}
+                      {item.text}
+                      {Object.entries(item.reactions ?? {}).map(([reaction, count]) => (
+                        <span key={reaction} className="ml-2">
+                          {reaction} {count}
+                        </span>
+                      ))}
                     </p>
                   ))}
                 </div>
               </section>
             )}
             {snapshot.state === 'complete' && (
-              <section aria-label="Match results" className="space-y-4">
-                <h2 className="text-2xl font-bold">Match results</h2>
-                {result && (
-                  <RatingResult
-                    event={{ ...result, appliedAt: Timestamp.fromDate(new Date(result.appliedAt)) }}
-                  />
-                )}
-                <button className={button} onClick={() => navigate('/home')}>
-                  Return Home
-                </button>
-              </section>
+              <MatchResults
+                snapshot={snapshot}
+                selfUid={user?.uid}
+                onHome={() => navigate('/home')}
+                buttonClass={button}
+              />
             )}
             {snapshot.state === 'abandoned' && (
               <section aria-label="Match ended" className="space-y-4">

@@ -5,9 +5,9 @@
  * beside their own modules. These drive the page the way an author does, with
  * the store mocked, to check the pieces are wired together.
  */
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { EDITOR_LIMITS, addNote } from '@/lib/chart/edits'
 import {
@@ -15,12 +15,13 @@ import {
   listMyScenarios,
   loadScenario,
   saveScenarioDraft,
+  ScenarioConflictError,
 } from '@/lib/scenarios/store'
 import { emptyChart } from '@/lib/schema/collections'
 import type { Scenario, ScenarioVersion } from '@/lib/schema/types'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { EditorPanel } from '@/pages/scenario_editor/EditorPanel'
-import { withOpeningTempo } from '@/pages/scenario_editor/draft'
+import { draftFromDocuments, withOpeningTempo } from '@/pages/scenario_editor/draft'
 import { LocationProbe, renderAtRoute, SIGNED_OUT, signedIn } from '@/test/render'
 
 vi.mock('@/lib/scenarios/store', () => ({
@@ -28,15 +29,12 @@ vi.mock('@/lib/scenarios/store', () => ({
   listMyScenarios: vi.fn(),
   loadScenario: vi.fn(),
   saveScenarioDraft: vi.fn(),
+  ScenarioConflictError: class extends Error {},
 }))
 
 vi.mock('@/components/NotificationButton', () => ({
   NotificationButton: ({ uid }: { uid: string }) => (
-    <button
-      type="button"
-      aria-label="Notifications"
-      data-testid="notification-button"
-    >
+    <button type="button" aria-label="Notifications" data-testid="notification-button">
       Notifications: {uid}
     </button>
   ),
@@ -101,10 +99,12 @@ describe('saving a new scenario', () => {
       scenarioId: 'abc',
       versionId: 'abc-v1',
       versionNumber: 1,
+      outcome: 'version',
     })
     renderEditor()
 
     await userEvent.type(screen.getByLabelText('Title'), 'Chromatic Warmup')
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
     fireEvent.change(screen.getByLabelText('Tempo (BPM)'), { target: { value: '90' } })
     fireEvent.pointerDown(screen.getByRole('application'), { button: 0, ...at(2, 60) })
     await userEvent.click(screen.getByRole('button', { name: 'Save Scenario' }))
@@ -126,6 +126,7 @@ describe('saving a new scenario', () => {
       scenarioId: 'abc',
       versionId: 'abc-v1',
       versionNumber: 1,
+      outcome: 'version',
     })
     renderEditor()
 
@@ -145,6 +146,24 @@ describe('saving a new scenario', () => {
       uid: 'user-1',
       scenarioId: 'abc',
     })
+  })
+
+  it('only offers to save while the draft differs from what was saved', async () => {
+    const { scenario, version } = savedDocuments()
+    vi.mocked(loadScenario).mockResolvedValue({ scenario, version })
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+
+    const save = await screen.findByRole('button', { name: 'Save Version' })
+    expect(save).toBeDisabled()
+
+    const title = screen.getByLabelText('Title')
+    await userEvent.type(title, '!')
+    expect(save).toBeEnabled()
+
+    // Undoing the edit by hand leaves nothing new to save.
+    await userEvent.type(title, '{Backspace}')
+    expect(save).toBeDisabled()
+    expect(save).toHaveAttribute('title', 'No changes since the last save.')
   })
 
   it('reports a failed save and leaves the draft as it was', async () => {
@@ -173,6 +192,88 @@ describe('saving a new scenario', () => {
   })
 })
 
+describe('toolbar drawers', () => {
+  it('keeps the settings out of the way until a toolbar button opens them', async () => {
+    renderEditor()
+
+    expect(screen.getByRole('application')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Tempo (BPM)')).not.toBeInTheDocument()
+
+    const details = screen.getByRole('button', { name: 'Details' })
+    await userEvent.click(details)
+    expect(details).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('region', { name: 'Details' })).toBeInTheDocument()
+
+    // One drawer at a time: opening Tempo closes Details.
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Tempo (BPM)')).toHaveValue(120)
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByLabelText('Tempo (BPM)')).not.toBeInTheDocument()
+  })
+
+  it('closes a drawer from its close button', async () => {
+    renderEditor()
+
+    await userEvent.click(screen.getByRole('button', { name: 'File' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Close File' }))
+
+    expect(screen.queryByRole('button', { name: 'Export MIDI' })).not.toBeInTheDocument()
+  })
+})
+
+describe('sheet music view', () => {
+  beforeEach(() => localStorage.clear())
+  afterEach(() => localStorage.clear())
+
+  it('shows the same notes as sheet music, and edits there reach the save', async () => {
+    vi.mocked(saveScenarioDraft).mockResolvedValue({
+      scenarioId: 'abc',
+      versionId: 'abc-v1',
+      versionNumber: 1,
+      outcome: 'version',
+    })
+    renderEditor()
+    fireEvent.pointerDown(screen.getByRole('application'), { button: 0, ...at(0, 60) })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sheet Music' }))
+
+    expect(screen.getByRole('application')).toHaveAccessibleName('Sheet music, 1 note placed')
+    expect(screen.getByRole('button', { name: 'C4 at beat 0' })).toBeInTheDocument()
+
+    fireEvent.keyDown(screen.getByRole('application'), { key: 'e' })
+    await userEvent.type(screen.getByLabelText('Title'), 'Two Notes')
+    await userEvent.click(screen.getByRole('button', { name: 'Save Scenario' }))
+
+    const { draft } = vi.mocked(saveScenarioDraft).mock.calls[0][0]
+    expect(draft.chart.parts[0].notes.map((note) => note.midiPitch)).toEqual([60, 64])
+  })
+
+  it('remembers the chosen view', async () => {
+    const { unmount } = renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Sheet Music' }))
+    unmount()
+
+    renderEditor()
+
+    expect(screen.getByRole('button', { name: 'Sheet Music' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('sets the key signature the sheet music is written in', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
+
+    await userEvent.selectOptions(screen.getByLabelText('Key signature'), '-2')
+
+    expect(screen.getByRole('button', { name: /^Tempo/ })).toHaveTextContent('B♭')
+  })
+})
+
 describe('reopening a saved scenario', () => {
   it('restores the notes and metadata that were saved', async () => {
     vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
@@ -181,10 +282,12 @@ describe('reopening a saved scenario', () => {
     expect(screen.getByText('Loading scenario...')).toBeInTheDocument()
     expect(await screen.findByLabelText('Title')).toHaveValue('Chromatic Warmup')
     expect(loadScenario).toHaveBeenCalledWith('abc')
+    await userEvent.click(screen.getByRole('button', { name: 'Details' }))
     expect(screen.getByLabelText('Description')).toHaveValue('Four bars, slowly.')
     expect(screen.getByLabelText('Instrument')).toHaveValue('guitar')
     expect(screen.getByLabelText('Visibility')).toHaveValue('public')
     expect(screen.getByLabelText(/Difficulty/)).toHaveValue('6')
+    await userEvent.click(screen.getByRole('button', { name: /^Tempo/ }))
     expect(screen.getByLabelText('Tempo (BPM)')).toHaveValue(90)
     expect(screen.getByText(/^2 notes · 90 BPM · 4\/4/)).toBeInTheDocument()
     expect(screen.getByTitle(/^C4 at beat 0$/)).toBeInTheDocument()
@@ -235,6 +338,7 @@ describe('Your Library', () => {
   it('deletes a scenario after confirmation and drops it from the list', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     vi.mocked(listMyScenarios).mockResolvedValue([savedDocuments().scenario])
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
     renderEditor('/scenario_editor?tab=library&scenario=abc')
 
     await userEvent.click(await screen.findByRole('button', { name: 'Delete Chromatic Warmup' }))
@@ -243,7 +347,7 @@ describe('Your Library', () => {
     expect(confirm).toHaveBeenCalledOnce()
     expect(deleteScenario).toHaveBeenCalledWith({ uid: 'user-1', scenarioId: 'abc' })
     // It was also the scenario open in the editor tab, which lets go of it.
-    expect(screen.getByTestId('location')).not.toHaveTextContent('scenario=')
+    await waitFor(() => expect(screen.getByTestId('location')).not.toHaveTextContent('scenario='))
     expect(screen.getByRole('tab', { name: 'New Scenario' })).toBeInTheDocument()
     confirm.mockRestore()
   })
@@ -272,5 +376,108 @@ describe('Your Library', () => {
     expect(screen.getByRole('heading', { name: 'Chromatic Warmup' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete Chromatic Warmup' })).toBeEnabled()
     confirm.mockRestore()
+  })
+})
+
+describe('conflicts and recovery (user story #27)', () => {
+  const key = 'coj:scenario-draft:v1:user-1:abc'
+
+  beforeEach(() => localStorage.clear())
+
+  async function openAndEdit() {
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+    await userEvent.type(await screen.findByLabelText('Title'), '!')
+  }
+
+  it('saves against the version it loaded', async () => {
+    vi.mocked(saveScenarioDraft).mockResolvedValue({
+      scenarioId: 'abc',
+      versionId: 'abc-v3',
+      versionNumber: 3,
+      outcome: 'version',
+    })
+    await openAndEdit()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save Version' }))
+
+    expect(vi.mocked(saveScenarioDraft).mock.calls[0][0].baseVersionId).toBe('abc-v2')
+  })
+
+  it('warns about a conflict, keeps the draft, and can reload the latest', async () => {
+    vi.mocked(saveScenarioDraft).mockRejectedValue(new ScenarioConflictError())
+    await openAndEdit()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save Version' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/saved somewhere else/)
+    expect(screen.getByLabelText('Title')).toHaveValue('Chromatic Warmup!')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reload Latest' }))
+
+    expect(await screen.findByLabelText('Title')).toHaveValue('Chromatic Warmup')
+    expect(loadScenario).toHaveBeenCalledTimes(2)
+  })
+
+  it('saves a conflicting draft as a separate private copy', async () => {
+    vi.mocked(saveScenarioDraft).mockRejectedValueOnce(new ScenarioConflictError())
+    vi.mocked(saveScenarioDraft).mockResolvedValueOnce({
+      scenarioId: 'copy',
+      versionId: 'copy-v1',
+      versionNumber: 1,
+      outcome: 'version',
+    })
+    await openAndEdit()
+    await userEvent.click(screen.getByRole('button', { name: 'Save Version' }))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Save as Copy' }))
+
+    const { draft, scenarioId } = vi.mocked(saveScenarioDraft).mock.calls[1][0]
+    expect(scenarioId).toBeUndefined()
+    expect(draft).toMatchObject({ title: 'Chromatic Warmup! (copy)', visibility: 'private' })
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('scenario=copy'))
+  })
+
+  function storeDraft(uid = 'user-1') {
+    const { scenario, version } = savedDocuments()
+    localStorage.setItem(
+      `coj:scenario-draft:v1:${uid}:abc`,
+      JSON.stringify({
+        draft: { ...draftFromDocuments(scenario, version), title: 'Recovered' },
+        baseVersionId: 'abc-v2',
+        savedAt: 0,
+      }),
+    )
+  }
+
+  it('offers unsaved work back after a reload, and can restore it', async () => {
+    storeDraft()
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Restore Draft' }))
+
+    expect(screen.getByLabelText('Title')).toHaveValue('Recovered')
+    expect(screen.getByRole('button', { name: 'Save Version' })).toBeEnabled()
+  })
+
+  it('can discard the offered work', async () => {
+    storeDraft()
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Discard Draft' }))
+
+    expect(screen.getByLabelText('Title')).toHaveValue('Chromatic Warmup')
+    expect(localStorage.getItem(key)).toBeNull()
+  })
+
+  it("never offers another account's draft", async () => {
+    storeDraft('someone-else')
+    vi.mocked(loadScenario).mockResolvedValue(savedDocuments())
+    renderEditor('/scenario_editor?tab=new&scenario=abc')
+
+    await screen.findByLabelText('Title')
+    expect(screen.queryByRole('button', { name: 'Restore Draft' })).not.toBeInTheDocument()
   })
 })

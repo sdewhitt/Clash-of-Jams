@@ -5,13 +5,17 @@
  * The value can be typed in, or measured: Calibrate plays a run of clicks, the player plays a
  * note on each, and the typical gap between click and note becomes the setting. It is stored
  * on userSettings/{uid}, where the play page and the editor's play test read it.
+ *
+ * Calibration listens on the saved audio interface and input, since latency belongs to the
+ * whole setup and an interface is usually quicker than a built-in microphone.
  */
 import { useEffect, useRef, useState } from 'react'
 
-import { openAudioInput, type AudioInput } from '@/audio/input'
+import { findDevice } from '@/audio/devices'
+import { listAudioInputs, openAudioInput, type AudioInput } from '@/audio/input'
 import { estimateLatencyMs, MAX_LATENCY_MS } from '@/lib/play/latency'
 import { scheduleClicks } from '@/lib/play/metronome'
-import { loadInputLatencyMs, saveInputLatencyMs } from '@/lib/play/settings'
+import { loadAudioInputChoice, loadInputLatencyMs, saveInputLatencyMs } from '@/lib/play/settings'
 
 const CLICKS = 8
 const INTERVAL_SECONDS = 0.75
@@ -95,7 +99,13 @@ export function InputLatencySetting({ uid }: { uid: string }) {
     setStatus({ kind: 'listening' })
     let opened: AudioInput
     try {
-      opened = await openAudioInput()
+      const choice = await loadAudioInputChoice(uid).catch(() => null)
+      const devices = choice ? await listAudioInputs().catch(() => []) : []
+      const deviceId = choice ? findDevice(devices, choice) : null
+      opened = await openAudioInput({
+        deviceId: deviceId ?? undefined,
+        channel: deviceId !== null ? (choice?.channel ?? undefined) : undefined,
+      })
     } catch (error) {
       if (mounted.current) setStatus({ kind: 'error', message: microphoneError(error) })
       return

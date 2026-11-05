@@ -82,3 +82,25 @@ def test_banned_user_and_cancelled_lobby_cannot_start(session_arena):
     matcher.abandon_lobby(uids[1], chosen.players[1].ticket)
     with pytest.raises(MatchmakingError, match="no longer"):
         store.start(value, 0, 60_000, "server")
+
+
+def test_spectator_identity_requires_an_accepted_request_and_a_friendship(session_arena):
+    db, _, uids, _, _, document, _, _ = session_arena
+    friend, _, viewer = uids
+    pair = sorted((friend, viewer))
+    key = "_".join(pair)
+    store = FirestoreSessionStore(db)
+    friendship = document(
+        "friendships/" + key,
+        {"friends": pair, "uidA": pair[0], "uidB": pair[1]},
+    )
+    assert store.spectator_identity(viewer) == (viewer, set())
+    request = document(
+        "friendRequests/" + key,
+        {"potentialFriends": pair, "status": "pending"},
+    )
+    assert store.spectator_identity(viewer) == (viewer, set())
+    request.update({"status": "accepted"})
+    assert store.spectator_identity(viewer) == (viewer, {friend})
+    friendship.delete()
+    assert store.spectator_identity(viewer) == (viewer, set())

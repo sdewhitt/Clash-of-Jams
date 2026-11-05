@@ -57,6 +57,7 @@ import {
   newPlaylist,
   newPublicProfile,
   newRecordingShare,
+  newScoreShare,
   newRun,
   newScenario,
   newScenarioReview,
@@ -107,6 +108,7 @@ const ACTION_ID = `${PREFIX}moderation_action`
 const INVITATION_ID = `${PREFIX}invitation`
 const INVITATION_LOCK =  `${PREFIX}invitation_lock`
 const SHARE_ID = `${PREFIX}recording_share`
+const SCORE_SHARE_ID = `${PREFIX}score_share`
 const IMPORT_ID = `${PREFIX}import_job`
 
 /** A one-bar C major scale so the chart shape is exercised, not just empty. */
@@ -408,6 +410,20 @@ function buildPlan(): Plan[] {
         mediaAssetId: MEDIA_ID,
         caption: 'Template recording share written by scripts/init-firestore.ts.',
         visibility: 'public',
+      }),
+    },
+    {
+      path: `${COLLECTIONS.scoreShares}/${SCORE_SHARE_ID}`,
+      entity: 'ScoreShare',
+      data: newScoreShare({
+        id: SCORE_SHARE_ID,
+        ownerUid: UID_A,
+        runId: RUN_ID,
+        scenarioId: SCENARIO_ID,
+        scenarioTitle: 'Template scenario',
+        finalScore: 0,
+        recipientUids: [UID_B],
+        message: 'Template score share written by scripts/init-firestore.ts.',
       }),
     },
     {

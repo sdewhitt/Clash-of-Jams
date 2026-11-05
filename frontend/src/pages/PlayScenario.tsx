@@ -3,12 +3,17 @@ import { useNavigate, useParams, useSearchParams } from "react-router"
 
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
+import { RunAudioExport } from "@/components/RunAudioExport"
+import { ShareScore } from "@/components/ShareScore"
 import { ScenarioLeaderboard } from "@/components/ScenarioLeaderboard"
 import { ScenarioPlayer, type FinishedRun, type PlayerSetup } from "@/components/ScenarioPlayer"
 import { ScoreReport } from "@/components/ScoreReport"
 import { StarPicker } from "@/components/StarRating"
+import type { AudioInputChoice } from "@/audio/devices"
 import { ApiError, apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth/useAuth"
+import { audioInputChoiceFrom, saveAudioInputChoice } from "@/lib/play/settings"
+import { DEFAULT_SPEED } from "@/lib/play/speed"
 import { buildTimeline, resolveScoringRules } from "@/lib/play/timeline"
 import { getUserSettings } from "@/lib/profile/userSettings"
 import { submitRun, type SubmittedRun } from "@/lib/runs/store"
@@ -30,10 +35,13 @@ type PlayableScenario = {
     versionId: string
     partId: string
     expected: ExpectedNote[]
+    /** The chart's other parts, mixed under the player's audio when they export it. */
+    backing: ExpectedNote[]
     tempoMap: TempoMapEntry[]
     rules: ScoringRules
     instrument: Instrument
     latencyMs: number
+    audioInput: AudioInputChoice
 }
 
 const buttonClass = `
@@ -84,12 +92,19 @@ export function PlayScenario() {
     const [playable, setPlayable] = useState<PlayableScenario | null>(null)
     const [loadError, setLoadError] = useState<string | null>(null)
     const [run, setRun] = useState<FinishedRun | null>(null)
+    const [playedAt, setPlayedAt] = useState(() => new Date())
     const [saved, setSaved] = useState<SubmittedRun | null>(null)
     const [saveError, setSaveError] = useState<string | null>(null)
+    // Play again keeps the speed the last run was played at.
+    const [speed, setSpeed] = useState(DEFAULT_SPEED)
     const [setup, setSetup] = useState<PlayerSetup | null>(null)
     const [attempt, setAttempt] = useState(0)
     const [checkingReplay, setCheckingReplay] = useState(false)
     const [replayError, setReplayError] = useState<string | null>(null)
+    const [performing, setPerforming] = useState(false)
+    // Only setup shows site navigation. A run exits through "Stop and see results",
+    // and the results screen through Next, whose rating dialog leads home.
+    const hideHeader = phase === "results" || performing
 
     useEffect(() => {
         if (!scenarioId || !user) return
@@ -98,6 +113,10 @@ export function PlayScenario() {
                 const { scenario, version } = await loadScenario(id, versionId)
                 const part = version?.chart.parts.find((candidate) => candidate.notes.length > 0)
                 const notes = part?.notes ?? []
+                if (versionId && !version) {
+                    setLoadError("This version of the scenario is no longer available.")
+                    return
+                }
                 if (!version || !part || notes.length === 0) {
                     setLoadError("This scenario has no notes to play yet.")
                     return
@@ -109,10 +128,14 @@ export function PlayScenario() {
                     versionId: version.id,
                     partId: part.partId,
                     expected: notes,
+                    backing: version.chart.parts
+                        .filter((candidate) => candidate.partId !== part.partId)
+                        .flatMap((candidate) => candidate.notes),
                     tempoMap: version.chart.tempoMap,
                     rules: resolveScoringRules(version.scoringRules),
                     instrument: scenario.instrument,
                     latencyMs: settings?.inputLatencyOffsetMs ?? 0,
+                    audioInput: audioInputChoiceFrom(settings),
                 })
             } catch (err) {
                 setLoadError(err instanceof Error ? err.message : "Could not load this scenario.")
@@ -123,11 +146,15 @@ export function PlayScenario() {
 
     function finishRun(finished: FinishedRun) {
         setRun(finished)
+        // The player unmounts before it can report the run ended.
+        setPerforming(false)
+        setSpeed(finished.speedMultiplier)
         setSetup({
             instrument: finished.instrument,
             inputKind: finished.inputKind,
             midiDeviceId: finished.midiDeviceId,
         })
+        setPlayedAt(new Date())
         setSaved(null)
         setSaveError(null)
         setPhase("results")
@@ -138,7 +165,7 @@ export function PlayScenario() {
             scenarioVersionId: playable.versionId,
             instrument: finished.instrument,
             partId: playable.partId,
-            speedMultiplier: 1,
+            speedMultiplier: finished.speedMultiplier,
             scoringRules: playable.rules,
             finalScore: finished.result.finalScore,
             breakdown: finished.result.breakdown,
@@ -148,6 +175,12 @@ export function PlayScenario() {
                 console.error(err)
                 setSaveError("Your run could not be saved.")
             })
+    }
+
+    function rememberAudioInput(choice: AudioInputChoice) {
+        setPlayable((current) => current && { ...current, audioInput: choice })
+        if (!user) return
+        saveAudioInputChoice(user.uid, choice).catch(console.error)
     }
 
     /** Checks the scenario can still be played, then starts a fresh run of the same version. */
@@ -211,7 +244,7 @@ export function PlayScenario() {
 
     return (
         <main className="h-screen flex flex-col">
-            <header
+            {!hideHeader && <header
                 className={`
                     flex
                     items-center
@@ -225,7 +258,7 @@ export function PlayScenario() {
                 `}
             >
                 <div className="flex ml-12">
-                    <BackButton></BackButton>
+                    <BackButton onClick={() => navigate("/scenario_search")}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Play Scenario</h1>
                 </div>
 
@@ -238,7 +271,7 @@ export function PlayScenario() {
                     userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
                     />
                 </div>
-            </header>
+            </header>}
 
             {phase === "playing" ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6">
@@ -251,8 +284,12 @@ export function PlayScenario() {
                             rules={playable.rules}
                             defaultInstrument={playable.instrument}
                             latencyMs={playable.latencyMs}
+                            initialSpeed={speed}
+                            audioInput={playable.audioInput}
+                            onAudioInputChange={rememberAudioInput}
                             initialSetup={setup}
                             onFinish={finishRun}
+                            onPlayingChange={setPerforming}
                         />
                     )}
                     {!playable && !loadError && <p className="text-muted">Loading scenario…</p>}
@@ -274,12 +311,21 @@ export function PlayScenario() {
                     <h2 className="text-3xl font-bold text-ink">Results</h2>
 
                     {run && (
-                        <ScoreReport finalScore={run.result.finalScore} explanation={run.explanation} />
+                        <ScoreReport
+                            finalScore={run.result.finalScore}
+                            explanation={run.explanation}
+                            speedMultiplier={run.speedMultiplier}
+                            tempoMap={playable?.tempoMap}
+                        />
                     )}
                     {run && playable && (
                         <div className="flex w-full max-w-xl shrink-0 flex-col gap-2">
                             <NoteHighway
-                                timeline={buildTimeline({ notes: playable.expected, tempoMap: playable.tempoMap })}
+                                timeline={buildTimeline({
+                                    notes: playable.expected,
+                                    tempoMap: playable.tempoMap,
+                                    speedMultiplier: run.speedMultiplier,
+                                })}
                                 verdicts={
                                     new Map(
                                         run.result.breakdown.noteResults.map((result) => [
@@ -293,6 +339,25 @@ export function PlayScenario() {
                                 {saveMessage(saved, saveError)}
                             </p>
                         </div>
+                    )}
+                    {run && playable && (
+                        <RunAudioExport
+                            title={playable.title}
+                            take={run.take}
+                            durationMs={run.durationMs ?? 0}
+                            backing={playable.backing}
+                            tempoMap={playable.tempoMap}
+                            playedAt={playedAt}
+                        />
+                    )}
+                    {run && playable && scenarioId && user && (
+                        <ShareScore
+                            scenarioId={scenarioId}
+                            scenarioTitle={playable.title}
+                            finalScore={run.result.finalScore}
+                            runId={saved?.runId ?? null}
+                            uid={user.uid}
+                        />
                     )}
 
                     {/* TODO: highlight the run just played; the highlighted row is the player's best run. */}

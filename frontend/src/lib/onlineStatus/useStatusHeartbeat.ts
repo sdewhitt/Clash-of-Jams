@@ -3,10 +3,11 @@ import { useAuth } from '@/lib/auth/useAuth'
 import { HEARTBEAT_INTERVAL_MS, writeHeartbeat } from '@/lib/onlineStatus/status'
 
 export function useStatusHeartbeat() {
-  const { user, loading } = useAuth()
+  const { user, loading, account } = useAuth()
+  const suspended = account !== undefined && account.state !== 'active'
 
   useEffect(() => {
-    if (loading || !user) { 
+    if (loading || suspended || !user) {
       return
     }
 
@@ -66,5 +67,5 @@ export function useStatusHeartbeat() {
 
       document.removeEventListener( 'visibilitychange', handleVisibility, )
     }
-  }, [user, loading])
+  }, [user, loading, suspended])
 }

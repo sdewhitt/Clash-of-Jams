@@ -11,12 +11,14 @@ import { MyFriends } from '@/pages/social/MyFriends'
 import { FindFriends } from '@/pages/social/FindFriends'
 import { MyCommunities } from '@/pages/social/MyCommunities'
 import { FindCommunities } from '@/pages/social/FindCommunities'
+import { SharedScores } from '@/pages/social/SharedScores'
 import { Settings } from '@/pages/Settings'
 import { Tuner } from '@/pages/Tuner'
 import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { ScenarioDifficulty } from '@/pages/ScenarioDifficulty'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
+import { SpectatorMatch } from '@/pages/SpectatorMatch'
 import { MultiplayerSession } from '@/pages/MultiplayerSession'
 import { AudioLab } from '@/pages/AudioLab'
 import { PlayScenario } from '@/pages/PlayScenario'
@@ -40,7 +42,8 @@ const PROTECTED_ROUTES = [
   { path: '/friends/find_friends', element: <FindFriends /> },
   { path: '/friends/my_communities', element: <MyCommunities /> },
   { path: '/friends/find_communities', element: <FindCommunities /> },
-  { path: '/community/:communityId', element: <UserCommunity />},
+  { path: '/friends/shared_scores', element: <SharedScores /> },
+  { path: '/community/:communityId', element: <UserCommunity /> },
   { path: '/settings', element: <Settings /> },
   { path: '/tuner', element: <Tuner /> },
   { path: '/scenario_editor', element: <ScenarioEditor /> },
@@ -49,6 +52,7 @@ const PROTECTED_ROUTES = [
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
   { path: '/multiplayer/friend-invitations/:invitationId', element: <FriendMatchWaiting /> },
   { path: '/multiplayer/:matchId', element: <MultiplayerSession /> },
+  { path: '/spectate/:matchId', element: <SpectatorMatch /> },
   { path: '/audio_lab', element: <AudioLab /> },
   { path: '/play/:scenarioId', element: <PlayScenario /> },
   { path: '/play_history', element: <PlayHistory /> },

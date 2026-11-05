@@ -33,7 +33,7 @@ export async function searchCommunities( activeUid: string, queryName: string, l
     }
 
     if (!limitOverride) {
-        constraints.push(orderBy('id'));
+        constraints.push(orderBy('usernameLower'));
         constraints.push(startAt(term));
         constraints.push(endAt(term + "\uf8ff"));
     }

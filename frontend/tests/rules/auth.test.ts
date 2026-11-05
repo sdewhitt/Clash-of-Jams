@@ -18,6 +18,7 @@ import { INSTRUMENTS } from '../../src/lib/schema/types.ts'
 import {
   ALICE,
   aliceProfile,
+  aliceSettings,
   as,
   assertFails,
   assertSucceeds,
@@ -167,5 +168,33 @@ describe('roles', () => {
     })
     await assertSucceeds(setDoc(doc(db, `${COLLECTIONS.moderationActions}/act-1`), action))
     await assertSucceeds(getDoc(doc(db, path.scenario('bobs'))))
+  })
+})
+
+describe('account deletion', () => {
+  const marker = `accountDeletions/${ALICE}`
+
+  it('allows recovery state to be read by its owner while blocking normal access', async () => {
+    await seed(env(), [
+      [marker, { state: 'pending_deletion', authAfter: 100 }],
+      [path.settings(ALICE), aliceSettings()],
+    ])
+    const db = as(env(), ALICE)
+    await assertSucceeds(getDoc(doc(db, marker)))
+    await assertFails(getDoc(doc(as(env(), BOB), marker)))
+    await assertFails(setDoc(doc(db, marker), { state: 'active', authAfter: 0 }))
+    await assertFails(getDoc(doc(db, path.settings(ALICE))))
+    await assertFails(setDoc(doc(db, `userPreferences/${ALICE}`), { preferredInstrument: 'piano' }))
+  })
+
+  it('requires a fresh session after restoration', async () => {
+    await seed(env(), [
+      [marker, { state: 'active', authAfter: 100 }],
+      [path.settings(ALICE), aliceSettings()],
+    ])
+    const oldSession = env().authenticatedContext(ALICE, { auth_time: 100 }).firestore()
+    const newSession = env().authenticatedContext(ALICE, { auth_time: 101 }).firestore()
+    await assertFails(oldSession.doc(path.settings(ALICE)).get())
+    await assertSucceeds(newSession.doc(path.settings(ALICE)).get())
   })
 })

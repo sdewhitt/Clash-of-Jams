@@ -11,6 +11,7 @@ import { emptyChart, newScenario } from '@/lib/schema/collections'
 import {
   DEFAULT_INSTRUMENT,
   draftFromDocuments,
+  draftsEqual,
   emptyDraft,
   noteCount,
   openingTempo,
@@ -150,5 +151,72 @@ describe('draftFromDocuments', () => {
 
     expect(noteCount(draft.chart)).toBe(0)
     expect(draft.chart.parts[0].instrument).toBe('guitar')
+  })
+})
+
+describe('draftsEqual', () => {
+  const note = (index: number, startBeat: number) => ({
+    index,
+    midiPitch: 60,
+    startBeat,
+    durationBeats: 1,
+    velocity: 80,
+  })
+
+  function withNotes(notes: ReturnType<typeof note>[]) {
+    const draft = emptyDraft()
+    const [part] = draft.chart.parts
+    return { ...draft, chart: { ...draft.chart, parts: [{ ...part, notes }] } }
+  }
+
+  it('treats two untouched drafts as equal', () => {
+    expect(draftsEqual(emptyDraft(), emptyDraft())).toBe(true)
+  })
+
+  it('ignores whitespace around the title, which a save trims anyway', () => {
+    expect(
+      draftsEqual({ ...emptyDraft(), title: 'Etude' }, { ...emptyDraft(), title: ' Etude ' }),
+    ).toBe(true)
+  })
+
+  it('ignores map key order, which Firestore does not preserve', () => {
+    const draft = withNotes([note(0, 0)])
+    const reordered = JSON.parse(
+      JSON.stringify({
+        chart: draft.chart,
+        authorDifficulty: draft.authorDifficulty,
+        visibility: draft.visibility,
+        instrument: draft.instrument,
+        description: draft.description,
+        title: draft.title,
+      }),
+    ) as typeof draft
+
+    expect(draftsEqual(draft, reordered)).toBe(true)
+  })
+
+  it('ignores note order and the index that restates it', () => {
+    expect(
+      draftsEqual(withNotes([note(0, 0), note(1, 2)]), withNotes([note(0, 2), note(1, 0)])),
+    ).toBe(true)
+  })
+
+  it.each([
+    ['title', { title: 'Other' }],
+    ['description', { description: 'Other' }],
+    ['instrument', { instrument: 'guitar' as const }],
+    ['visibility', { visibility: 'public' as const }],
+    ['difficulty', { authorDifficulty: 7 }],
+  ])('notices a change to %s', (_field, patch) => {
+    expect(draftsEqual(emptyDraft(), { ...emptyDraft(), ...patch })).toBe(false)
+  })
+
+  it('notices a changed note and a changed tempo', () => {
+    const base = withNotes([note(0, 0)])
+
+    expect(draftsEqual(base, withNotes([note(0, 1)]))).toBe(false)
+    expect(draftsEqual(base, { ...base, chart: withOpeningTempo(base.chart, { bpm: 90 }) })).toBe(
+      false,
+    )
   })
 })

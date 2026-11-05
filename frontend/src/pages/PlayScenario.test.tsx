@@ -30,11 +30,7 @@ vi.mock('@/lib/profile/userSettings', () => ({ getUserSettings: vi.fn() }))
 vi.mock('@/components/LiveElo', () => ({ LiveElo: () => <span>400 Elo</span> }))
 vi.mock('@/components/NotificationButton', () => ({
   NotificationButton: ({ uid }: { uid: string }) => (
-    <button
-      type="button"
-      aria-label="Notifications"
-      data-testid="notification-button"
-    >
+    <button type="button" aria-label="Notifications" data-testid="notification-button">
       Notifications: {uid}
     </button>
   ),
@@ -85,6 +81,7 @@ const FINISHED: FinishedRun = {
   instrument: 'piano',
   inputKind: 'midi',
   midiDeviceId: 'keys-1',
+  speedMultiplier: 1,
   performed: [],
   result: RESULT,
   explanation: explainScore({ result: RESULT, expected: NOTES }),
@@ -92,6 +89,7 @@ const FINISHED: FinishedRun = {
 
 const player = vi.hoisted(() => ({
   fake: false,
+  speed: 1,
   initialSetup: null as PlayerSetup | null | undefined,
   latencyMs: 0,
 }))
@@ -103,7 +101,12 @@ vi.mock('@/components/ScenarioPlayer', async (importOriginal) => {
       player.initialSetup = props.initialSetup
       player.latencyMs = props.latencyMs
       return player.fake ? (
-        <button onClick={() => props.onFinish(FINISHED)}>Finish run</button>
+        <>
+          <button onClick={() => props.onPlayingChange?.(true)}>Begin run</button>
+          <button onClick={() => props.onFinish({ ...FINISHED, speedMultiplier: player.speed })}>
+            Finish run
+          </button>
+        </>
       ) : (
         <actual.ScenarioPlayer {...props} />
       )
@@ -117,6 +120,7 @@ function renderPlay(route = '/play/s1?version=v1') {
 
 beforeEach(() => {
   player.fake = false
+  player.speed = 1
   vi.mocked(loadScenario).mockReset().mockResolvedValue({ scenario, version })
   vi.mocked(submitRun).mockReset()
   vi.mocked(getUserSettings)
@@ -145,12 +149,53 @@ describe('before a run', () => {
     expect(loadScenario).toHaveBeenCalledWith('s1', null)
   })
 
+  it('goes back to scenario search', async () => {
+    renderPlay()
+
+    await userEvent.click(await screen.findByRole('button', { name: '⬅' }))
+    expect(screen.getByTestId('location')).toHaveTextContent('/scenario_search')
+  })
+
   it('says so when the scenario has nothing to play', async () => {
     vi.mocked(loadScenario).mockResolvedValue({ scenario, version: null })
-    renderPlay()
+    renderPlay('/play/s1')
 
     expect(await screen.findByText(/no notes to play/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument()
+  })
+
+  it('says a version link is unavailable once that version has been deleted', async () => {
+    vi.mocked(loadScenario).mockResolvedValue({ scenario, version: null })
+    renderPlay('/play/s1?version=deleted')
+
+    expect(
+      await screen.findByText(/version of the scenario is no longer available/),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument()
+  })
+})
+
+describe('during a run', () => {
+  beforeEach(() => {
+    player.fake = true
+  })
+
+  it('hides the header from the run through the results, until a replay', async () => {
+    vi.mocked(submitRun).mockResolvedValue({ runId: 'r1', validation: 'accepted', reason: null })
+    renderPlay()
+    expect(await screen.findByTestId('notification-button')).toBeInTheDocument()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Begin run' }))
+    expect(screen.queryByTestId('notification-button')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Play Scenario' })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Finish run' }))
+    expect(screen.getByRole('region', { name: 'Your score' })).toBeInTheDocument()
+    expect(screen.queryByTestId('notification-button')).not.toBeInTheDocument()
+
+    await screen.findByText('Run saved to the leaderboard.')
+    await userEvent.click(screen.getByRole('button', { name: 'Play again' }))
+    expect(await screen.findByTestId('notification-button')).toBeInTheDocument()
   })
 })
 
@@ -179,6 +224,20 @@ describe('after a run', () => {
       breakdown: RESULT.breakdown,
     })
     expect(await screen.findByText('Run saved to the leaderboard.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Played tempo')).toHaveTextContent('Played at 1x · 120 bpm')
+  })
+
+  it('saves the speed with a slowed-down run and shows the tempo it was played at', async () => {
+    player.speed = 0.5
+    vi.mocked(submitRun).mockResolvedValue({ runId: 'r1', validation: 'accepted', reason: null })
+    renderPlay()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Finish run' }))
+
+    expect(screen.getByLabelText('Played tempo')).toHaveTextContent(
+      'Played at 0.5x · 60 bpm (written 120 bpm)',
+    )
+    expect(submitRun).toHaveBeenCalledWith(expect.objectContaining({ speedMultiplier: 0.5 }))
   })
 
   it('explains a rejected run', async () => {

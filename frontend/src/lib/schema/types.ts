@@ -15,7 +15,7 @@
  *    separate documents, as the design document requires.
  */
 import type { Timestamp } from 'firebase/firestore'
-import type { PRESET_MESSAGES } from '@/lib/multiplayer/types'
+import type { PRESET_MESSAGES } from '../multiplayer/types.ts'
 
 /* ------------------------------------------------------------------ enums */
 
@@ -70,7 +70,13 @@ export type JobState = (typeof JOB_STATES)[number]
 export const REPORT_STATES = ['open', 'reviewing', 'resolved', 'dismissed'] as const
 export type ReportState = (typeof REPORT_STATES)[number]
 
-export const INVITATION_STATES = ['pending', 'accepted', 'declined', 'expired', 'cancelled'] as const
+export const INVITATION_STATES = [
+  'pending',
+  'accepted',
+  'declined',
+  'expired',
+  'cancelled',
+] as const
 export type InvitationState = (typeof INVITATION_STATES)[number]
 
 export const REQUEST_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
@@ -85,7 +91,7 @@ export type HitVerdict = (typeof HIT_VERDICTS)[number]
 
 export type ModerationTargetType = 'user' | 'scenario' | 'recording'
 
-export type RelationshipStatus = "friend" | "friendOfFriend" | "none";
+export type RelationshipStatus = 'friend' | 'friendOfFriend' | 'none'
 
 /* ------------------------------------------------------- primary database */
 
@@ -115,6 +121,17 @@ export interface UserProfile {
   updatedAt: Timestamp
 }
 
+export interface FeaturedProfileScore {
+  runId: string
+  scenarioId: string
+  finalScore: number
+}
+
+export interface ProfileAppearance {
+  accent: 'Default' | 'Blue' | 'Green' | 'Violet'
+  featuredScores: FeaturedProfileScore[]
+}
+
 /** publicProfile/{uid} — outward facing use profiles for public queries. **/
 export interface PublicProfile {
   uid: string
@@ -130,13 +147,14 @@ export interface PublicProfile {
   friends: string[]
   communities: string[]
   publicHistory: boolean
+  profileAppearance?: ProfileAppearance
   updatedAt: Timestamp
 }
 
 /** Interface used to query public users for friend-of-friends **/
 export interface SearchProfile extends PublicProfile {
-  relationship: RelationshipStatus;
-  mutualFriendCount: number;
+  relationship: RelationshipStatus
+  mutualFriendCount: number
 }
 
 /** usernames/{usernameLower} — reservation document enforcing invariant 1. **/
@@ -148,6 +166,7 @@ export interface UsernameReservation {
 
 /** userSettings/{uid} — themes, accessibility options, instrument preferences. **/
 export interface UserSettings {
+  profileAppearance?: ProfileAppearance
   uid: string
   scenarioTheme: string
   theme: string
@@ -159,6 +178,17 @@ export interface UserSettings {
   publicElos: Instrument[]
   /** Milliseconds of input latency the gameplay engine compensates for. **/
   inputLatencyOffsetMs: number
+  /**
+   * The same for a MIDI controller, which skips the microphone and runs far lower. Calibrated
+   * from the scenario editor and subtracted from notes recorded there. Older documents lack it.
+   */
+  midiLatencyOffsetMs?: number
+  /** The audio interface or microphone to play through; null is the browser default. */
+  audioInputDeviceId?: string | null
+  /** The device's name when it was chosen, to find it again if its id changes. */
+  audioInputDeviceLabel?: string | null
+  /** Which input of the device to analyze, from 0; null mixes every input together. */
+  audioInputChannel?: number | null
   masterVolume: number
   metronomeEnabled: boolean
   updatedAt: Timestamp
@@ -267,6 +297,16 @@ export interface ScoringRules {
  * versionNumber is unique per scenario (invariant 2). Leaderboards are scoped
  * to a version so every run on one was scored against identical note data.
  */
+/** The scenario settings a version records. Visibility is deliberately not one of them. */
+export interface ScenarioVersionMetadata {
+  title: string
+  description: string
+  instrument: Instrument
+  authorDifficulty: number
+  genres: Genre[]
+  tags: string[]
+}
+
 export interface ScenarioVersion {
   id: string
   scenarioId: string
@@ -276,6 +316,10 @@ export interface ScenarioVersion {
   durationMs: number
   /** MediaAsset ids backing this version (backing track, sheet images, ...). */
   mediaAssetIds: string[]
+  /** Settings at save time. Absent on versions saved before these were recorded. */
+  metadata?: ScenarioVersionMetadata
+  /** The author's label for this version. The only field an author can change later. */
+  name?: string | null
   createdByUid: string
   createdAt: Timestamp
 }
@@ -626,11 +670,11 @@ export interface FriendMatchInvitationResponse {
 }
 
 export interface DeclineFriendMatchRequest {
-  invitationId: string;
+  invitationId: string
 }
 
 export interface CancelFriendMatchRequest {
-  invitationId: string;
+  invitationId: string
 }
 
 /** recordingShares/{shareId} — a run recording the owner chose to publish. */
@@ -642,6 +686,25 @@ export interface RecordingShare {
   mediaAssetId: string
   caption: string
   visibility: Visibility
+  createdAt: Timestamp
+}
+
+/**
+ * scoreShares/{shareId} -- a run's result, sent to friends from the results screen.
+ *
+ * The title and score are copied from the scenario and run when it is sent, so a recipient
+ * sees them without reading a scenario that may be private. The rules check the copied score
+ * against the run itself, so it cannot be inflated.
+ */
+export interface ScoreShare {
+  id: string
+  ownerUid: string
+  runId: string
+  scenarioId: string
+  scenarioTitle: string
+  finalScore: number
+  message: string
+  recipientUids: string[]
   createdAt: Timestamp
 }
 
