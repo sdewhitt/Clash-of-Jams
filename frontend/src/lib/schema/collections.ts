@@ -26,6 +26,7 @@ import type {
   ScenarioReview,
   ScenarioTheme,
   ScenarioVersion,
+  ScenarioVersionMetadata,
   ScoringRules,
   SkillRating,
   UserProfile,
@@ -85,7 +86,8 @@ export const matchParticipantsPath = (matchId: string) =>
 
 export const skillRatingsPath = (uid: string) => `${COLLECTIONS.users}/${uid}/skillRatings`
 
-export const scenarioThemesPath = (uid: string) => `${COLLECTIONS.userSettings}/${uid}/scenarioThemes`
+export const scenarioThemesPath = (uid: string) =>
+  `${COLLECTIONS.userSettings}/${uid}/scenarioThemes`
 
 export const ratingHistoryPath = (uid: string, instrument: Instrument) =>
   skillRatingsPath(uid) + '/' + instrument + '/history'
@@ -202,12 +204,10 @@ export function newUsernameReservation(args: {
   }
 }
 
-export function newUserSettings(args: {
-  uid: string
-}): WithFieldValue<UserSettings> {
+export function newUserSettings(args: { uid: string }): WithFieldValue<UserSettings> {
   return {
     uid: args.uid,
-    scenarioTheme: "default",
+    scenarioTheme: 'default',
     theme: 'default',
     reduceFlashing: false,
     acceptingFriends: true,
@@ -217,6 +217,9 @@ export function newUserSettings(args: {
     publicElos: [],
     inputLatencyOffsetMs: 0,
     midiLatencyOffsetMs: 0,
+    audioInputDeviceId: null,
+    audioInputDeviceLabel: null,
+    audioInputChannel: null,
     masterVolume: 0.8,
     metronomeEnabled: true,
     updatedAt: serverTimestamp(),
@@ -238,7 +241,7 @@ export function newUserStatus(): WithFieldValue<UserStatus> {
   }
 }
 
-export function newAppNotification( args: {
+export function newAppNotification(args: {
   notifiedUid: string
   notifierUid: string
   notificationType: string
@@ -285,6 +288,9 @@ export function newScenario(args: {
   }
 }
 
+/** Longest name an author can give a version; firestore.rules enforces the same limit. */
+export const VERSION_NAME_MAX_LENGTH = 60
+
 export function newScenarioVersion(args: {
   id: string
   scenarioId: string
@@ -294,6 +300,7 @@ export function newScenarioVersion(args: {
   durationMs?: number
   scoringRules?: ScoringRules
   mediaAssetIds?: string[]
+  metadata?: ScenarioVersionMetadata
 }): WithFieldValue<ScenarioVersion> {
   return {
     id: args.id,
@@ -305,6 +312,7 @@ export function newScenarioVersion(args: {
     mediaAssetIds: args.mediaAssetIds ?? [],
     createdByUid: args.createdByUid,
     createdAt: serverTimestamp(),
+    ...(args.metadata ? { metadata: args.metadata } : {}),
   }
 }
 
@@ -432,7 +440,7 @@ export function newScenarioTheme(args: {
 }): WithFieldValue<ScenarioTheme> {
   return {
     uid: args.uid,
-    accompanyTheme: "default",
+    accompanyTheme: 'default',
     themeName: args.themeName,
     themeUrl: args.themeUrl,
     updatedAt: serverTimestamp(),
@@ -445,7 +453,8 @@ export function newFriendRequests(args: {
   initiatorUid: string
   state: FriendshipState
 }): WithFieldValue<FriendRequest> {
-  const [idA, idB] = args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
+  const [idA, idB] =
+    args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
   return {
     potentialFriends: [idA, idB],
     initiatorUid: args.initiatorUid,
@@ -458,14 +467,15 @@ export function newFriendship(args: {
   uidOne: string
   uidTwo: string
 }): WithFieldValue<Friendship> {
-  const [idA, idB] = args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
+  const [idA, idB] =
+    args.uidOne < args.uidTwo ? [args.uidOne, args.uidTwo] : [args.uidTwo, args.uidOne]
   return {
     id: friendshipId(idA, idB),
     friends: [idA, idB],
     totalFriendlies: 0,
     matchHistory: [],
     uidA: idA,
-    uidAWins: 0, 
+    uidAWins: 0,
     uidB: idB,
     uidBWins: 0,
     createdAt: serverTimestamp(),
@@ -610,7 +620,7 @@ export function newMatchInvitation(args: {
 
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-    expiresAt: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000)
+    expiresAt: Timestamp.fromMillis(Date.now() + 5 * 60 * 1000),
   }
 }
 

@@ -15,7 +15,7 @@
  * the chart, and a MIDI controller records into it (user stories #26 and #30).
  * Any chart can be exported back out as a .mid file.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { PianoRoll } from '@/components/PianoRoll'
@@ -30,7 +30,7 @@ import type { MidiFile, MidiImport } from '@/lib/import/midiFile'
 import type { MusicXmlImport } from '@/lib/import/musicxml'
 import { MUSICXML_ACCEPT, importMusicXmlFile } from '@/lib/import/musicxmlFile'
 import { STEP_NAMES, clampFifths, spellPitch } from '@/lib/notation/spelling'
-import { loadScenario, saveScenarioDraft } from '@/lib/scenarios/store'
+import { ScenarioConflictError, loadScenario, saveScenarioDraft } from '@/lib/scenarios/store'
 import { INSTRUMENTS, VISIBILITIES } from '@/lib/schema/types'
 import type { Instrument, Visibility } from '@/lib/schema/types'
 import {
@@ -38,6 +38,7 @@ import {
   INSTRUMENT_LABELS,
   VISIBILITY_LABELS,
   draftFromDocuments,
+  draftsEqual,
   emptyDraft,
   noteCount,
   openingTempo,
@@ -46,6 +47,12 @@ import {
   withOpeningTempo,
 } from '@/pages/scenario_editor/draft'
 import type { ScenarioDraft } from '@/pages/scenario_editor/draft'
+import {
+  clearRecoverableDraft,
+  readRecoverableDraft,
+  writeRecoverableDraft,
+} from '@/pages/scenario_editor/draftRecovery'
+import type { RecoverableDraft } from '@/pages/scenario_editor/draftRecovery'
 import { MidiRecordPanel } from '@/pages/scenario_editor/MidiRecordPanel'
 import { PlayTest } from '@/pages/scenario_editor/PlayTest'
 
@@ -122,12 +129,23 @@ function noteLetter(step: number, alter: number) {
 function mod(value: number, by: number) {
   return ((value % by) + by) % by
 }
+/** firestore.rules caps a scenario title at this length. */
+const TITLE_MAX_LENGTH = 120
+const COPY_SUFFIX = ' (copy)'
+
+const NOTICE_CLASS =
+  'flex flex-wrap items-center gap-3 rounded-xl border-2 border-accent-start bg-base-end px-4 py-3'
+const NOTICE_BUTTON_CLASS =
+  'rounded-lg border-2 border-base-middle px-4 py-2 text-sm font-bold text-ink ' +
+  'transition-colors hover:border-accent-start hover:bg-accent-base-middle'
 
 type Status =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'saving' }
   | { kind: 'saved'; versionNumber: number }
+  | { kind: 'visibility' }
+  | { kind: 'conflict' }
   | { kind: 'imported'; fileName: string; notes: number; warnings: string[] }
   | { kind: 'error'; message: string }
 
@@ -142,12 +160,18 @@ interface EditorPanelProps {
 
 export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProps) {
   const { user } = useAuth()
+  const uid = user?.uid ?? null
   const [draft, setDraft] = useState<ScenarioDraft>(emptyDraft)
   const [openId, setOpenId] = useState(scenarioId)
   const [status, setStatus] = useState<Status>(() =>
     scenarioId ? { kind: 'loading' } : { kind: 'idle' },
   )
-  const [dirty, setDirty] = useState(false)
+  // What a save would be compared against: the last saved or loaded state.
+  const [baseline, setBaseline] = useState<ScenarioDraft>(emptyDraft)
+  // The version the draft started from; a save checks it is still the current one.
+  const [baseVersionId, setBaseVersionId] = useState<string | null>(null)
+  const [reloads, setReloads] = useState(0)
+  const [recoverable, setRecoverable] = useState<RecoverableDraft | null>(null)
   const [playTesting, setPlayTesting] = useState(false)
   const [drawer, setDrawer] = useState<DrawerId | null>(null)
   const [view, setView] = useState<EditorView>(loadEditorView)
@@ -169,7 +193,9 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     if (scenarioId === null || scenarioId !== savedHere) {
       setSavedHere(null)
       setDraft(emptyDraft())
-      setDirty(false)
+      setBaseline(emptyDraft())
+      setBaseVersionId(null)
+      setRecoverable(null)
       setPlayTesting(false)
       setPendingMidi(null)
       setStatus(scenarioId ? { kind: 'loading' } : { kind: 'idle' })
@@ -184,9 +210,12 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     loadScenario(scenarioId)
       .then(({ scenario, version }) => {
         if (cancelled) return
-        setDraft(draftFromDocuments(scenario, version))
-        setDirty(false)
+        const loaded = draftFromDocuments(scenario, version)
+        setDraft(loaded)
+        setBaseline(loaded)
+        setBaseVersionId(scenario.currentVersionId)
         setStatus({ kind: 'idle' })
+        offerRecovery(loaded)
       })
       .catch((error: unknown) => {
         if (cancelled) return
@@ -195,24 +224,105 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     return () => {
       cancelled = true
     }
-  }, [scenarioId, savedHere])
+    // offerRecovery only reads uid and scenarioId, which are covered here.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioId, savedHere, reloads, uid])
+
+  // A blank scenario has nothing to load, so its recovery check happens here.
+  useEffect(() => {
+    if (!scenarioId) offerRecovery(emptyDraft())
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioId, uid])
+
+  // Keeps unsaved work in this browser. Paused while a recovery offer is open,
+  // so it cannot overwrite the draft being offered.
+  useEffect(() => {
+    if (!uid || recoverable || status.kind === 'loading') return
+    const timer = setTimeout(() => {
+      if (draftsEqual(draft, baseline)) clearRecoverableDraft(uid, scenarioId)
+      else writeRecoverableDraft(uid, scenarioId, { draft, baseVersionId, savedAt: Date.now() })
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [uid, scenarioId, draft, baseline, baseVersionId, recoverable, status.kind])
+
+  function offerRecovery(saved: ScenarioDraft) {
+    if (!uid) return
+    const stored = readRecoverableDraft(uid, scenarioId)
+    if (!stored) return
+    if (draftsEqual(stored.draft, saved)) clearRecoverableDraft(uid, scenarioId)
+    else setRecoverable(stored)
+  }
+
+  function restoreRecovered(stored: RecoverableDraft) {
+    setDraft(stored.draft)
+    setBaseVersionId(stored.baseVersionId)
+    setRecoverable(null)
+  }
+
+  function discardRecovered() {
+    if (uid) clearRecoverableDraft(uid, scenarioId)
+    setRecoverable(null)
+  }
+
+  function reloadLatest() {
+    if (uid) clearRecoverableDraft(uid, scenarioId)
+    setSavedHere(null)
+    setStatus({ kind: 'loading' })
+    setReloads((count) => count + 1)
+  }
+
+  async function handleSaveAsCopy() {
+    setStatus({ kind: 'saving' })
+    try {
+      // Private, so a copy of a draft is never published by accident.
+      const copy: ScenarioDraft = {
+        ...draft,
+        title: draft.title.trim().slice(0, TITLE_MAX_LENGTH - COPY_SUFFIX.length) + COPY_SUFFIX,
+        visibility: 'private',
+      }
+      const result = await saveScenarioDraft({ uid, draft: copy })
+      if (uid) clearRecoverableDraft(uid, scenarioId)
+      setSavedHere(result.scenarioId)
+      setDraft(copy)
+      setBaseline(copy)
+      setBaseVersionId(result.versionId)
+      setStatus({ kind: 'saved', versionNumber: result.versionNumber })
+      onSaved(result.scenarioId)
+    } catch (error: unknown) {
+      setStatus({ kind: 'error', message: messageOf(error) })
+    }
+  }
 
   function edit(next: ScenarioDraft) {
     setDraft(next)
-    setDirty(true)
     setStatus({ kind: 'idle' })
   }
 
   async function handleSave() {
     setStatus({ kind: 'saving' })
     try {
-      const result = await saveScenarioDraft({ uid: user?.uid ?? null, draft, scenarioId })
+      const result = await saveScenarioDraft({
+        uid,
+        draft,
+        scenarioId,
+        ...(scenarioId ? { baseVersionId } : {}),
+      })
+      if (uid) clearRecoverableDraft(uid, scenarioId)
       setSavedHere(result.scenarioId)
-      setDirty(false)
-      setStatus({ kind: 'saved', versionNumber: result.versionNumber })
+      setBaseline(draft)
+      setBaseVersionId(result.versionId)
+      setStatus(
+        result.outcome === 'visibility'
+          ? { kind: 'visibility' }
+          : { kind: 'saved', versionNumber: result.versionNumber },
+      )
       onSaved(result.scenarioId)
     } catch (error: unknown) {
-      setStatus({ kind: 'error', message: messageOf(error) })
+      setStatus(
+        error instanceof ScenarioConflictError
+          ? { kind: 'conflict' }
+          : { kind: 'error', message: messageOf(error) },
+      )
     }
   }
 
@@ -225,7 +335,6 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
 
   function applyImport(imported: MusicXmlImport | MidiImport, fileName: string) {
     setDraft(withImportedScore(draft, imported))
-    setDirty(true)
     setStatus({
       kind: 'imported',
       fileName,
@@ -291,8 +400,9 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
     ? addNotes(draft.chart, partId, take.notes, { replace: take.replace })
     : draft.chart
   const notes = noteCount(draft.chart)
+  const unchanged = useMemo(() => draftsEqual(draft, baseline), [draft, baseline])
   const canSave =
-    Boolean(user) && draft.title.trim().length > 0 && status.kind !== 'saving' && dirty
+    Boolean(user) && draft.title.trim().length > 0 && status.kind !== 'saving' && !unchanged
 
   if (status.kind === 'loading') {
     return <p className="py-12 text-center text-muted">Loading scenario...</p>
@@ -362,6 +472,7 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
             type="button"
             onClick={handleSave}
             disabled={!canSave}
+            title={unchanged ? 'No changes since the last save.' : undefined}
             className="rounded-lg bg-linear-to-b from-accent-start from-50 via-accent-middle
               to-accent-end to-70 px-5 py-2 text-sm font-bold text-ink transition-all
               hover:brightness-125 active:scale-95 disabled:cursor-not-allowed
@@ -373,6 +484,43 @@ export function EditorPanel({ scenarioId, onSaved, onStartNew }: EditorPanelProp
         </div>
 
         <SaveStatus status={status} signedIn={Boolean(user)} hasTitle={draft.title.trim() !== ''} />
+
+        {status.kind === 'conflict' && (
+          <div role="alert" className={NOTICE_CLASS}>
+            <p className="min-w-0 flex-1 basis-64 text-sm text-ink">
+              This scenario was saved somewhere else since you opened it. Your edits are still here
+              and nothing was overwritten.
+            </p>
+            <button type="button" onClick={reloadLatest} className={NOTICE_BUTTON_CLASS}>
+              Reload Latest
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSaveAsCopy()}
+              className={NOTICE_BUTTON_CLASS}
+            >
+              Save as Copy
+            </button>
+          </div>
+        )}
+
+        {recoverable && (
+          <div role="status" className={NOTICE_CLASS}>
+            <p className="min-w-0 flex-1 basis-64 text-sm text-ink">
+              You have unsaved work from {new Date(recoverable.savedAt).toLocaleString()}.
+            </p>
+            <button
+              type="button"
+              onClick={() => restoreRecovered(recoverable)}
+              className={NOTICE_BUTTON_CLASS}
+            >
+              Restore Draft
+            </button>
+            <button type="button" onClick={discardRecovered} className={NOTICE_BUTTON_CLASS}>
+              Discard Draft
+            </button>
+          </div>
+        )}
 
         {drawer === 'details' && (
           <Drawer id={drawerId('details')} label="Details" onClose={() => setDrawer(null)}>
@@ -783,6 +931,9 @@ function SaveStatus({
   }
   if (status.kind === 'saved') {
     return <p className="text-sm text-muted">Saved as version {status.versionNumber}.</p>
+  }
+  if (status.kind === 'visibility') {
+    return <p className="text-sm text-muted">Visibility updated. No new version was needed.</p>
   }
   if (status.kind === 'imported') {
     return (

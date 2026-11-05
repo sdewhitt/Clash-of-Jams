@@ -14,12 +14,15 @@ import { useFriendshipStatus } from "@/lib/friendship/friendRequests";
 import { ChallengeFriendDialog } from "@/components/ChallengeFriendDialog";
 import { NotificationButton } from "@/components/NotificationButton";
 import { LiveElo } from "@/components/LiveElo";
+import { FeaturedProfileScores } from "@/components/FeaturedProfileScores";
+import { PROFILE_ACCENTS } from "@/lib/profile/profileAppearance";
 
 
 export function PublicProfile() {
     const { user, profile, loading } = useAuth();
     const { uid } = useParams<{ uid: string }>();
-    const [userProfile, setUserProfile] = useState<PublicProfile>();
+    const [loadedProfile, setUserProfile] = useState<PublicProfile>();
+    const userProfile = loadedProfile?.uid === uid ? loadedProfile : undefined;
     const [profileLoading, setProfileLoading] = useState(true);
 
     const currentUid = profile?.uid;
@@ -126,7 +129,9 @@ export function PublicProfile() {
                     />
                 </div>
             </header>
-            <div className="overscroll-contain px-6 py-6">
+            {!userProfile ? (
+                <p className="p-6 text-ink" role="status">Profile unavailable.</p>
+            ) : <div className="overscroll-contain px-6 py-6">
                 <div className={`
                     relative
                     w-full 
@@ -139,7 +144,7 @@ export function PublicProfile() {
                     rounded-lg
                     py-8
                     mb-8`
-                }>
+                } style={{ outlineColor: PROFILE_ACCENTS[userProfile.profileAppearance?.accent ?? "Default"] }}>
                     <div className="grid grid-cols-[1.5fr_3fr] gap-2 m-8">
                         <img 
                             src={userProfile?.avatarUrl ?? "../../favicon.svg"}
@@ -260,7 +265,7 @@ export function PublicProfile() {
                                         Elos:
                                     </label>
                                     <div id="elos" className="flex flex-row overscroll-x-contain gap-4 mx-2">                           
-                                        {eloRatings.map((rating) => (
+                                        {eloRatings.filter(({ instrument }) => userProfile.elos?.includes(instrument)).map((rating) => (
                                             <div key={rating.instrument}>
                                                 <EloDisplay instrument={rating.instrument} tier={rating.tier} elo={rating.elo}/>
                                             </div>
@@ -270,6 +275,9 @@ export function PublicProfile() {
                             </div>
                         </div>
                     </div>
+                    {userProfile.publicHistory === true && userProfile.profileAppearance && (
+                        <FeaturedProfileScores scores={userProfile.profileAppearance.featuredScores} />
+                    )}
                 </div>
             
                 {isFriend && (
@@ -487,7 +495,7 @@ export function PublicProfile() {
                         }
                     </div>
                 </div>
-            </div>
+            </div>}
         </main>
     )
 }

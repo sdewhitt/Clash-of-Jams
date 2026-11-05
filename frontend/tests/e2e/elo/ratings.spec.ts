@@ -4,7 +4,7 @@ import { TEST_ENV } from '../support/environment.js'
 import { test, expect } from '../support/fixtures.js'
 import { prepareResult, rating } from './data.js'
 
-test('both players receive live Elo and duplicate completion applies once', async ({
+test('both players receive live Elo and duplicate completion applies once @smoke', async ({
   page,
   browser,
   data,
@@ -91,7 +91,7 @@ test('instrument selection isolates history and preferred-instrument changes rea
   await page.getByRole('combobox', { name: 'Instrument' }).selectOption('piano')
   await expect(page.getByRole('article')).toHaveCount(1)
   await page.goto('/home')
-  await data.update('userSettings/' + player.uid, { preferredInstrument: 'guitar' })
+  await data.update('userPreferences/' + player.uid, { preferredInstrument: 'guitar' })
   await expect(page.getByRole('button', { name: 'View guitar Elo details' })).toContainText(
     'Guitar-400',
   )
@@ -111,7 +111,7 @@ test('Home Elo dropdown saves its instrument across reloads and opens separate r
     'Guitar-400',
   )
   await expect(details.getByRole('combobox')).toBeEnabled()
-  expect((await data.read('userSettings/' + player.uid))?.preferredInstrument).toBe('guitar')
+  expect((await data.read('userPreferences/' + player.uid))?.preferredInstrument).toBe('guitar')
   await page.reload()
   await page.getByRole('button', { name: 'View guitar Elo details' }).click()
   await expect(details.getByRole('combobox')).toHaveValue('guitar')

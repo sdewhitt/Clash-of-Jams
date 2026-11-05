@@ -53,6 +53,7 @@ class SessionMetrics:
                 "passes50Ms": p95 is not None and p95 < 50,
                 "measurement": "accepted event receipt to response enqueue",
                 "lastTiming": self.last_timing,
+                "spectatorPendingSnapshotHighWater": 0,  # Direct sends use no waiting queue.
             }
 
 

@@ -10,7 +10,7 @@ for (const destination of ['/home', '/recent_matches', '/profile', '/scenario_ed
   })
 }
 
-test('real login rejects wrong credentials and restores the requested route', async ({
+test('real login rejects wrong credentials and restores the requested route @smoke', async ({
   page,
   player,
 }) => {
@@ -25,7 +25,7 @@ test('real login rejects wrong credentials and restores the requested route', as
   await expect(page.getByRole('heading', { name: 'Recent Matches', exact: true })).toBeVisible()
 })
 
-test('sign-out protects history and a second account gets its own profile', async ({
+test('sign-out protects history and a second account gets its own profile @smoke', async ({
   page,
   player,
   opponent,
@@ -61,6 +61,8 @@ test('home header fits a small phone and exposes keyboard navigation', async ({
   const key =
     process.platform === 'darwin' && testInfo.project.name === 'webkit-desktop' ? 'Alt+Tab' : 'Tab'
   await page.keyboard.press(key)
+  await expect(page.getByRole('button', { name: 'Notifications' })).toBeFocused()
+  await page.keyboard.press(key)
   await expect(link).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: 'Elo details' })).toBeVisible()
@@ -74,7 +76,7 @@ test('home header fits a small phone and exposes keyboard navigation', async ({
   await expect(page).toHaveURL(/\/recent_matches$/)
 })
 
-test('the real API rejects a request without a Firebase ID token', async ({ request }) => {
+test('the real API rejects a request without a Firebase ID token @smoke', async ({ request }) => {
   const response = await request.get(TEST_ENV.apiURL + '/api/v1/skill-ratings/piano')
   expect(response.status()).toBe(401)
 })

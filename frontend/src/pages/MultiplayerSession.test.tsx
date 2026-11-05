@@ -174,3 +174,32 @@ it('shows match details during reconnect and disables live actions until connect
   await userEvent.click(screen.getByRole('button', { name: 'Reconnect' }))
   expect(retry).toHaveBeenCalledOnce()
 })
+
+it('lets the player change spectator permissions and shows system messages and reactions', async () => {
+  const snapshot = sessionSnapshot({
+    state: 'in_progress',
+    messages: [{
+      id: 1,
+      uid: '',
+      text: 'Friend joined as a spectator',
+      atMs: 0,
+      system: true,
+      reactions: { '👏': 2 },
+    }],
+  })
+  snapshot.participants[0]!.allowSpectators = true
+  vi.mocked(useSession).mockReturnValue({
+    snapshot,
+    receivedAt: performance.now(),
+    connection: 'connected',
+    error: null,
+    send,
+    retry,
+  })
+  renderSession()
+  await userEvent.click(screen.getByText('Match settings'))
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Allow spectators' }))
+  expect(send).toHaveBeenCalledWith('spectating', false)
+  expect(screen.getByRole('log')).toHaveTextContent('Friend joined as a spectator')
+  expect(screen.getByRole('log')).toHaveTextContent('👏 2')
+})

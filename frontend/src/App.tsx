@@ -18,6 +18,7 @@ import { ScenarioEditor } from '@/pages/ScenarioEditor'
 import { ScenarioSearch } from '@/pages/ScenarioSearch'
 import { ScenarioDifficulty } from '@/pages/ScenarioDifficulty'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
+import { SpectatorMatch } from '@/pages/SpectatorMatch'
 import { MultiplayerSession } from '@/pages/MultiplayerSession'
 import { AudioLab } from '@/pages/AudioLab'
 import { PlayScenario } from '@/pages/PlayScenario'
@@ -51,6 +52,7 @@ const PROTECTED_ROUTES = [
   { path: '/multiplayer_connect', element: <MultiplayerConnect /> },
   { path: '/multiplayer/friend-invitations/:invitationId', element: <FriendMatchWaiting /> },
   { path: '/multiplayer/:matchId', element: <MultiplayerSession /> },
+  { path: '/spectate/:matchId', element: <SpectatorMatch /> },
   { path: '/audio_lab', element: <AudioLab /> },
   { path: '/play/:scenarioId', element: <PlayScenario /> },
   { path: '/play_history', element: <PlayHistory /> },

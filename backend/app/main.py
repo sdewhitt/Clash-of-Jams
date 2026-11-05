@@ -22,6 +22,7 @@ from app import __version__
 from app.config import get_settings
 from app.firebase import get_firestore_client
 from app.routers import (
+    account,
     health,
     history,
     leaderboards,
@@ -34,6 +35,7 @@ from app.routers import (
     scenarios,
     skill_ratings,
 )
+from app.services.account_deletion import purge_due_accounts
 from app.services.matchmaking import MatchmakingService
 from app.services.matchmaking_store import FirestoreMatchmakingStore
 from app.services.multiplayer import SessionService
@@ -104,13 +106,24 @@ def create_app() -> FastAPI:
                     logging.getLogger(__name__).exception("Session update failed")
                 await asyncio.sleep(0.5)
 
+        async def purge_accounts():
+            # Delay the first pass so startup is independent of the worker.
+            while True:
+                await asyncio.sleep(60)
+                try:
+                    await run_in_threadpool(purge_due_accounts)
+                except Exception:
+                    logging.getLogger(__name__).exception("Account deletion worker failed")
+
         session_task = asyncio.create_task(update_sessions())
+        purge_task = asyncio.create_task(purge_accounts())
         try:
             yield
         finally:
             task.cancel()
             expiry_task.cancel()
             session_task.cancel()
+            purge_task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
@@ -119,6 +132,7 @@ def create_app() -> FastAPI:
                 task,
                 expiry_task,
                 session_task,
+                purge_task,
                 return_exceptions=True,
             )
 
@@ -141,6 +155,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health.router)
+    app.include_router(account.router, prefix=settings.api_prefix)
     app.include_router(scenarios.router, prefix=settings.api_prefix)
     app.include_router(scenario_difficulty.router, prefix=settings.api_prefix)
     app.include_router(ratings.router, prefix=settings.api_prefix)

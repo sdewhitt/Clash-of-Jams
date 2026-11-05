@@ -139,7 +139,14 @@ export async function ensureAccountDocuments(user: User): Promise<boolean> {
 
 export async function signInWithGoogle(): Promise<User> {
   const credential = await signInWithPopup(auth, new GoogleAuthProvider())
-  await ensureAccountDocuments(credential.user)
+  try {
+    await ensureAccountDocuments(credential.user)
+  } catch (error) {
+    // A pending account cannot read its normal profile until recovery.
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'permission-denied') throw error
+    const account = await getDoc(doc(db, 'accountDeletions', credential.user.uid))
+    if (account.data()?.state !== 'pending_deletion') throw error
+  }
   return credential.user
 }
 

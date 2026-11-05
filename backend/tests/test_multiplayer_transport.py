@@ -16,7 +16,7 @@ from tests.test_multiplayer import SessionTestStore
 @pytest.fixture
 def transport(monkeypatch):
     def verify(credentials, _settings):
-        if credentials.credentials not in ("a", "b", "outsider"):
+        if credentials.credentials not in ("a", "b", "outsider", "unrelated"):
             raise HTTPException(401, "Invalid token")
         return CurrentUser(uid=credentials.credentials)
 
@@ -116,3 +116,90 @@ def test_invalid_event_does_not_change_session_state(transport):
         reply = socket.receive_json()
         assert reply["disposition"] == "rejected"
         assert reply["snapshot"]["participants"][0]["score"] == 0
+
+
+def test_spectating_discovery_permissions_reactions_and_reconnect(transport, monkeypatch):
+    from app.dependencies import get_current_user
+
+    client, hub = transport
+    monkeypatch.setattr(
+        SessionTestStore,
+        "spectator_identity",
+        lambda _store, uid: ("Viewer", {"a"} if uid == "outsider" else set()),
+        raising=False,
+    )
+    client.app.dependency_overrides[get_current_user] = lambda: CurrentUser(uid="outsider")
+    player_url = "/api/v1/multiplayer/match/socket"
+    watch_url = "/api/v1/multiplayer/match/spectate"
+    discovery_url = "/api/v1/multiplayer/spectating"
+
+    def action(socket, kind, sequence, **fields):
+        event_id = f"{kind}-{sequence}"
+        socket.send_json({"eventId": event_id, "kind": kind, "sequence": sequence, **fields})
+        return until(socket, lambda reply: reply["eventId"] == event_id)
+
+    def join(viewer):
+        viewer.send_json({"token": "outsider", "visit": "visit"})
+
+    with client.websocket_connect(player_url) as a, client.websocket_connect(player_url) as b:
+        a.send_json({"token": "a", "allowSpectators": True})
+        b.send_json({"token": "b"})
+        a.receive_json()
+        b.receive_json()
+        action(a, "ready", 1)
+        action(b, "ready", 1)
+        assert client.get(discovery_url).json() == []
+        with client.websocket_connect(watch_url) as viewer:
+            join(viewer)
+            with pytest.raises(WebSocketDisconnect) as denied:
+                viewer.receive_json()
+            assert denied.value.code == 4403
+
+        action(b, "spectating", 2, allowSpectators=True)
+        assert client.get(discovery_url).json() == [{"id": "match", "friends": ["a"]}]
+        with client.websocket_connect(watch_url) as unrelated:
+            unrelated.send_json({"token": "unrelated", "visit": "visit"})
+            with pytest.raises(WebSocketDisconnect) as denied:
+                unrelated.receive_json()
+            assert denied.value.code == 4403
+
+        with client.websocket_connect(watch_url) as viewer:
+            join(viewer)
+            state = viewer.receive_json()
+            assert state["players"][0]["score"] == 0
+            assert set(state["players"][0]) == {"name", "score", "beatsHit", "outcome"}
+            message = state["messages"][0]
+            assert message["text"] == "Viewer joined as a spectator"
+            viewer.send_json({"type": "reaction", "messageId": message["id"], "reaction": "👏"})
+            until(viewer, lambda state: state["messages"][0]["reactions"] == {"👏": 1})
+            viewer.send_json({"kind": "demo_hit"})
+            with pytest.raises(WebSocketDisconnect) as invalid:
+                while True:
+                    viewer.receive_json()
+            assert invalid.value.code == 1008
+
+        with client.websocket_connect(watch_url) as viewer:
+            join(viewer)
+            assert len(viewer.receive_json()["messages"]) == 1
+            state = action(a, "demo_hit", 2)["snapshot"]
+            assert state["messages"][0]["reactions"] == {"👏": 1}
+            until(viewer, lambda state: state["players"][0]["beatsHit"] == 1)
+            action(a, "spectating", 3, allowSpectators=False)
+            with pytest.raises(WebSocketDisconnect) as removed:
+                while True:
+                    viewer.receive_json()
+            assert removed.value.code == 4410
+
+        assert client.get(discovery_url).json() == []
+        action(a, "spectating", 4, allowSpectators=True)
+        with client.websocket_connect(watch_url) as viewer:
+            join(viewer)
+            viewer.receive_json()
+            action(b, "resign", 3)
+            result = until(viewer, lambda state: state["state"] == "complete")
+            assert [player["outcome"] for player in result["players"]] == ["win", "forfeit"]
+            with pytest.raises(WebSocketDisconnect) as completed:
+                viewer.receive_json()
+            assert completed.value.code == 1000
+
+    assert hub.metrics.report()["counts"]["spectatorConnections"] == 3

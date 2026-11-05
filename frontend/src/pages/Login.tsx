@@ -21,7 +21,11 @@ export function Login() {
   const {setTheme} = useTheme()
 
   // Where RequireAuth bounced the user from, if anywhere.
-  const from = (location.state as { from?: string } | null)?.from ?? '/home';
+  const navigation = location.state as { from?: string; purgeAt?: string } | null
+  const from = navigation?.from ?? '/home'
+  const deletionNotice = navigation?.purgeAt
+    ? `Account scheduled for deletion. Sign in to restore it before ${new Date(navigation.purgeAt).toLocaleString()}.`
+    : null
 
   useEffect(() => {
     if (loading || !user) { 
@@ -160,7 +164,8 @@ export function Login() {
           </label>
 
           {error && <p className="text-sm text-accent-middle">{error}</p>}
-          {notice && <p className="text-sm text-muted">{notice}</p>}
+          {deletionNotice && <p role="status">{deletionNotice}</p>}
+            {notice && <p className="text-sm text-muted">{notice}</p>}
 
           <button
             type="submit"

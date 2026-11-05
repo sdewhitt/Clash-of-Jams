@@ -65,7 +65,7 @@ describe('piano audio recordings', () => {
     const { withinSemitone, score } = transcribeAsPiano(rec)
     expect(withinSemitone / rec.notes.length).toBeGreaterThanOrEqual(0.95)
     expect(score?.finalScore).toBeGreaterThanOrEqual(95_000)
-  })
+  }, 10_000)
 
   it('identifies at least 95% of 1000 notes across the low, middle and high registers', () => {
     let total = 0

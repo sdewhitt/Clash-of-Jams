@@ -6,13 +6,14 @@
  */
 import type { TabDefinition } from '@/components/TabBar'
 
-export const EDITOR_TAB_IDS = ['new', 'browse', 'library'] as const
+export const EDITOR_TAB_IDS = ['new', 'browse', 'library', 'history'] as const
 export type EditorTabId = (typeof EDITOR_TAB_IDS)[number]
 
 export const EDITOR_TABS: readonly TabDefinition<EditorTabId>[] = [
   { id: 'new', label: 'New Scenario' },
   { id: 'browse', label: 'Browse Published Scenarios' },
   { id: 'library', label: 'Your Library' },
+  { id: 'history', label: 'Version History' },
 ]
 
 /** Opening the editor lands on a blank scenario, per user story #24. */
@@ -29,3 +30,6 @@ export function parseEditorTab(value: string | null): EditorTabId {
 
 /** The scenario currently open in the editor tab, if any. */
 export const EDITOR_SCENARIO_PARAM = 'scenario'
+
+/** The saved version being looked at on the history tab, if any. */
+export const EDITOR_VERSION_PARAM = 'version'

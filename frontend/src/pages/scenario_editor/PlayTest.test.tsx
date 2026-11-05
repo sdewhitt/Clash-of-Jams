@@ -68,6 +68,7 @@ vi.mock('@/components/ScenarioPlayer', async (importOriginal) => {
         instrument: props.defaultInstrument,
         inputKind: 'microphone',
         midiDeviceId: '',
+        speedMultiplier: 1,
         performed: [],
         result: RESULT,
         explanation: explainScore({ result: RESULT, expected: props.expected }),

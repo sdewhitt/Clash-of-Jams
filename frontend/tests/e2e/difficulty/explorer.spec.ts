@@ -48,7 +48,7 @@ test('scenario tabs explain easy, hard and provisional synthetic evidence', asyn
   )
 })
 
-test('the author computes and publishes difficulty from accepted musical runs through the real API', async ({
+test('the author computes and publishes difficulty from accepted musical runs through the real API @smoke', async ({
   page,
   data,
   player,

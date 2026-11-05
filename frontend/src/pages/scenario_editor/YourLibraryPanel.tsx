@@ -13,10 +13,13 @@ import { deleteScenario, listMyScenarios } from '@/lib/scenarios/store'
 import type { Scenario } from '@/lib/schema/types'
 import { INSTRUMENT_LABELS } from '@/pages/scenario_editor/draft'
 import { EmptyState } from '@/pages/scenario_editor/EmptyState'
+import { formatSavedAt } from '@/pages/scenario_editor/versions'
 
 interface YourLibraryPanelProps {
   /** Opens a saved scenario in the editor tab. */
   onOpenScenario: (scenarioId: string) => void
+  /** Opens a saved scenario's version history. */
+  onViewHistory: (scenarioId: string) => void
   /** Sends the author to the blank-scenario tab. */
   onCreateNew: () => void
   /** Called once a scenario is gone, so the editor can let go of it too. */
@@ -25,6 +28,7 @@ interface YourLibraryPanelProps {
 
 export function YourLibraryPanel({
   onOpenScenario,
+  onViewHistory,
   onCreateNew,
   onScenarioDeleted,
 }: YourLibraryPanelProps) {
@@ -116,13 +120,14 @@ export function YourLibraryPanel({
           className="flex flex-wrap items-center justify-between gap-4 rounded-xl border-2
             border-base-middle bg-base-end px-6 py-4"
         >
-          <div>
-            <h3 className="text-xl font-bold text-ink">{scenario.title}</h3>
+          <div className="min-w-0 flex-1 basis-64">
+            <h3 className="text-xl font-bold wrap-break-word text-ink">{scenario.title}</h3>
             <p className="text-sm text-muted">
               {INSTRUMENT_LABELS[scenario.instrument]} &middot; {scenario.visibility} &middot;
               version {scenario.currentVersionNumber} &middot; difficulty{' '}
               {scenario.authorDifficulty}/10
             </p>
+            <p className="text-sm text-faint">Last edited {formatSavedAt(scenario.updatedAt)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -133,6 +138,15 @@ export function YourLibraryPanel({
                 outline-contrast-middle transition-all hover:brightness-125 active:scale-95"
             >
               Open in Editor
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewHistory(scenario.id)}
+              aria-label={`Version history of ${scenario.title}`}
+              className="rounded-lg border-2 border-base-middle px-5 py-2 font-bold text-ink
+                transition-colors hover:border-accent-start hover:bg-accent-base-middle"
+            >
+              History
             </button>
             <button
               type="button"

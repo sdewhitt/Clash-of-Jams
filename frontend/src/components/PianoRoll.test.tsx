@@ -246,3 +246,39 @@ describe('keyboard nudging', () => {
     expect(notesFrom(onChange)[0].startBeat).toBeCloseTo(0.75)
   })
 })
+
+describe('read only', () => {
+  function renderReadOnly() {
+    const chart = addNote(emptyChart('piano'), 'lead', {
+      midiPitch: 60,
+      startBeat: 0,
+      durationBeats: 1,
+    })
+    const onChange = vi.fn<(next: NoteChart) => void>()
+    render(<PianoRoll chart={chart} partId="lead" onChange={onChange} readOnly />)
+    return { onChange, grid: screen.getByRole('application') }
+  }
+
+  it('shows the notes without the editing tools', () => {
+    renderReadOnly()
+
+    expect(screen.getByRole('application')).toHaveAccessibleName('Note grid, 1 notes placed')
+    expect(screen.queryByRole('button', { name: 'Delete note' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Snap')).not.toBeInTheDocument()
+  })
+
+  it('ignores placing, dragging, right-clicking and the keyboard', () => {
+    const { onChange, grid } = renderReadOnly()
+    const note = screen.getByTitle(/at beat 0/)
+
+    fireEvent.pointerDown(grid, { button: 0, ...at(4, 60) })
+    fireEvent.pointerUp(grid, at(4, 60))
+    fireEvent.pointerDown(note, { button: 0, ...at(0, 60) })
+    fireEvent.pointerMove(grid, at(2, 62))
+    fireEvent.pointerUp(grid, at(2, 62))
+    fireEvent.contextMenu(note)
+    fireEvent.keyDown(grid, { key: 'Delete' })
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+})
