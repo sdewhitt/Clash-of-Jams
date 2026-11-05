@@ -1,4 +1,4 @@
-import { act, renderHook, screen } from '@testing-library/react'
+import { act, renderHook, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Timestamp } from 'firebase/firestore'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -30,6 +30,20 @@ vi.mock('firebase/firestore', async (importOriginal) => ({
   doc: (_db: unknown, ...parts: string[]) => ({ path: parts.join('/') }),
   query: (ref: { path: string }) => ref,
   updateDoc,
+  getDoc: async (ref: { path: string }) => ({
+    exists: () => settings.has(ref.path),
+    data: () => settings.get(ref.path),
+  }),
+  // Batched writes reach the same fake store as updateDoc, and stop at the first failure.
+  writeBatch: () => {
+    const writes: [{ path: string }, Record<string, unknown>][] = []
+    return {
+      update: (ref: { path: string }, data: Record<string, unknown>) => writes.push([ref, data]),
+      commit: async () => {
+        for (const [ref, data] of writes) await updateDoc(ref, data)
+      },
+    }
+  },
   onSnapshot: (ref: { path: string }, next: (snapshot: Snapshot) => void, error: () => void) => {
     const unsubscribe = vi.fn()
     listeners.set(ref.path, { next, error, unsubscribe })
@@ -205,9 +219,11 @@ describe('Elo UI', () => {
       'Beating a stronger opponent',
     )
     await userEvent.selectOptions(screen.getByLabelText('Instrument'), 'guitar')
-    expect(updateDoc).toHaveBeenCalledWith(
-      { path: 'userPreferences/user-1' },
-      expect.objectContaining({ preferredInstrument: 'guitar' }),
+    await waitFor(() =>
+      expect(updateDoc).toHaveBeenCalledWith(
+        { path: 'userPreferences/user-1' },
+        expect.objectContaining({ preferredInstrument: 'guitar' }),
+      ),
     )
     emitRating(450, 'guitar')
     expect(screen.getByRole('button', { name: /View guitar Elo/ })).toHaveTextContent('Guitar-450')
@@ -219,6 +235,36 @@ describe('Elo UI', () => {
     emitRating(450, 'guitar')
     await userEvent.click(screen.getByRole('button', { name: /View guitar Elo/ }))
     expect(screen.getByLabelText('Instrument')).toHaveValue('guitar')
+  })
+
+  it('keeps a hidden instrument off the public profile when it changes', async () => {
+    settings.set('userSettings/user-1', { publicInstrument: false })
+    settings.set('publicProfile/user-1', { preferredInstrument: '' })
+    renderWithAuth(<Home />, { auth: signedIn(), route: '/home' })
+    emitRating()
+    await userEvent.click(screen.getByRole('button', { name: /View piano Elo/ }))
+    await userEvent.selectOptions(screen.getByLabelText('Instrument'), 'guitar')
+    await waitFor(() =>
+      expect(updateDoc).toHaveBeenCalledWith(
+        { path: 'publicProfile/user-1' },
+        { preferredInstrument: '' },
+      ),
+    )
+  })
+
+  it('updates a public instrument on the public profile when it changes', async () => {
+    settings.set('userSettings/user-1', { publicInstrument: true })
+    settings.set('publicProfile/user-1', { preferredInstrument: 'piano' })
+    renderWithAuth(<Home />, { auth: signedIn(), route: '/home' })
+    emitRating()
+    await userEvent.click(screen.getByRole('button', { name: /View piano Elo/ }))
+    await userEvent.selectOptions(screen.getByLabelText('Instrument'), 'guitar')
+    await waitFor(() =>
+      expect(updateDoc).toHaveBeenCalledWith(
+        { path: 'publicProfile/user-1' },
+        { preferredInstrument: 'guitar' },
+      ),
+    )
   })
 
   it('shows a failed preference save and retains the previous instrument', async () => {
