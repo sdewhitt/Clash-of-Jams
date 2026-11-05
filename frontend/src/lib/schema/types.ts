@@ -79,8 +79,9 @@ export const INVITATION_STATES = [
 ] as const
 export type InvitationState = (typeof INVITATION_STATES)[number]
 
-export const FRIENDSHIP_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
-export type FriendshipState = (typeof FRIENDSHIP_STATES)[number]
+export const REQUEST_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
+export type FriendshipState = (typeof REQUEST_STATES)[number]
+export type  CommunityState = (typeof REQUEST_STATES)[number]
 
 export const COMMUNITY_ROLES = ['owner', 'moderator', 'member'] as const
 export type CommunityRole = (typeof COMMUNITY_ROLES)[number]
@@ -536,11 +537,10 @@ export interface FriendRequest {
 export interface Community {
   id: string
   name: string
-  communityIcon: string | null
+  communityIcon: string
   description: string
   ownerUid: string
   memberCount: number
-  announcements: string[]
   isPublic: boolean
   createdAt: Timestamp
 }
@@ -548,9 +548,27 @@ export interface Community {
 /** communities/{communityId}/members/{uid} */
 export interface CommunityMembership {
   uid: string
+  userDisplayName: string
   communityId: string
   role: CommunityRole
   joinedAt: Timestamp
+}
+
+/** communities/{communityId}/announcement/{announcementId} */
+export interface CommunityAnnouncement {
+  announcerUid: string
+  announcementTitle: string
+  announcement: string
+  announcementViewers: CommunityRole[]
+  postedAt: Timestamp
+}
+
+export interface CommunityRequest {
+  memberUid: string
+  outsiderUid: string
+  requestType: string
+  status: CommunityState
+  createdAt: Timestamp
 }
 
 /** playlists/{playlistId} — written only by the backend's /playlists routes. */

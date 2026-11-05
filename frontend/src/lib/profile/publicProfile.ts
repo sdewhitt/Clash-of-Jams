@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, runTransaction, arrayRemove, } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, setDoc, arrayRemove, runTransaction, } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { PublicProfile, UserSettings, UserStatus } from '@/lib/schema/types';
 import { COLLECTIONS } from '@/lib/schema/collections';
@@ -75,42 +75,43 @@ export async function updatePublicProfile( uid: string, savedUsername: string, p
         return;
     }
 
-    await runTransaction(db, async (transaction) => {
-        const snapshot = await transaction.get(docRef);
-        const settings = await transaction.get(doc(db, COLLECTIONS.userSettings, uid));
-        const appearance = (settings.data() as UserSettings | undefined)?.profileAppearance ?? DEFAULT_APPEARANCE;
+    const snapshot = await getDoc(docRef);
 
-        transaction.set(docRef, {
-            ...(snapshot.exists() ? {} : { friends: [], communities: [] }),
-            uid,
-            username: savedUsername,
-            usernameLower: savedUsername.toLowerCase(),
-            displayName: savedUsername,
-            avatarUrl,
-            bio: bio ? savedBio : "",
-            preferredInstrument: instrument ? savedInstrument : "",
-            preferredGenres: genres ? savedGenres : [],
-            elos,
-            acceptingFriends,
-            updatedAt: serverTimestamp(),
-            publicHistory,
-            profileAppearance: publicAppearance(appearance, publicHistory),
-        }, { merge: true });
-    });
+    const profileData = {
+        uid,
+        username: savedUsername,
+        usernameLower: savedUsername.toLowerCase(),
+        displayName: savedUsername,
+        avatarUrl,
+        bio: bio ? savedBio : "",
+        preferredInstrument: instrument ? savedInstrument : "",
+        preferredGenres: genres ? savedGenres : [],
+        elos,
+        acceptingFriends,
+        updatedAt: serverTimestamp(),
+        publicHistory
+    };
+
+    await setDoc(
+        docRef,
+        {
+            ...profileData,
+            ...(!snapshot.exists() && {
+                friends: [],
+                communities: []
+            })
+        },
+        { merge: true }
+    );
 }
 
 export async function updateAcceptingFriends( uid: string, accepting: boolean ) {
     const userRef = doc(db, "userSettings", uid);
     const publicRef = doc(db, "publicProfile", uid);
 
-    await updateDoc(publicRef, {
-        acceptingFriends: accepting,
-        updatedAt: serverTimestamp(),
-    });
-
-    await updateDoc(userRef, {
-        acceptingFriends: accepting,
-        updatedAt: serverTimestamp(),
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {acceptingFriends: accepting, updatedAt: serverTimestamp(),});
+        transaction.update(publicRef, {acceptingFriends: accepting, updatedAt: serverTimestamp(),});
     });
 }
 
@@ -119,14 +120,9 @@ export async function updateEloPublicity( uid: string, elos: string[] ) {
     const userRef = doc(db, "userSettings", uid);
     const publicRef = doc(db, "publicProfile", uid);
 
-    await updateDoc(publicRef, {
-        elos: elos,
-        updatedAt: serverTimestamp(),
-    });
-
-    await updateDoc(userRef, {
-        publicElos: elos,
-        updatedAt: serverTimestamp(),
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {publicElos: elos, updatedAt: serverTimestamp(),});
+        transaction.update(publicRef, {elos: elos, updatedAt: serverTimestamp(),});
     });
 }
 
@@ -144,7 +140,5 @@ export async function getUserStatus( uid: string): Promise<UserStatus> {
 export async function updateDoNotDistrub( uid: string, dnd: boolean ) {
     const userRef = doc(db, "userStatus", uid);
 
-    await updateDoc(userRef, {
-        dnd: dnd,
-    });
+    await updateDoc(userRef, { dnd: dnd, });
 }

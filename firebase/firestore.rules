@@ -32,6 +32,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
     }
 
+    function canPostAnnouncement(communityId, memberUid) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/communities/$(communityId))
+        && get(/databases/$(database)/documents/communities/$(communityId)/members/$(memberUid)).data.role in ['owner', 'moderator'];
+    }
+
     function pairId(uidOne, uidTwo) {
       return uidOne < uidTwo
         ? uidOne + '_' + uidTwo
@@ -197,7 +203,7 @@ service cloud.firestore {
         && (
             isAdmin()
             || changed('friends')
-            || changed('commnuities')
+            || changed('communities')
             || (
                 isSelf(uid)
                 && unchanged('role')
@@ -514,33 +520,93 @@ service cloud.firestore {
     // --------------------------------------------------
 
     match /userStatus/{uid} {
-
-      // Authenticated users can see other users' presence.
       allow read: if signedIn();
 
-      // Users can only write their own presence.
-      allow create, update: if isSelf(uid) &&
-        request.resource.data.keys().hasOnly([
-          'dnd',
-          'lastHeartbeat'
-        ]) &&
-        request.resource.data.dnd is bool &&
-        request.resource.data.lastHeartbeat is timestamp;
+      allow create: if isSelf(uid)
+          && request.resource.data.keys().hasOnly(['lastHeartbeat'])
+          && request.resource.data.lastHeartbeat == request.time;
 
-      allow delete: if isSelf(uid);
+      allow update: if isSelf(uid)
+          && request.resource.data.diff(resource.data)
+              .affectedKeys().hasOnly(['lastHeartbeat'])
+          && request.resource.data.lastHeartbeat == request.time;
+
+      allow delete: if false;
     }
 
     match /communities/{communityId} {
       allow read: if resource.data.isPublic == true || signedIn();
       allow create: if isSelf(request.resource.data.ownerUid);
-      allow update, delete: if isSelf(resource.data.ownerUid) || isAdmin();
+      allow update: if (isSelf(resource.data.ownerUid) || isAdmin()) || (signedIn() && changed('memberCount'))
+      allow delete: if isSelf(resource.data.ownerUid) || isAdmin();
 
+      
       match /members/{uid} {
         allow read: if signedIn();
-        allow create: if isSelf(uid) && request.resource.data.role == 'member';
+
+        allow create: if signedIn() && (
+            isSelf(uid)
+            || isSelf(
+                get(/databases/$(database)/documents/communities/$(communityId))
+                    .data.ownerUid
+            )
+            || isAdmin()
+        );
+
         allow update, delete: if isSelf(uid)
-          || isSelf(get(/databases/$(database)/documents/communities/$(communityId)).data.ownerUid)
-          || isAdmin();
+            || isSelf(
+                get(/databases/$(database)/documents/communities/$(communityId))
+                    .data.ownerUid
+            )
+            || isAdmin();
+      }
+
+      match /announcements/{announcementId} {
+        allow read: if signedIn();
+        allow create: if isSelf(request.resource.data.announcerUid) && canPostAnnouncement(communityId, request.resource.data.announcerUid);
+        allow update, delete: if signedIn() || isAdmin();
+      }
+
+      match /requests/{requestId} {
+        allow read: if signedIn() && (
+          isSelf(resource.data.memberUid)
+          || isSelf(resource.data.outsiderUid)
+          || isSelf(
+            get(/databases/$(database)/documents/communities/$(communityId))
+              .data.ownerUid
+          )
+          || isAdmin()
+        );
+
+        allow create: if signedIn() && (
+          isSelf(request.resource.data.memberUid)
+          || isSelf(request.resource.data.outsiderUid)
+          || isSelf(
+            get(/databases/$(database)/documents/communities/$(communityId))
+              .data.ownerUid
+          )
+          || isAdmin()
+        );
+
+        allow update: if signedIn() && (
+          isSelf(resource.data.memberUid)
+          || isSelf(resource.data.outsiderUid)
+          || isSelf(
+            get(/databases/$(database)/documents/communities/$(communityId))
+              .data.ownerUid
+          )
+          || isAdmin()
+        );
+
+        allow delete: if signedIn() && (
+          isSelf(resource.data.memberUid)
+          || isSelf(resource.data.outsiderUid)
+          || isSelf(
+            get(/databases/$(database)/documents/communities/$(communityId))
+              .data.ownerUid
+          )
+          || isAdmin()
+        );
       }
     }
 

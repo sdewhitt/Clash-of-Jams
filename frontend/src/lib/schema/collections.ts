@@ -40,6 +40,9 @@ import type {
   FriendRequest,
   FriendshipState,
   MatchInvitation,
+  CommunityAnnouncement,
+  CommunityRole,
+  CommunityRequest,
 } from './types.ts'
 
 /** Bumped whenever a document shape changes in a way that needs a migration. */
@@ -94,6 +97,15 @@ export const ratingHistoryPath = (uid: string, instrument: Instrument) =>
 
 export const communityMembersPath = (communityId: string) =>
   `${COLLECTIONS.communities}/${communityId}/members`
+
+export const communityAnnouncementsPath = (communityId: string) =>
+  `${COLLECTIONS.communities}/${communityId}/announcements`
+
+export const communityRequestsPath = (communityId: string) =>
+  `${COLLECTIONS.communities}/${communityId}/requests`
+
+export const playlistItemsPath = (playlistId: string) =>
+  `${COLLECTIONS.playlists}/${playlistId}/items`
 
 /* --------------------------------------------------------- derived ids */
 
@@ -447,7 +459,7 @@ export function newScenarioTheme(args: {
   }
 }
 
-export function newFriendRequests(args: {
+export function newFriendRequest(args: {
   uidOne: string
   uidTwo: string
   initiatorUid: string
@@ -485,7 +497,7 @@ export function newFriendship(args: {
 export function newCommunity(args: {
   id: string
   name: string
-  communityIcon: string | null
+  communityIcon: string
   ownerUid: string
   description?: string
   isPublic?: boolean
@@ -497,7 +509,6 @@ export function newCommunity(args: {
     description: args.description ?? '',
     ownerUid: args.ownerUid,
     memberCount: 1,
-    announcements: [],
     isPublic: args.isPublic ?? true,
     createdAt: serverTimestamp(),
   }
@@ -505,14 +516,45 @@ export function newCommunity(args: {
 
 export function newCommunityMembership(args: {
   uid: string
+  userDisplayName: string
   communityId: string
   role?: CommunityMembership['role']
 }): WithFieldValue<CommunityMembership> {
   return {
     uid: args.uid,
+    userDisplayName: args.userDisplayName,
     communityId: args.communityId,
     role: args.role ?? 'member',
     joinedAt: serverTimestamp(),
+  }
+}
+
+export function newCommunityAnnouncement(args: {
+  announcerUid: string
+  announcementTitle: string
+  announcement: string
+  announcementViewers: CommunityRole[]
+}): WithFieldValue<CommunityAnnouncement> {
+  return {
+    announcerUid: args.announcerUid,
+    announcementTitle: args.announcementTitle,
+    announcement: args.announcement,
+    announcementViewers: args.announcementViewers,
+    postedAt: serverTimestamp(),
+  }
+}
+
+export function newCommunityRequest(args: {
+  memberUid: string
+  outsiderUid: string
+  requestType: string
+}): WithFieldValue<CommunityRequest> {
+  return {
+    memberUid: args.memberUid,
+    outsiderUid: args.outsiderUid,
+    requestType: args.requestType,
+    status: 'pending',
+    createdAt: serverTimestamp(),
   }
 }
 

@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, updateDoc, getDoc} from 'firebase/firestore';
+import { doc, serverTimestamp, getDoc, runTransaction} from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { UserPreferences } from '@/lib/schema/types';
 import { COLLECTIONS } from '@/lib/schema/collections';
@@ -18,28 +18,26 @@ export async function updatePreferredGenres( uid: string, publicGenres: boolean,
     const userRef = doc(db, "userPreferences", uid);
     const publicRef = doc(db, "publicProfile", uid);
 
-    await updateDoc(userRef, { 
-        preferredGenres: genres, 
-        updatedAt: serverTimestamp(),
-    });
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {preferredGenres: genres, updatedAt: serverTimestamp(),});
 
-    const docSnap = await getDoc(publicRef);
-    if (docSnap.exists()) {
-        await updateDoc(publicRef, { preferredGenres: publicGenres ? genres : [], });
-    }
+        const docSnap = await getDoc(publicRef);
+        if (docSnap.exists()) {
+            transaction.update(publicRef, { preferredGenres: publicGenres ? genres : [], });
+        }
+    });
 }
 
 export async function updatePreferredInstrument( uid: string, publicInstrument: boolean, preferredInstrument: string ) {
     const userRef = doc(db, "userPreferences", uid);    
     const publicRef = doc(db, "publicProfile", uid);
 
-    await updateDoc(userRef, {
-        preferredInstrument: preferredInstrument,
-        updatedAt: serverTimestamp(),
-    });
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {preferredInstrument: preferredInstrument, updatedAt: serverTimestamp(),});
 
-    const docSnap = await getDoc(publicRef);
-    if (docSnap.exists()) {
-        await updateDoc(publicRef, { preferredInstrument: publicInstrument ? preferredInstrument : "", });
-    }
+        const docSnap = await getDoc(publicRef);
+        if (docSnap.exists()) {
+            transaction.update(publicRef, { preferredInstrument: publicInstrument ? preferredInstrument : "", });
+        }
+    });
 }

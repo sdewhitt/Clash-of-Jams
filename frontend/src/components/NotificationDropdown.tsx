@@ -1,6 +1,8 @@
 import type { AppNotification } from "@/lib/schema/types";
 import { FriendMatchInvitation } from "./FriendMatchInvitation";
 import { FriendRequestNotification } from "./FriendRequestNotification";
+import { CommunityRequestNotification } from "./CommunityRequestNotification";
+import { deleteNotification } from "@/lib/notifications/readNotifications";
 
 interface NotificationDropdownProps {
     uid: string;
@@ -87,16 +89,13 @@ export function NotificationDropdown({ uid, notifications, loading, error, onClo
 
                         if (notification.notificationType === "friend_match_invitation") {
                             return (
-                                <div
+                                <FriendMatchInvitation
                                     key={key}
-                                >
-                                    <FriendMatchInvitation
-                                        notification={notification}
-                                    />
-                                </div>
+                                    notification={notification}
+                                />
                             );
                         }
-                        if (notification.notificationType.includes("friend_request")) {
+                        else if (notification.notificationType.includes("friend_request")) {
                             return (
                                 <FriendRequestNotification 
                                     key={key}
@@ -108,6 +107,63 @@ export function NotificationDropdown({ uid, notifications, loading, error, onClo
                                     read={notification.read}
                                 />
                             );
+                        }
+                        else if (notification.notificationType.includes("community") && notification.notificationType.includes("request_sent")) {
+                            return (
+                                <CommunityRequestNotification
+                                    key={key}
+                                    activeUid={uid}
+                                    notification={notification}
+                                />
+                            );
+                        }
+                        else if (notification.notificationType.includes("community") && notification.notificationType.includes("request_accepted")) {
+                            return (
+                                <div
+                                    onClick={() => deleteNotification(notification.id ?? "")}
+                                    className="
+                                        w-full
+                                        flex flex-row
+                                        bg-linear-to-b
+                                        from-contrast-start from-50
+                                        via-contrast-middle
+                                        to-contrast-end to-70
+                                        brightness-80
+                                        border-b border-line
+                                        hover:brightness-110
+                                        gap-4
+                                    "
+                                >
+                                    <p>x</p>
+                                    <p>
+                                        {notification.notifierUid} accepted the invitation to your community
+                                    </p>
+                                </div>
+                            );
+                        }
+                        else if (notification.notificationType.includes("community") && notification.notificationType.includes("request_declined")) {
+                            return (
+                                <div
+                                    onClick={() => deleteNotification(notification.id ?? "")}
+                                    className="
+                                        w-full
+                                        flex flex-row
+                                        bg-linear-to-b
+                                        from-contrast-start from-50
+                                        via-contrast-middle
+                                        to-contrast-end to-70
+                                        brightness-80
+                                        border-b border-line
+                                        hover:brightness-110
+                                        gap-4
+                                    "
+                                >
+                                    <p>x</p>
+                                    <p>
+                                        {notification.notifierUid} declined the invitation to your community
+                                    </p>
+                                </div>
+                            )
                         }
                     })
                 )}

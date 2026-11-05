@@ -235,6 +235,8 @@ export function FindCommunities() {
                                         <CommunitySearchResult
                                             key={community.id}
                                             community={community}
+                                            activeUid={profile?.uid ?? ""}
+                                            activeDisplayName={profile?.displayName ?? profile?.username ?? "..."}
                                             member={false}
                                         />
                                     ))}
@@ -252,6 +254,8 @@ export function FindCommunities() {
                                             <CommunitySearchResult
                                                 key={community.id}
                                                 community={community}
+                                                activeUid={profile?.uid ?? ""}
+                                                activeDisplayName={profile?.displayName ?? profile?.username ?? "..."}
                                                 member={false}
                                             />
                                         ))}
