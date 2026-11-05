@@ -14,8 +14,10 @@ import {
 
 import {
   newSkillRating,
+  newUserPreferences,
   newUserProfile,
   newUserSettings,
+  newUserStatus,
   newUsernameReservation,
   skillRatingsPath,
 } from '../../../src/lib/schema/collections.js'
@@ -114,6 +116,8 @@ export class TestData {
       ['users/' + uid, newUserProfile({ uid, username, displayName })],
       ['usernames/' + username, newUsernameReservation({ uid, username })],
       ['userSettings/' + uid, newUserSettings({ uid })],
+      ['userPreferences/' + uid, newUserPreferences()],
+      ['userStatus/' + uid, newUserStatus()],
       ...INSTRUMENTS.map(
         (instrument) =>
           [skillRatingsPath(uid) + '/' + instrument, newSkillRating({ uid, instrument })] as const,

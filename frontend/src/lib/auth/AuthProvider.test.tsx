@@ -22,8 +22,9 @@ vi.mock('firebase/firestore', async (importOriginal) => ({
   ...(await importOriginal<typeof import('firebase/firestore')>()),
   doc: (_db: unknown, ...segments: string[]) => ({ path: segments.join('/') }),
   onSnapshot: vi.fn(
-    (_ref: unknown, next: (snapshot: { exists: () => boolean; data: () => unknown }) => void) => {
-      next({ exists: () => true, data: () => ({ displayName: 'Ada', role: 'user' }) })
+    (ref: { path: string }, next: (snapshot: { exists: () => boolean; data: () => unknown }) => void) => {
+      const profile = ref.path.startsWith('users/')
+      next({ exists: () => profile, data: () => profile ? { displayName: 'Ada', role: 'user' } : undefined })
       return () => {}
     },
   ),

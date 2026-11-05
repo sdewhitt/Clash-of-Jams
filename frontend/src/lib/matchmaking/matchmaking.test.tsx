@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Home } from '@/pages/Home'
 import { MultiplayerConnect } from '@/pages/MultiplayerConnect'
 import { renderAtRoute, signedIn } from '@/test/render'
+import { spectatorPreferenceKey } from '@/lib/multiplayer/useSession'
 
 import { cancelQueue, getQueueStatus, joinQueue, type QueueStatus } from './api'
 import { useActiveMatch, useMatchmaking } from './useMatchmaking'
@@ -230,6 +231,23 @@ describe('matchmaking UI', () => {
     renderAtRoute(<MultiplayerConnect />, { path: '/multiplayer', auth: signedIn() })
     expect(await screen.findByTestId('location')).toHaveTextContent('/multiplayer/match-1')
     expect(cancelQueue).not.toHaveBeenCalledWith('ticket-1')
+  })
+
+  it('carries the spectator choice into the assigned match', async () => {
+    const key = spectatorPreferenceKey('user-1', 'match-1')
+    let assign!: (status: QueueStatus) => void
+    vi.mocked(joinQueue).mockReturnValue(new Promise((resolve) => { assign = resolve }))
+    renderAtRoute(<MultiplayerConnect />, { path: '/multiplayer', auth: signedIn() })
+    try {
+      const checkbox = screen.getByRole('checkbox', { name: 'Allow spectators' })
+      expect(checkbox).not.toBeChecked()
+      await userEvent.click(checkbox)
+      await act(async () => assign(matched))
+      expect(screen.getByTestId('location')).toHaveTextContent('/multiplayer/match-1')
+      expect(sessionStorage.getItem(key)).toBe('on')
+    } finally {
+      sessionStorage.removeItem(key)
+    }
   })
 
   it('failed join is visible and the player can still exit', async () => {

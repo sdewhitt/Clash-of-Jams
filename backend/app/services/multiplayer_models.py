@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, StrictBool
 
 from app.schemas import ApiModel, Instrument
 from app.services.skill_ratings import RatingEvent
@@ -18,7 +18,8 @@ PHRASES = {
 class SessionEvent(ApiModel):
     event_id: str = Field(min_length=1, max_length=128)
     sequence: int = Field(ge=1, le=2**53 - 1)
-    kind: Literal["ready", "demo_hit", "emote", "resign"]
+    kind: Literal["ready", "demo_hit", "emote", "resign", "spectating"]
+    allow_spectators: StrictBool | None = None
     phrase: Literal["well_done", "challenge", "thanks", "good_game"] | None = None
 
 
@@ -33,6 +34,7 @@ class SessionPlayer(ApiModel):
     beats_hit: int
     # Zero-based beat slots this player hit, ascending; the results screen reads streaks from it.
     hit_beats: list[int] = Field(default_factory=list)
+    allow_spectators: bool = False
 
 
 class SessionMessage(ApiModel):
@@ -40,6 +42,8 @@ class SessionMessage(ApiModel):
     uid: str
     text: str
     at_ms: float
+    system: bool = False
+    reactions: dict[str, int] = Field(default_factory=dict)
 
 
 class SessionSnapshot(ApiModel):

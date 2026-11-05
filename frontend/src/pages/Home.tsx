@@ -4,6 +4,7 @@ import { ProfileButton } from '@/components/ProfileButton'
 import { LiveElo } from '@/components/LiveElo'
 import { useAuth } from '@/lib/auth/useAuth'
 import { useActiveMatch } from '@/lib/matchmaking/useMatchmaking'
+import { SpectateTab } from '@/components/SpectateTab'
 import { NotificationButton } from '@/components/NotificationButton'
 
 export function Home() {
@@ -19,11 +20,11 @@ export function Home() {
     <main className="h-screen flex flex-col overflow-hidden">
       <header className="relative flex flex-wrap items-center justify-between gap-4 bg-linear-to-r from-accent-base-start from-10% via-accent-base-middle via-70% to-accent-base-end to-90% border-b-4 border-accent-start px-4 py-4 sm:px-12 sm:py-6">
         <h1 className="whitespace-nowrap text-3xl font-bold sm:text-4xl">Clash of Jams</h1>
-        <div className="ml-auto flex items-center gap-3 sm:gap-4">
+        <div className="ml-auto flex w-full min-w-0 items-center justify-end gap-3 sm:w-auto sm:gap-4">
           <NotificationButton uid={profile?.uid ?? ""}/>
           <LiveElo />
           <ProfileButton
-            className="w-36 shrink-0 sm:w-50"
+            className="w-36 min-w-0 sm:w-50 sm:shrink-0"
             username={profile?.displayName ?? user?.email ?? '…'}
             userAvatar={profile?.avatarUrl ?? '../../favicon.svg'}
           />
@@ -56,13 +57,16 @@ export function Home() {
             <NavButton onClick={() => navPortal('/settings')}>Settings</NavButton>
           </nav>
 
-          <section className="aspect-video w-full rounded-xl border-4 border-accent-start bg-linear-to-br from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 overflow-hidden">
-            <img
-              src="../../favicon.svg"
-              alt="Clash of Jams Preview"
-              className="w-full h-full object-cover"
-            />
-          </section>
+          <div className="min-w-0 space-y-4">
+            <div className="flex justify-end"><SpectateTab uid={user?.uid} /></div>
+            <section className="aspect-video w-full rounded-xl border-4 border-accent-start bg-linear-to-br from-accent-base-start from-10 via-accent-base-middle via-80 to-accent-base-end to-90 overflow-hidden">
+              <img
+                src="../../favicon.svg"
+                alt="Clash of Jams Preview"
+                className="w-full h-full object-cover"
+              />
+            </section>
+          </div>
         </div>
       </div>
     </main>

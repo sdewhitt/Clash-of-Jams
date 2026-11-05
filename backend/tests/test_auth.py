@@ -253,3 +253,40 @@ def test_forged_token_fails_real_verification(real_verifier_client: TestClient, 
     response = real_verifier_client.post("/api/v1/_test/admin-only", headers=bearer(token))
 
     assert response.status_code == 401
+
+
+def test_pending_account_cannot_use_normal_api(auth_client, fake_db):
+    fake_db.put("accountDeletions/user-1", {"state": "pending_deletion", "authAfter": 100})
+    response = auth_client.get("/api/v1/_test/whoami", headers=bearer("standard-token"))
+    assert response.status_code == 403
+
+
+def test_account_delete_requires_recent_auth(auth_client):
+    response = auth_client.delete("/api/v1/account", headers=bearer("standard-token"))
+    assert response.status_code == 403
+    assert "Sign in again" in response.json()["detail"]
+
+
+def test_account_lifecycle_routes_use_verified_identity(auth_client, monkeypatch, fake_db):
+    from datetime import UTC, datetime, timedelta
+
+    from app.services import account_deletion
+
+    now = datetime.now(UTC)
+    deadline = now + timedelta(days=30)
+    token = {**VALID_TOKENS["standard-token"], "auth_time": int(now.timestamp())}
+    monkeypatch.setitem(VALID_TOKENS, "recent-token", token)
+    calls = []
+
+    def schedule(uid, auth_time, requested_at):
+        calls.append((uid, auth_time))
+        fake_db.put(f"accountDeletions/{uid}", {"state": "pending_deletion", "purgeAt": deadline})
+        return deadline
+
+    monkeypatch.setattr(account_deletion, "schedule", schedule)
+    monkeypatch.setattr(account_deletion, "restore", lambda uid, auth_time, _: calls.append((uid, auth_time)))
+    headers = bearer("recent-token")
+    assert auth_client.delete("/api/v1/account", headers=headers).status_code == 202
+    assert auth_client.get("/api/v1/account", headers=headers).json()["state"] == "pending_deletion"
+    assert auth_client.post("/api/v1/account/restore", headers=headers).status_code == 204
+    assert calls == [("user-1", token["auth_time"])] * 2

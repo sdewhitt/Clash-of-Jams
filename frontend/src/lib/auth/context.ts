@@ -5,6 +5,7 @@
 import { createContext } from 'react'
 import type { User } from 'firebase/auth'
 
+import type { AccountDeletionState } from '@/lib/auth/deletion'
 import type { UserProfile } from '@/lib/schema/types'
 
 export interface AuthState {
@@ -14,6 +15,7 @@ export interface AuthState {
   profile: UserProfile | null
   /** True until the first onAuthStateChanged callback settles. */
   loading: boolean
+  account?: AccountDeletionState
 }
 
 export const AuthContext = createContext<AuthState | null>(null)

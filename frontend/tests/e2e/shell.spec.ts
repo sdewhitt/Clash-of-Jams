@@ -61,6 +61,8 @@ test('home header fits a small phone and exposes keyboard navigation', async ({
   const key =
     process.platform === 'darwin' && testInfo.project.name === 'webkit-desktop' ? 'Alt+Tab' : 'Tab'
   await page.keyboard.press(key)
+  await expect(page.getByRole('button', { name: 'Notifications' })).toBeFocused()
+  await page.keyboard.press(key)
   await expect(link).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: 'Elo details' })).toBeVisible()

@@ -38,6 +38,8 @@ class Player:
     sequence: int = 0
     event_ids: set[str] = field(default_factory=set)
     hit_slots: set[int] = field(default_factory=set)
+    allow_spectators: bool = False
+    connected_once: bool = False
     last_emote: float = float("-inf")
 
 
@@ -53,6 +55,11 @@ class Session:
     started: float | None = None
     started_epoch_ms: float | None = None
     messages: deque = field(default_factory=lambda: deque(maxlen=20))
+    score_updated_at_ms: float = 0
+    spectator_generation: int = 0
+    spectator_connections: dict[str, str] = field(default_factory=dict)
+    spectator_visits: deque = field(default_factory=lambda: deque(maxlen=512))
+    spectator_votes: dict[int, dict[str, str]] = field(default_factory=dict)
     pending: FinalMatchResult | str | None = None
     reason: str | None = None
     rating_events: tuple = ()
@@ -137,11 +144,14 @@ class SessionService:
         with self._registry_lock:
             return self.sessions.setdefault(match_id, session)
 
-    def connect(self, match_id, uid, connection):
+    def connect(self, match_id, uid, connection, allow_spectators=False):
         session = self._get(match_id, uid)
         with session.lock:
             self._advance(session)
             player = session.players[uid]
+            if not player.connected_once:
+                player.allow_spectators = allow_spectators
+                player.connected_once = True
             player.connection = connection
             player.last_seen = self.clock()
             player.recover_until = None
@@ -231,6 +241,7 @@ class SessionService:
                         error = "The playthrough has ended."
                     else:
                         player.hit_slots.add(slot)
+                        session.score_updated_at_ms = self.wall_clock() * 1000
             elif event.kind == "emote":
                 if event.phrase not in PHRASES:
                     error = "Choose a preset message."
@@ -246,6 +257,14 @@ class SessionService:
                             at_ms=self.wall_clock() * 1000,
                         )
                     )
+            elif event.kind == "spectating":
+                if event.allow_spectators is None:
+                    error = "Choose whether to allow spectators."
+                else:
+                    if player.allow_spectators and not event.allow_spectators:
+                        session.spectator_generation += 1
+                        session.spectator_connections.clear()
+                    player.allow_spectators = event.allow_spectators
             elif event.kind == "resign":
                 if session.state != "in_progress":
                     error = "Leave the lobby before the match starts."
@@ -347,10 +366,16 @@ class SessionService:
         elif now >= deadline:
             self._finish(session, "completed")
 
-    def tick(self):
+    def live_sessions(self):
         with self._registry_lock:
-            sessions = list(self.sessions.values())
-        for session in sessions:
+            return list(self.sessions.values())
+
+    def find_session(self, match_id):
+        with self._registry_lock:
+            return self.sessions.get(match_id)
+
+    def tick(self):
+        for session in self.live_sessions():
             with session.lock:
                 self._advance(session)
                 if (
@@ -398,6 +423,7 @@ class SessionService:
                     score=events[p.uid].score if p.uid in events else session.score(p),
                     beats_hit=len(p.hit_slots),
                     hit_beats=sorted(p.hit_slots),
+                    allow_spectators=p.allow_spectators,
                 )
                 for p in session.players.values()
             ],

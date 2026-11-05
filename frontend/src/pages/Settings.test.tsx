@@ -185,3 +185,21 @@ describe('settings page', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/profile/edit_profile')
   })
 })
+
+it('opens and dismisses the account deletion dialog', async () => {
+  renderSettings()
+
+  const dialog = screen.getByRole('dialog', { hidden: true })
+  // jsdom does not implement the browser's modal dialog methods.
+  Object.defineProperties(dialog, {
+    showModal: { value: () => dialog.setAttribute('open', '') },
+    close: { value: () => dialog.removeAttribute('open') },
+  })
+  await userEvent.click(screen.getByRole('button', { name: 'Delete Account' }))
+  expect(screen.getByRole('dialog', { name: 'Delete Account' })).toBe(dialog)
+
+  expect(dialog).toHaveTextContent('30 days')
+  expect(screen.getByRole('button', { name: 'Confirm Deletion' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(dialog).not.toHaveAttribute('open')
+})

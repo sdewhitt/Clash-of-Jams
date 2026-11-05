@@ -6,6 +6,7 @@ import { AudioInputSetting } from "@/pages/settings/AudioInputSetting"
 import { InputLatencySetting } from "@/pages/settings/InputLatencySetting"
 import { NotificationButton } from "@/components/NotificationButton"
 import { LiveElo } from "@/components/LiveElo"
+import { AccountDeletionSetting } from "@/pages/settings/AccountDeletionSetting"
 
 export function Settings() {
     const { user, profile } = useAuth()
@@ -66,6 +67,7 @@ export function Settings() {
                         Open profile settings
                     </button>
                 </section>
+                {user && <AccountDeletionSetting />}
             </div>
         </main>
     )

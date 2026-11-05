@@ -155,8 +155,9 @@ test('shared play, presets, both players rejoin with progress, and resignation u
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',
     })
+    // The hook retries every second, so recovery needs no click: the Reconnect button
+    // can vanish first. MultiplayerSession.test.tsx covers the button itself.
     interrupted = false
-    await page.getByRole('button', { name: 'Reconnect' }).click()
     await expect(page.getByRole('button', { name: /Tap beat/ })).toBeEnabled()
     await expect(page.getByRole('region', { name: 'Reconnecting to match' })).not.toBeVisible()
     await page.goto('/home')

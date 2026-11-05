@@ -1,4 +1,4 @@
-import type { Instrument, RatingEvent } from '@/lib/schema/types'
+import type { Instrument, RatingEvent } from '../schema/types.ts'
 
 export const PRESET_MESSAGES = [
   { id: 'well_done', text: 'Well done!', key: 'ArrowUp', shortcut: '↑' },
@@ -18,6 +18,7 @@ export interface SessionPlayer {
   beatsHit: number
   /** Zero-based beats this player hit, ascending. Absent from older servers. */
   hitBeats?: number[]
+  allowSpectators?: boolean
 }
 
 export interface SessionSnapshot {
@@ -39,7 +40,7 @@ export interface SessionSnapshot {
   beatMs: number
   totalBeats: number
   participants: SessionPlayer[]
-  messages: { id: number; uid: string; text: string; atMs: number }[]
+  messages: { id: number; uid: string; text: string; atMs: number; system?: boolean; reactions?: Record<string, number> }[]
   finalizing: boolean
   completionReason: string | null
   ratingEvents: (Omit<RatingEvent, 'appliedAt'> & { appliedAt: string })[]
@@ -48,7 +49,8 @@ export interface SessionSnapshot {
 export interface SessionEvent {
   eventId: string
   sequence: number
-  kind: 'ready' | 'demo_hit' | 'emote' | 'resign'
+  kind: 'ready' | 'demo_hit' | 'emote' | 'resign' | 'spectating'
+  allowSpectators?: boolean
   phrase?: (typeof PRESET_MESSAGES)[number]['id']
 }
 
