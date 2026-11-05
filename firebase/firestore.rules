@@ -522,15 +522,7 @@ service cloud.firestore {
     match /userStatus/{uid} {
       allow read: if signedIn();
 
-      allow create: if isSelf(uid)
-          && request.resource.data.keys().hasOnly(['lastHeartbeat'])
-          && request.resource.data.lastHeartbeat == request.time;
-
-      allow update: if isSelf(uid)
-          && request.resource.data.diff(resource.data)
-              .affectedKeys().hasOnly(['lastHeartbeat'])
-          && request.resource.data.lastHeartbeat == request.time;
-
+      allow create, update: if isSelf(uid);
       allow delete: if false;
     }
 
