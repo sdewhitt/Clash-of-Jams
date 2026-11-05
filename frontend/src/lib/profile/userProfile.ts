@@ -106,8 +106,11 @@ export async function updateBioPublicity( uid: string, bio: boolean, savedBio: s
     const publicRef = doc(db, "publicProfile", uid);
 
     await runTransaction(db, async (transaction) => {
+        const docSnap = await transaction.get(publicRef);
         transaction.update(userRef, {publicBio: bio, updatedAt: serverTimestamp(),});
-        transaction.update(publicRef, {bio: bio ? savedBio : "",  updatedAt: serverTimestamp(),});
+        if (docSnap.exists()) {
+            transaction.update(publicRef, {bio: bio ? savedBio : "",  updatedAt: serverTimestamp(),});
+        }
     });
 }
 
@@ -116,8 +119,11 @@ export async function updateGenrePublicity( uid: string, genres: boolean, prefer
     const publicRef = doc(db, "publicProfile", uid);
 
     await runTransaction(db, async (transaction) => {
+        const docSnap = await transaction.get(publicRef);
         transaction.update(userRef, {publicGenres: genres, updatedAt: serverTimestamp(),});
-        transaction.update(publicRef, {preferredGenres: genres ? preferredGenres : [],  updatedAt: serverTimestamp(),});
+        if (docSnap.exists()) {
+            transaction.update(publicRef, {preferredGenres: genres ? preferredGenres : [],  updatedAt: serverTimestamp(),});
+        }
     });
 }
 
@@ -126,8 +132,11 @@ export async function updateInstrumentPublicity( uid: string, instrument: boolea
     const publicRef = doc(db, "publicProfile", uid);
 
     await runTransaction(db, async (transaction) => {
+        const docSnap = await transaction.get(publicRef);
         transaction.update(userRef, {publicInstrument: instrument, updatedAt: serverTimestamp(),});
-        transaction.update(publicRef, {preferredInstrument: instrument ? savedInstrument : "", updatedAt: serverTimestamp(),});
+        if (docSnap.exists()) {
+            transaction.update(publicRef, {preferredInstrument: instrument ? savedInstrument : "", updatedAt: serverTimestamp(),});
+        }
     });
 }
 

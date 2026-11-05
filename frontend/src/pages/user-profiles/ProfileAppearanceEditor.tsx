@@ -7,17 +7,21 @@ import {
   publishedScenarioTitles,
   saveProfileAppearance,
 } from '@/lib/profile/profileAppearance'
-import { getPublicProfile } from '@/lib/profile/publicProfile'
+import { findPublicProfile } from '@/lib/profile/publicProfile'
 import { getUserSettings } from '@/lib/profile/userSettings'
 import { fetchPlayHistory } from '@/lib/runs/history'
 import type { FeaturedProfileScore, ProfileAppearance, PublicProfile } from '@/lib/schema/types'
 
 const MAX_FEATURED_SCORES = 3
+const BUTTON_STYLE = 'cursor-pointer rounded-lg border-2 border-accent-start bg-linear-to-br from-accent-base-start via-accent-base-middle to-accent-base-end px-4 py-2 text-ink transition duration-200 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100'
+const PANEL_STYLE = 'm-4 rounded-lg border-2 border-accent-start bg-linear-to-br from-accent-base-start via-accent-base-middle to-accent-base-end p-6 text-ink'
 
 export function ProfileAppearanceEditor({ uid }: { uid: string }) {
   const [saved, setSaved] = useState<ProfileAppearance>()
   const [draft, setDraft] = useState(DEFAULT_APPEARANCE)
-  const [publicProfile, setPublicProfile] = useState<PublicProfile>()
+  // undefined while loading; null when the profile is private and has no public document.
+  const [publicProfile, setPublicProfile] = useState<PublicProfile | null>()
+  const [publicProfileError, setPublicProfileError] = useState(false)
   const [choices, setChoices] = useState<FeaturedProfileScore[]>([])
   const [titles, setTitles] = useState<Map<string, string>>(new Map())
   const [cursor, setCursor] = useState<string | null>(null)
@@ -38,9 +42,9 @@ export function ProfileAppearanceEditor({ uid }: { uid: string }) {
       setSaved(appearance)
       setDraft(appearance)
     }).catch(() => { if (!cancelled) setSettingsError(true) })
-    void getPublicProfile(uid).then((profile) => {
+    void findPublicProfile(uid).then((profile) => {
       if (!cancelled) setPublicProfile(profile)
-    }).catch(() => { /* A private profile has no public document. */ })
+    }).catch(() => { if (!cancelled) setPublicProfileError(true) })
     return () => { cancelled = true }
   }, [uid])
 
@@ -86,17 +90,17 @@ export function ProfileAppearanceEditor({ uid }: { uid: string }) {
   }
 
   const scores = [...new Map([...draft.featuredScores, ...choices].map((score) => [score.runId, score])).values()]
-  if (settingsError) return <p className="m-6" role="alert">Could not load your profile appearance.</p>
-  if (!saved) return <p className="m-6" role="status">Loading profile appearance…</p>
+  if (settingsError) return <p className={PANEL_STYLE} role="alert">Could not load your profile appearance.</p>
+  if (!saved) return <p className={PANEL_STYLE} role="status">Loading profile appearance…</p>
 
   return (
-    <section className="m-4 space-y-4 rounded-lg bg-base-middle p-6 text-ink">
+    <section className={`${PANEL_STYLE} space-y-4`}>
       <h2 className="text-2xl font-bold">Appearance</h2>
       <fieldset disabled={saveState === 'saving'} className="space-y-4">
         <label className="flex flex-wrap items-center gap-3">
           Profile accent
           <select
-            className="rounded border border-line bg-base-start p-2"
+            className="cursor-pointer rounded-lg border-2 border-accent-start bg-accent-base-middle px-3 py-2 text-ink"
             value={draft.accent}
             onChange={(event) => {
               setDraft({ ...draft, accent: event.target.value as ProfileAppearance['accent'] })
@@ -108,7 +112,7 @@ export function ProfileAppearanceEditor({ uid }: { uid: string }) {
         </label>
         <fieldset className="space-y-2">
           <legend className="font-bold">Featured scores</legend>
-          <p className="text-sm text-muted">Choose up to three scores from published scenarios. Visitors can see them when your profile and play history are public.</p>
+          <p className="text-sm">Choose up to three scores from published scenarios. Visitors can see them when your profile and play history are public.</p>
           {scores.map((score) => {
             const selected = draft.featuredScores.some(({ runId }) => runId === score.runId)
             return (
@@ -127,7 +131,7 @@ export function ProfileAppearanceEditor({ uid }: { uid: string }) {
           {!historyLoading && historyOpened && !historyError && !cursor && scores.length === 0 &&
             <p>No eligible scores yet.</p>}
           {(!historyOpened || cursor || historyError) && (
-            <button type="button" disabled={historyLoading} className="underline" onClick={() => {
+            <button type="button" disabled={historyLoading} className="cursor-pointer underline" onClick={() => {
               setHistoryOpened(true)
               void loadScores()
             }}>
@@ -136,14 +140,14 @@ export function ProfileAppearanceEditor({ uid }: { uid: string }) {
           )}
         </fieldset>
         <div className="flex flex-wrap gap-3">
-          <button type="button" className="rounded border border-line px-3 py-2" aria-expanded={preview} onClick={() => setPreview(!preview)}>
+          <button type="button" className={BUTTON_STYLE} aria-expanded={preview} onClick={() => setPreview(!preview)}>
             {preview ? 'Close visitor preview' : 'Preview as Visitor'}
           </button>
-          <button type="button" disabled={draft === saved} className="rounded border border-line px-3 py-2 disabled:opacity-50" onClick={() => {
+          <button type="button" disabled={draft === saved} className={BUTTON_STYLE} onClick={() => {
             setDraft(saved)
             setSaveState('idle')
           }}>Cancel</button>
-          <button type="button" disabled={draft === saved} className="rounded bg-accent-start px-3 py-2 font-bold disabled:opacity-50" onClick={() => void save()}>
+          <button type="button" disabled={draft === saved} className={`${BUTTON_STYLE} font-bold`} onClick={() => void save()}>
             {saveState === 'saving' ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
@@ -151,13 +155,15 @@ export function ProfileAppearanceEditor({ uid }: { uid: string }) {
       {saveState === 'error' && <p role="alert">Could not save your profile appearance. Try again.</p>}
       {saveState === 'saved' && <p role="status">Profile appearance saved.</p>}
       {preview && (
-        publicProfile ? (
-          <section className="rounded-lg border-4 bg-base-start p-4" style={{ borderColor: PROFILE_ACCENTS[draft.accent] }}>
+        publicProfileError ? <p role="alert">Could not load your public profile. Try again.</p>
+        : publicProfile === undefined ? <p role="status">Loading visitor preview…</p>
+        : publicProfile ? (
+          <section className="rounded-lg border-4 bg-accent-base-start p-4" style={{ borderColor: PROFILE_ACCENTS[draft.accent] }}>
             <h3 className="font-bold">{publicProfile.displayName}</h3>
             {publicProfile.bio && <p>{publicProfile.bio}</p>}
             {publicProfile.publicHistory === true && <FeaturedProfileScores scores={draft.featuredScores} />}
           </section>
-        ) : <p>Profile unavailable to visitors.</p>
+        ) : <p role="status">Your profile is private, so visitors can't see it. Switch it to Public under My Presence to preview it here.</p>
       )}
     </section>
   )
