@@ -2,6 +2,7 @@ import { useNavigate } from "react-router"
 import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
+import { AudioInputSetting } from "@/pages/settings/AudioInputSetting"
 import { InputLatencySetting } from "@/pages/settings/InputLatencySetting"
 import { NotificationButton } from "@/components/NotificationButton"
 import { LiveElo } from "@/components/LiveElo"
@@ -48,6 +49,7 @@ export function Settings() {
             </header>
 
             <div className="flex flex-1 min-h-0 flex-col items-center gap-6 overflow-y-auto px-6 py-8">
+                {user && <AudioInputSetting uid={user.uid} />}
                 {user && <InputLatencySetting uid={user.uid} />}
 
                 <section className="flex w-full max-w-2xl flex-wrap items-center justify-between gap-4 rounded-xl border-3 border-accent-start bg-base-middle p-6">

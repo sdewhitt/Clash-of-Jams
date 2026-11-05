@@ -69,7 +69,7 @@ they do, the leaderboard and browse queries fail with a "needs an index" error.
 | `users/{uid}/skillRatings/{instrument}`                   | `SkillRating`         | One per instrument. Created at sign-up, then server-written.                  |
 | `users/{uid}/skillRatings/{instrument}/history/{matchId}` | `RatingEvent`         | Owner-readable, server-created immutable Elo update and replay inputs.        |
 | `usernames/{usernameLower}`                               | `UsernameReservation` | Reservation doc; the key is what makes usernames unique.                      |
-| `userSettings/{uid}`                                      | `UserSettings`        | Theme, accessibility, instrument preferences.                                 |
+| `userSettings/{uid}`                                      | `UserSettings`        | Theme, accessibility, instrument, input latency, audio interface and input. |
 | `scenarios/{scenarioId}`                                  | `Scenario`            | Ownership, metadata and aggregates.                                           |
 | `scenarios/{scenarioId}/versions/{versionId}`             | `ScenarioVersion`     | Immutable musical content; removed only when its scenario is deleted.         |
 | `scenarios/{scenarioId}/difficultyEstimates/{versionId}` | Server aggregate | Version-scoped band scores, difficulty, coverage/confidence, part/speed and computation metadata; no raw players. |

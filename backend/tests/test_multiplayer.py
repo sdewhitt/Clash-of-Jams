@@ -150,6 +150,19 @@ def test_duplicate_stale_and_same_beat_events_cannot_increase_score_twice(arena)
     assert event(service, "a", "demo_hit", 3).snapshot.participants[0].beats_hit == 2
 
 
+def test_snapshot_lists_the_beats_each_player_hit_in_order(arena):
+    service, _, now = arena
+    start(service)
+    now[0] = 0.4
+    event(service, "a", "demo_hit", 2)
+    now[0] = 2.5
+    event(service, "a", "demo_hit", 3)
+    players = {p.uid: p for p in service.snapshot("match", "a").participants}
+    assert players["a"].hit_beats == [0, 2]
+    assert players["b"].hit_beats == []
+    assert players["a"].model_dump(by_alias=True)["hitBeats"] == [0, 2]
+
+
 def test_reconnect_restores_progress_and_sequence_and_old_tab_cannot_disconnect_it(arena):
     service, _, now = arena
     start(service)

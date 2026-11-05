@@ -422,6 +422,7 @@ class SessionService:
                     else None,
                     score=events[p.uid].score if p.uid in events else session.score(p),
                     beats_hit=len(p.hit_slots),
+                    hit_beats=sorted(p.hit_slots),
                     allow_spectators=p.allow_spectators,
                 )
                 for p in session.players.values()

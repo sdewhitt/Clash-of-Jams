@@ -16,6 +16,8 @@ export interface SessionPlayer {
   reconnectUntilMs: number | null
   score: number
   beatsHit: number
+  /** Zero-based beats this player hit, ascending. Absent from older servers. */
+  hitBeats?: number[]
   allowSpectators?: boolean
 }
 
