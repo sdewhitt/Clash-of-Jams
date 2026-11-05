@@ -15,7 +15,7 @@ import { useTheme, type Theme } from "@/context/ThemeContext";
 import { UsernameEditor } from "@/components/UsernameEditor";
 import { BioEditor } from "@/components/BioEditor";
 import { getUserPreferences, updatePreferredGenres, updatePreferredInstrument } from "@/lib/profile/userPreferences"; <s></s>
-import { getPublicProfile, getUserStatus, updateDoNotDistrub, updateEloPublicity, updatePublicProfile } from "@/lib/profile/publicProfile";
+import { findPublicProfile, getUserStatus, updateDoNotDistrub, updateEloPublicity, updatePublicProfile } from "@/lib/profile/publicProfile";
 import { NotificationButton } from "@/components/NotificationButton";
 import { LiveElo } from "@/components/LiveElo";
 import { ProfileAppearanceEditor } from "./ProfileAppearanceEditor";
@@ -181,9 +181,9 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
             if (!user) {
                 return;
             }
-            setProfilePublicity(profile?.isProfilePublic ?? true)
-            const userProfile = await getPublicProfile(user.uid);
-            setPublicProfile(userProfile)
+            const userProfile = await findPublicProfile(user.uid);
+            setProfilePublicity(userProfile !== null)
+            setPublicProfile(userProfile ?? undefined)
         } catch (error) {
             console.error("Failed to load public profile:", error);
         }
@@ -368,14 +368,16 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
         setIsSaving(true);
 
         try {
+            // Creating or deleting the public document has to finish before the updates that depend on it.
+            await updatePublicProfile(uid, savedUsername, profileStatus, bio, savedBio, instrument, savedInstrument, genres, savedGenres, elos, friendStatus, profile?.avatarUrl ?? "../../favicon.svg", publicHistory);
             await Promise.all([
-                updatePublicProfile(uid, savedUsername, profileStatus, bio, savedBio, instrument, savedInstrument, genres, savedGenres, elos, friendStatus, profile?.avatarUrl ?? "../../favicon.svg", publicHistory),
                 updateBioPublicity(uid, bio, savedBio),
                 updateInstrumentPublicity(uid, instrument, savedInstrument),
                 updateGenrePublicity(uid, genres, savedGenres),
                 updateEloPublicity(uid, elos),
             ]);
             
+            await loadPublicProfile();
             await loadUserSettings();
         } catch (error) {
             setError(
@@ -397,6 +399,7 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
     };
 
     const handlePublicityCancel = async () => {
+        setProfilePublicity(publicProfile !== undefined);
         setBioPublicity(userSettings?.publicBio ?? true);
         setInstrumentPublicity(userSettings?.publicInstrument ?? true);
         setPublicElos(publicProfile?.elos ?? []);
@@ -481,6 +484,53 @@ function ProfileEditContent({ selectedSetting, user, profile, draftUsername, dra
                             Displayed On Public Profile
                         </div>
                     </div>
+                    {error && (
+                        <div
+                            role="alert"
+                            className="
+                                flex
+                                items-center
+                                justify-between
+                                gap-4
+                                rounded-lg
+                                border-2
+                                border-accent-start
+                                bg-linear-to-b
+                                from-accent-start
+                                via-accent-middle
+                                to-accent-end
+                                brightness-85
+                                opacity-80
+                                px-4
+                                py-3
+                                text-inverse-ink
+                            "
+                        >
+                            <div>
+                                <p className="font-semibold">
+                                    Update failed
+                                </p>
+                                <p className="text-sm">
+                                    {error}
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setError(null)}
+                                className="
+                                    rounded-md
+                                    px-2
+                                    py-1
+                                    text-lg
+                                    hover:bg-contrast-start
+                                "
+                                aria-label="Dismiss error"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
                     <div className="mx-8">
                         <p className="text-md font-medium text-accent-start select-none">
                             Profile Publicity:

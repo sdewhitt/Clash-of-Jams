@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import type { SampleBlock } from '@/audio/frame-processor'
 import {
   DEFAULT_INPUT_CHOICE,
   findDevice,
@@ -17,6 +18,7 @@ import {
   type MidiInputConnection,
 } from '@/audio/midi-input'
 import { toPerformedNotes } from '@/audio/performance'
+import type { RunTake } from '@/audio/run-audio'
 import { describeInputError, useLiveAudioInput } from '@/audio/useLiveAudioInput'
 import { AudioInputPicker } from '@/components/AudioInputPicker'
 import { LevelMeter } from '@/components/LevelMeter'
@@ -57,6 +59,10 @@ export interface FinishedRun extends PlayerSetup {
   performed: PerformedNote[]
   result: ScoreResult
   explanation: ScoreExplanation
+  /** What was captured of the player, for exporting the run's audio. */
+  take?: RunTake
+  /** From beat 0 to the moment the run ended. */
+  durationMs?: number
 }
 
 type Mode = 'setup' | 'playback'
@@ -77,6 +83,8 @@ type ScenarioPlayerProps = {
   onAudioInputChange?: (choice: AudioInputChoice) => void
   /** The previous run's choices, when replaying. Falls back to defaultInstrument and the microphone. */
   initialSetup?: PlayerSetup | null
+  /** Told when the count-in starts and when the run ends, so the page can hide its chrome. */
+  onPlayingChange?: (playing: boolean) => void
 }
 
 /** Everything that exists only while a scenario is being played. */
@@ -88,6 +96,8 @@ interface Session {
   /** The device the microphone was opened on; null is the browser default. */
   deviceId: string | null
   midi: MidiInputConnection | null
+  /** Everything the microphone heard, kept so the run's audio can be exported. */
+  blocks: SampleBlock[]
   silenceClicks: () => void
   stopWatchingDevices: () => void
   animationFrame: number
@@ -127,6 +137,7 @@ export function ScenarioPlayer({
   latencyMs,
   initialSetup,
   onFinish,
+  onPlayingChange,
   initialSpeed = DEFAULT_SPEED,
   audioInput = DEFAULT_INPUT_CHOICE,
   onAudioInputChange,
@@ -262,6 +273,7 @@ export function ScenarioPlayer({
     const context = new AudioContext({ latencyHint: 'interactive' })
     let microphone: AudioInput | null = null
     let midi: MidiInputConnection | null = null
+    const blocks: SampleBlock[] = []
     let deviceId: string | null = null
     // startTime is set below, once we know when the count-in begins.
     let startTime = 0
@@ -277,6 +289,7 @@ export function ScenarioPlayer({
           channel: deviceId !== null ? (inputChoice.channel ?? undefined) : undefined,
           analyzer: profile.analyzer,
           segmenter: profile.segmenter,
+          onSamples: (block) => blocks.push(block),
           onNote: (note) => {
             for (const performed of toPerformedNotes([note], startTime, latencyMs)) {
               addLiveNote(performed)
@@ -331,6 +344,7 @@ export function ScenarioPlayer({
         microphone,
         deviceId,
         midi,
+        blocks,
         silenceClicks,
         stopWatchingDevices,
         animationFrame: 0,
@@ -362,12 +376,23 @@ export function ScenarioPlayer({
     const current = session.current
     if (!current) return
 
+    const durationMs = Math.max(0, (current.context.currentTime - current.startTime) * 1000)
     let performed: PerformedNote[] = []
+    let take: RunTake | undefined
     if (current.microphone) {
       performed = toPerformedNotes(current.microphone.takeNotes(), current.startTime, latencyMs)
+      take = {
+        kind: 'microphone',
+        blocks: current.blocks,
+        sampleRate: current.context.sampleRate,
+        beatZeroTime: current.startTime,
+        latencyMs,
+      }
     }
     if (current.midi) {
       performed = current.midi.takeNotes()
+      // Everything pressed is heard in the export, even notes the scoring range drops.
+      take = { kind: 'midi', notes: performed }
     }
     performed = keepNotesInRange(performed, profile)
     stopSession()
@@ -389,8 +414,16 @@ export function ScenarioPlayer({
       performed,
       result,
       explanation,
+      take,
+      durationMs,
     })
   }
+
+  const playing = elapsedMs !== null
+
+  useEffect(() => {
+    onPlayingChange?.(playing)
+  }, [playing, onPlayingChange])
 
   if (mode === 'playback' && expected.length > 0) {
     return (
@@ -404,7 +437,6 @@ export function ScenarioPlayer({
     )
   }
 
-  const playing = elapsedMs !== null
   const countIn = playing && elapsedMs < 0
 
   // Score only the notes whose time has already passed, so the live score is fair mid-song.

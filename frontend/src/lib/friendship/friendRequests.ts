@@ -1,7 +1,7 @@
 import { collection, doc, onSnapshot, runTransaction, arrayUnion, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useEffect, useState } from 'react';
-import { newAppNotification, newFriendRequests, newFriendship } from '../schema/collections';
+import { newAppNotification, newFriendRequest, newFriendship } from '../schema/collections';
   
 function friendshipId(uidA: string, uidB: string) {
     return [uidA, uidB].sort().join('_')
@@ -145,7 +145,7 @@ export async function sendFriendRequest( actorUid: string, toUid: string, ) {
             }
         }
 
-        tx.set(requestRef,  newFriendRequests({ uidOne: actorUid, uidTwo: toUid, initiatorUid: actorUid, state: 'pending', }))
+        tx.set(requestRef,  newFriendRequest({ uidOne: actorUid, uidTwo: toUid, initiatorUid: actorUid, state: 'pending', }))
         tx.set(notificationRef, newAppNotification({ notifiedUid: toUid, notifierUid: actorUid, notificationType: 'friend_request_sent', requestId: requestRef.id, }))
     })
 }

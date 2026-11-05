@@ -127,7 +127,7 @@ export function UserProfile() {
                     mb-8`
                 } style={{ outlineColor: PROFILE_ACCENTS[appearance.accent] }}>
                     <div className="flex justify-end px-6">
-                        <button type="button" className="rounded-lg border border-line bg-base-start px-4 py-2 font-bold text-ink" onClick={() => navPortal('/profile/edit_profile?section=appearance')}>
+                        <button type="button" className="cursor-pointer rounded-lg border-2 border-accent-start bg-linear-to-br from-accent-base-start via-accent-base-middle to-accent-base-end px-4 py-2 font-bold text-ink transition duration-200 hover:scale-105 active:scale-95" onClick={() => navPortal('/profile/edit_profile?section=appearance')}>
                             Customize Profile
                         </button>
                     </div>

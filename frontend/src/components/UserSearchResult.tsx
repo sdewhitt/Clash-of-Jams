@@ -4,9 +4,11 @@ import { useNavigate } from "react-router"
 
 interface UserSearchResultProps {
     profile: SearchProfile;
+    communitySearch: boolean;
+    communityFunction?: () => void;
 }
   
-export default function UserSearchResult({ profile, }: UserSearchResultProps) {
+export default function UserSearchResult({ profile, communitySearch, communityFunction, }: UserSearchResultProps) {
     const navigate = useNavigate();
     const { isOnline, dnd, loading } = useOnlineStatus(profile.uid);
 
@@ -17,9 +19,9 @@ export default function UserSearchResult({ profile, }: UserSearchResultProps) {
 
         case "friendOfFriend":
             return `${profile.mutualFriendCount} mutual ${
-            profile.mutualFriendCount === 1
-                ? "friend"
-                : "friends"
+                profile.mutualFriendCount === 1
+                    ? "friend"
+                    : "friends"
             }`;
 
         default:
@@ -33,9 +35,8 @@ export default function UserSearchResult({ profile, }: UserSearchResultProps) {
         "?";
 
     return (
-        <button
-            type="button"
-            onClick={() => navigate(`/profile/${profile.uid}`)}
+        <div
+            onClick={() => navigate(`/profile/${encodeURIComponent(profile.uid)}`, { replace: true })}
             className={`
                 flex 
                 w-full 
@@ -46,7 +47,8 @@ export default function UserSearchResult({ profile, }: UserSearchResultProps) {
                 from-accent-start
                 via-accent-middle
                 to-accent-end
-                border border-line bg-surface p-3 text-left
+                border border-line
+                p-3 text-left
                 transition 
                 hover:border-accent-soft
                 hover:bg-surface/80
@@ -64,7 +66,7 @@ export default function UserSearchResult({ profile, }: UserSearchResultProps) {
                 <div
                 className="
                     flex h-12 w-12 shrink-0 items-center
-                    justify-center rounded-full bg-base
+                    justify-center rounded-full bg-accent-base-start
                     text-lg font-semibold text-ink
                 "
                 >
@@ -81,9 +83,34 @@ export default function UserSearchResult({ profile, }: UserSearchResultProps) {
                 </p>
             </div>
 
-            <span className="text-inverse-ink" aria-hidden="true">
-                →
-            </span>
-        </button>
+            {communitySearch ? 
+                <button
+                    type="button"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        communityFunction?.();
+                    }}
+                    className={`
+                        rounded-lg
+                        bg-linear-to-b
+                        from-contrast-start
+                        via-contrast-middle
+                        to-contrast-end
+                        border border-line   
+                        px-4 py-2 
+                        hover:brightness-110
+                        hover:scale-105
+                        active:brightness-90
+                        active:scale-95
+                    `}
+                >
+                    +
+                </button>
+                :
+                <span className="text-inverse-ink" aria-hidden="true">
+                    →
+                </span>
+            }
+        </div>
     );
 }

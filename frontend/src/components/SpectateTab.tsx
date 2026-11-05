@@ -50,13 +50,13 @@ export function SpectateTab({
       <button
         type="button"
         aria-expanded={open}
-        className="rounded-lg border-2 border-accent-start px-4 py-2 font-bold"
+        className="cursor-pointer rounded-lg border-2 border-accent-start bg-linear-to-br from-accent-base-start via-accent-base-middle to-accent-base-end px-4 py-2 font-bold text-ink transition duration-200 hover:scale-105 active:scale-95"
         onClick={() => setOpen(!open)}
       >
         Spectate{owned?.matches?.length ? ` (${owned.matches.length})` : ''}
       </button>
       {open && (
-        <div className="mt-2 rounded-lg border-2 border-accent-start p-3">
+        <div className="mt-2 rounded-lg border-2 border-accent-start bg-linear-to-br from-accent-base-start via-accent-base-middle to-accent-base-end p-3 text-ink">
           {!owned ? (
             <p role="status">Checking for live matches…</p>
           ) : owned.matches === null ? (

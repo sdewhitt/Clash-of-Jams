@@ -1,6 +1,7 @@
 /**
- * Reads and writes the gameplay settings that persist: calibrated input latency, and the audio
- * interface and input the player plays through.
+ * Reads and writes the gameplay settings that persist: the calibrated latencies (the audio
+ * loop's, and a MIDI controller's, which is calibrated separately because it is a fraction of the
+ * other), and the audio interface and input the player plays through.
  */
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 
@@ -9,10 +10,12 @@ import { db } from '@/lib/firebase'
 import { COLLECTIONS, newUserSettings } from '@/lib/schema/collections'
 import type { UserSettings } from '@/lib/schema/types'
 
+type LatencyField = 'inputLatencyOffsetMs' | 'midiLatencyOffsetMs'
+
 type GameplaySettings = Partial<
   Pick<
     UserSettings,
-    'inputLatencyOffsetMs' | 'audioInputDeviceId' | 'audioInputDeviceLabel' | 'audioInputChannel'
+    LatencyField | 'audioInputDeviceId' | 'audioInputDeviceLabel' | 'audioInputChannel'
   >
 >
 
@@ -27,14 +30,26 @@ async function updateSettings(uid: string, fields: GameplaySettings): Promise<vo
   }
 }
 
-export async function loadInputLatencyMs(uid: string): Promise<number> {
-  const snapshot = await getDoc(doc(db, COLLECTIONS.userSettings, uid))
-  const value = snapshot.exists() ? snapshot.data().inputLatencyOffsetMs : 0
-  return typeof value === 'number' ? value : 0
+export function loadInputLatencyMs(uid: string): Promise<number> {
+  return loadLatency(uid, 'inputLatencyOffsetMs')
 }
 
-export async function saveInputLatencyMs(uid: string, latencyMs: number): Promise<void> {
-  await updateSettings(uid, { inputLatencyOffsetMs: latencyMs })
+export function saveInputLatencyMs(uid: string, latencyMs: number): Promise<void> {
+  return updateSettings(uid, { inputLatencyOffsetMs: latencyMs })
+}
+
+export function loadMidiLatencyMs(uid: string): Promise<number> {
+  return loadLatency(uid, 'midiLatencyOffsetMs')
+}
+
+export function saveMidiLatencyMs(uid: string, latencyMs: number): Promise<void> {
+  return updateSettings(uid, { midiLatencyOffsetMs: latencyMs })
+}
+
+async function loadLatency(uid: string, field: LatencyField): Promise<number> {
+  const snapshot = await getDoc(doc(db, COLLECTIONS.userSettings, uid))
+  const value = snapshot.exists() ? snapshot.data()[field] : 0
+  return typeof value === 'number' ? value : 0
 }
 
 /** The saved input choice from a settings document, with defaults for missing or bad fields. */

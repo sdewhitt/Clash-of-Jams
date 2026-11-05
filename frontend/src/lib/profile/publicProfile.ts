@@ -1,22 +1,26 @@
-import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, runTransaction, arrayRemove, } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, getDoc, deleteDoc, arrayRemove, runTransaction, } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { PublicProfile, UserSettings, UserStatus } from '@/lib/schema/types';
 import { COLLECTIONS } from '@/lib/schema/collections';
 import { DEFAULT_APPEARANCE, publicAppearance } from '@/lib/profile/profileAppearance';
 
-export async function getPublicProfile(uid: string): Promise<PublicProfile> {
+/** Resolves to null when the profile is private: making a profile private deletes its public document. */
+export async function findPublicProfile(uid: string): Promise<PublicProfile | null> {
     // Read by id, not by query: the rules grant userProfile/{uid} to its owner by document id, which a collection query can't be shown to satisfy.
     const snapshot = await getDoc(doc(db, COLLECTIONS.publicProfile, uid));
-    if (!snapshot.exists()) {
+    return snapshot.exists() ? { ...snapshot.data() } as PublicProfile : null;
+}
+
+export async function getPublicProfile(uid: string): Promise<PublicProfile> {
+    const profile = await findPublicProfile(uid);
+    if (!profile) {
         throw new Error("No public profile found for this user.");
     }
 
-    return {
-        ...snapshot.data(),
-    } as PublicProfile;
+    return profile;
 }
 
-export async function updatePublicProfile(uid: string, savedUsername: string, publicToggle: boolean, bio: boolean, savedBio: string, instrument: boolean, savedInstrument: string, genres: boolean, savedGenres: string[], elos: string[], acceptingFriends: boolean, avatarUrl: string, publicHistory: boolean) {
+export async function updatePublicProfile( uid: string, savedUsername: string, publicToggle: boolean, bio: boolean, savedBio: string, instrument: boolean, savedInstrument: string, genres: boolean, savedGenres: string[], elos: string[], acceptingFriends: boolean, avatarUrl: string, publicHistory: boolean ) {
     const userRef = doc(db, COLLECTIONS.users, uid);
     const docRef = doc(db, COLLECTIONS.publicProfile, uid);
 
@@ -24,29 +28,53 @@ export async function updatePublicProfile(uid: string, savedUsername: string, pu
         const userSnapshot = await getDoc(userRef);
 
         if (userSnapshot.exists()) {
-            const friends: string[] = userSnapshot.data().friends ?? [];
-            const communities: string[] = userSnapshot.data().communities ?? [];
+            const userData = userSnapshot.data();
+
+            const friends: string[] = userData.friends ?? [];
+            const communities: string[] = userData.communities ?? [];
+
+            const ownedCommunities = await Promise.all(
+                communities.map(async (communityUid) => {
+                    const communityRef = doc( db, COLLECTIONS.communities, communityUid );
+                    const communitySnapshot = await getDoc(communityRef);
+
+                    if ( communitySnapshot.exists() && communitySnapshot.data().ownerUid === uid ) {
+                        return communityUid;
+                    }
+
+                    return null;
+                })
+            );
+
+            const ownedCommunityIds = ownedCommunities.filter((communityUid): communityUid is string => communityUid !== null);
+
+            if (ownedCommunityIds.length > 0) {
+                throw new Error(
+                    "You must transfer ownership of or delete your communities before making your profile private."
+                );
+            }
 
             await Promise.all(
                 friends.map(async (friendUid) => {
-                    const friendRef = doc(db, COLLECTIONS.users, friendUid);
-                    const friendPublicRef = doc(db, 'publicProfile', friendUid);
+                    const friendRef = doc( db, COLLECTIONS.users, friendUid );
+                    const friendPublicRef = doc( db, COLLECTIONS.publicProfile, friendUid );
 
                     await updateDoc(friendRef, { friends: arrayRemove(uid) });
                     await updateDoc(friendPublicRef, { friends: arrayRemove(uid) });
                 })
             );
-
+            
             await Promise.all(
                 communities.map(async (communityUid) => {
-                    const communityRef = doc(db, COLLECTIONS.communities, communityUid);
+                    const communityRef = doc( db, COLLECTIONS.communities, communityUid );
 
                     await updateDoc(communityRef, { members: arrayRemove(uid) });
                 })
-            )
+            );
 
-            await updateDoc(userRef, { friends: []});
+            await updateDoc(userRef, { friends: [], communities: [] });
         }
+
         await deleteDoc(docRef);
         return;
     }
@@ -57,11 +85,12 @@ export async function updatePublicProfile(uid: string, savedUsername: string, pu
         const appearance = (settings.data() as UserSettings | undefined)?.profileAppearance ?? DEFAULT_APPEARANCE;
 
         transaction.set(docRef, {
-            ...(snapshot.exists() ? {} : { avatarUrl, friends: [], communities: [] }),
+            ...(snapshot.exists() ? {} : { friends: [], communities: [] }),
             uid,
             username: savedUsername,
             usernameLower: savedUsername.toLowerCase(),
             displayName: savedUsername,
+            avatarUrl,
             bio: bio ? savedBio : "",
             preferredInstrument: instrument ? savedInstrument : "",
             preferredGenres: genres ? savedGenres : [],
@@ -78,14 +107,9 @@ export async function updateAcceptingFriends( uid: string, accepting: boolean ) 
     const userRef = doc(db, "userSettings", uid);
     const publicRef = doc(db, "publicProfile", uid);
 
-    await updateDoc(publicRef, {
-        acceptingFriends: accepting,
-        updatedAt: serverTimestamp(),
-    });
-
-    await updateDoc(userRef, {
-        acceptingFriends: accepting,
-        updatedAt: serverTimestamp(),
+    await runTransaction(db, async (transaction) => {
+        transaction.update(userRef, {acceptingFriends: accepting, updatedAt: serverTimestamp(),});
+        transaction.update(publicRef, {acceptingFriends: accepting, updatedAt: serverTimestamp(),});
     });
 }
 
@@ -94,14 +118,12 @@ export async function updateEloPublicity( uid: string, elos: string[] ) {
     const userRef = doc(db, "userSettings", uid);
     const publicRef = doc(db, "publicProfile", uid);
 
-    await updateDoc(publicRef, {
-        elos: elos,
-        updatedAt: serverTimestamp(),
-    });
-
-    await updateDoc(userRef, {
-        publicElos: elos,
-        updatedAt: serverTimestamp(),
+    await runTransaction(db, async (transaction) => {
+        const docSnap = await transaction.get(publicRef);
+        transaction.update(userRef, {publicElos: elos, updatedAt: serverTimestamp(),});
+        if (docSnap.exists()) {
+            transaction.update(publicRef, {elos: elos, updatedAt: serverTimestamp(),});
+        }
     });
 }
 
@@ -119,7 +141,5 @@ export async function getUserStatus( uid: string): Promise<UserStatus> {
 export async function updateDoNotDistrub( uid: string, dnd: boolean ) {
     const userRef = doc(db, "userStatus", uid);
 
-    await updateDoc(userRef, {
-        dnd: dnd,
-    });
+    await updateDoc(userRef, { dnd: dnd, });
 }

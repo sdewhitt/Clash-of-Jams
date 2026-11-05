@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router'
 
 import { USERNAME_PATTERN, authErrorMessage, signUp } from '@/lib/auth/account'
+import { isProfaneUsername } from '@/lib/auth/profanity'
 import { useAuth } from '@/lib/auth/useAuth'
 
 const FIELD_CLASS =
@@ -17,6 +18,7 @@ export function SignUp() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [flaggedUsername, setFlaggedUsername] = useState<string | null>(null)
 
   if (loading) return null
   if (user) return <Navigate to="/home" replace />
@@ -24,6 +26,11 @@ export function SignUp() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+    // Caught here so the warning is a dialog; signUp checks again in case this page is bypassed.
+    if (isProfaneUsername(username)) {
+      setFlaggedUsername(username)
+      return
+    }
     setBusy(true)
     try {
       await signUp({ email, password, username })
@@ -139,6 +146,40 @@ export function SignUp() {
           </p>
         </div>
       </div>
+
+      {flaggedUsername !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="profane-username-title"
+            aria-describedby="profane-username-body"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setFlaggedUsername(null)
+            }}
+            className="flex w-full max-w-sm flex-col gap-4 rounded-xl border-4 border-accent-start
+              bg-base-start p-6"
+          >
+            <h2 id="profane-username-title" className="text-xl font-semibold text-ink">
+              Choose a different username
+            </h2>
+            <p id="profane-username-body" className="text-sm text-muted">
+              <span className="font-medium text-ink">{flaggedUsername}</span> can't be used.
+              Usernames are shown publicly, so please choose one without profanity. Your email and
+              password are kept.
+            </p>
+            <button
+              type="button"
+              autoFocus
+              onClick={() => setFlaggedUsername(null)}
+              className="rounded-lg bg-linear-to-b from-accent-start via-accent-middle to-accent-end
+                px-4 py-2 font-medium text-ink hover:brightness-125"
+            >
+              Change username
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
