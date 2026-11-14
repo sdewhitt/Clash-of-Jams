@@ -1,6 +1,7 @@
 import { collection, doc, endAt, getDoc, getDocs, limit, orderBy, query, startAt, where, type QueryConstraint, } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { PublicProfile, RelationshipStatus, SearchProfile, } from "@/lib/schema/types";
+import type { FriendRequest, PendingFriendRow, PublicProfile, RelationshipStatus, SearchProfile, } from "@/lib/schema/types";
+import { COLLECTIONS } from "@/lib/schema/collections";
 
 export async function searchPublicUsers( activeUid: string, queryUsername: string, limitOverride: boolean, instrumentFilter: string): Promise<SearchProfile[]> {
     const term = queryUsername.trim().toLowerCase();
@@ -196,6 +197,70 @@ export async function getFriendProfiles( activeUid: string, friendUids: string[]
                 ...profile,
                 relationship: "friend" as RelationshipStatus,
                 mutualFriendCount,
+            };
+        });
+}
+
+export function pendingFriendRequestsQuery(activeUid: string) {
+    return query(
+        collection(db, COLLECTIONS.friendRequests),
+        where("potentialFriends", "array-contains", activeUid),
+        where("status", "==", "pending"),
+    );
+}
+
+export async function getPendingFriendRequests( activeUid: string, requests: readonly FriendRequest[] ): Promise<PendingFriendRow[]> {
+    const activeProfileSnapshot = await getDoc(doc(db, "publicProfile", activeUid));
+    
+    if (!activeProfileSnapshot.exists()) {
+        return [];
+    }
+    
+    const activeProfile = activeProfileSnapshot.data() as PublicProfile;
+    const activeFriendIds = new Set(activeProfile.friends ?? []);
+    
+    const requestsByUid = new Map<string, FriendRequest>();
+
+    for (const request of requests) {
+        const otherUid = request.potentialFriends.find(uid => uid !== activeUid);
+
+        if (otherUid) {
+            requestsByUid.set(otherUid, request);
+        }
+    }
+
+    const results = await Promise.all(
+        [...requestsByUid].map(async ([uid, request]) => ({
+            snapshot: await getDoc(doc(db, "publicProfile", uid)),
+            request,
+        })),
+    );
+
+    return results
+        .filter(({ snapshot }) => snapshot.exists())
+        .map(({ snapshot, request }): PendingFriendRow => {
+            const profile = snapshot.data() as PublicProfile;
+            const uid = profile.uid || snapshot.id;
+    
+            let mutualFriendCount = 0;
+            for (const friendUid of new Set(profile.friends ?? [])) {
+                if (activeFriendIds.has(friendUid)) {
+                    mutualFriendCount++;
+                }
+            }
+
+            return {
+                profile: { 
+                    ...profile, 
+                    uid, 
+                    relationship: activeFriendIds.has(uid)
+                        ? "friend"
+                        : mutualFriendCount > 0
+                            ? "friendOfFriend"
+                            : "none", mutualFriendCount 
+                    },
+                initiatorUid: request.initiatorUid,
+                createdAt: request.createdAt,
             };
         });
 }

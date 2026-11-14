@@ -402,7 +402,8 @@ service cloud.firestore {
         && request.resource.data.initiatorUid == request.auth.uid
         && request.resource.data.status == 'pending';
 
-      allow list: if isFriendRequestParticipant(resource.data);
+      allow list: if signedIn() 
+        && resource.data.potentialFriends.hasAny([request.auth.uid]);
 
       allow update: if isFriendRequestParticipant(resource.data)
         && validFriendRequest(request.resource.data)

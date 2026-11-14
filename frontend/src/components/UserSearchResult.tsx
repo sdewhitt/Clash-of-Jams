@@ -1,14 +1,23 @@
+import { useAuth } from "@/lib/auth/useAuth";
 import { useOnlineStatus } from "@/lib/onlineStatus/useOnlineStatus";
-import type { SearchProfile } from "@/lib/schema/types";
+import type { PendingFriendRow, SearchProfile } from "@/lib/schema/types";
 import { useNavigate } from "react-router"
 
 interface UserSearchResultProps {
     profile: SearchProfile;
     communitySearch: boolean;
+    request?: Pick<PendingFriendRow, "initiatorUid" | "createdAt">;
     communityFunction?: () => void;
 }
   
-export default function UserSearchResult({ profile, communitySearch, communityFunction, }: UserSearchResultProps) {
+export default function UserSearchResult({ profile, communitySearch, request, communityFunction, }: UserSearchResultProps) {
+    const { user } = useAuth();
+
+    const requestDate = request?.createdAt?.toDate();
+    const requestDirection = user && request
+        ? request.initiatorUid === user.uid ? "Sent" : "Received"
+        : null;
+
     const navigate = useNavigate();
     const { isOnline, dnd, loading } = useOnlineStatus(profile.uid);
 
@@ -81,6 +90,21 @@ export default function UserSearchResult({ profile, communitySearch, communityFu
                 <p className="mt-1 text-xs text-inverse-ink">
                     {relationshipText}{loading ? "" : ` - ${dnd ? "Do Not Disturb" : `${isOnline ? "Online" : "Offline"}`}`}
                 </p>
+                {requestDirection && (
+                    <p className="mt-1 text-xs text-muted">
+                        Request {requestDirection} - 
+                        {requestDate && (
+                            <>
+                                {" "}
+                                <time dateTime={requestDate.toISOString()}>
+                                    {new Intl.DateTimeFormat(undefined, {
+                                        dateStyle: "medium",
+                                    }).format(requestDate)}
+                                </time>
+                            </>
+                        )}
+                    </p>
+                )}
             </div>
 
             {communitySearch ? 
