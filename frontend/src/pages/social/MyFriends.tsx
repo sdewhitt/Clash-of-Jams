@@ -185,7 +185,7 @@ export function MyFriends() {
                 `}>
                     <div className="flex ml-12">
                         <BackButton onClick={() => navigate('/home')}></BackButton>
-                        <h2 className="ml-4 text-4xl font-bold text-ink">My Friends</h2>
+                        <h2 className="ml-4 text-4xl font-bold text-ink">Jamming With Your Friends</h2>
                     </div>
                     <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
                         <NotificationButton uid={profile?.uid ?? ""}/>
@@ -246,7 +246,7 @@ export function MyFriends() {
             `}>
                 <div className="flex ml-12">
                     <BackButton onClick={() => navigate('/home')}></BackButton>
-                    <h2 className="ml-4 text-4xl font-bold text-ink">My Friends</h2>
+                    <h2 className="ml-4 text-4xl font-bold text-ink">Jamming With Your Friends</h2>
                 </div>
                 <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
                     <NotificationButton uid={profile?.uid ?? ""}/>
