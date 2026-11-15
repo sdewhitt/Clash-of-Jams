@@ -201,6 +201,69 @@ export async function getFriendProfiles( activeUid: string, friendUids: string[]
         });
 }
 
+export async function getPublicFriendProfiles( activeUid: string, friendUids: string[] ): Promise<SearchProfile[]> {
+
+    const activeProfileRef = doc(db, "publicProfile", activeUid);
+    const activeProfileSnap = await getDoc(activeProfileRef);
+
+    if (!activeProfileSnap.exists()) {
+        return [];
+    }
+
+    const activeProfile = activeProfileSnap.data() as PublicProfile;
+    const activeFriendIds = new Set(activeProfile.friends ?? []);
+
+    const uniqueFriendUids = [ ...new Set(friendUids) ].filter(uid => uid !== activeUid);
+
+    if (uniqueFriendUids.length === 0) {
+        return [];
+    }
+
+    const snapshots = await Promise.all(
+        uniqueFriendUids.map(uid => getDoc(doc(db, "publicProfile", uid)))
+    );
+
+    return snapshots
+        .filter(snapshot => snapshot.exists())
+        .map(snapshot => {
+            const profile = snapshot.data() as PublicProfile;
+
+            const uid = profile.uid || snapshot.id;
+            const candidateFriendIds = new Set(profile.friends ?? []);
+
+            if (uid === activeUid) {
+                return null;
+            }
+
+            const isFriend = activeFriendIds.has(uid);
+
+            let mutualFriendCount = 0;
+
+            for (const friendUid of candidateFriendIds) {
+                if (activeFriendIds.has(friendUid)) {
+                    mutualFriendCount++;
+                }
+            }
+
+            let relationship: RelationshipStatus = "none";
+
+            if (isFriend) {
+                relationship = "friend";
+            } else if (mutualFriendCount > 0) {
+                relationship = "friendOfFriend";
+            }
+
+            return {
+                ...profile,
+                relationship,
+                mutualFriendCount,
+            };
+        })
+        .filter(
+            (profile): profile is SearchProfile => profile !== null
+        );
+}
+
 export function pendingFriendRequestsQuery(activeUid: string) {
     return query(
         collection(db, COLLECTIONS.friendRequests),

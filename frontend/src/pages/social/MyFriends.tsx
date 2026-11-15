@@ -554,6 +554,7 @@ export function MyFriends() {
                                 <UserSearchResult
                                     key={profile.profile.uid}
                                     profile={profile.profile}
+                                    invertColor={false}
                                     request={profile.request}
                                     communitySearch={false}
                                 />

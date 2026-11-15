@@ -6,11 +6,46 @@ import { useNavigate } from "react-router"
 interface UserSearchResultProps {
     profile: SearchProfile;
     communitySearch: boolean;
+    invertColor: boolean;
     request?: Pick<PendingFriendRow, "initiatorUid" | "createdAt">;
     communityFunction?: () => void;
 }
+
+const resultStyles = {
+    primary: `
+        bg-linear-to-b
+        from-accent-start
+        via-accent-middle
+        to-accent-end
+        hover:border-accent-soft
+        hover:bg-surface/80
+        focus-visible:outline-none
+        focus-visible:ring-2 focus-visible:ring-accent-soft
+    `,
+    inverted: `
+        bg-linear-to-b
+        from-contrast-start
+        via-contrast-middle
+        to-contrast-end
+        hover:border-contrast-start
+        hover:bg-surface/80
+        focus-visible:outline-none
+        focus-visible:ring-2 focus-visible:ring-contrast-start
+    `,
+};
+
+const baseResultStyle = `
+    flex 
+    w-full 
+    items-center 
+    gap-3 p-3
+    rounded-xl
+    border border-line
+    text-left text-ink
+    transition
+`;
   
-export default function UserSearchResult({ profile, communitySearch, request, communityFunction, }: UserSearchResultProps) {
+export default function UserSearchResult({ profile, communitySearch, invertColor, request, communityFunction, }: UserSearchResultProps) {
     const { user } = useAuth();
 
     const requestDate = request?.createdAt?.toDate();
@@ -42,27 +77,15 @@ export default function UserSearchResult({ profile, communitySearch, request, co
         profile.displayName?.charAt(0) ||
         profile.username.charAt(0) ||
         "?";
-
+    
+    const style = invertColor ? 'inverted' : 'primary'
+    
     return (
         <div
             onClick={() => navigate(`/profile/${encodeURIComponent(profile.uid)}`, { replace: true })}
             className={`
-                flex 
-                w-full 
-                items-center 
-                gap-3 
-                rounded-xl
-                bg-linear-to-b
-                from-accent-start
-                via-accent-middle
-                to-accent-end
-                border border-line
-                p-3 text-left
-                transition 
-                hover:border-accent-soft
-                hover:bg-surface/80
-                focus-visible:outline-none
-                focus-visible:ring-2 focus-visible:ring-accent-soft
+                ${baseResultStyle}
+                ${resultStyles[style]}
             `}
         >
             {profile.avatarUrl ? (

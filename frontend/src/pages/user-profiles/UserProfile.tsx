@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth/useAuth"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
 import { useSkillRatings } from "@/lib/ratings/useSkillRatings";
-import type { UserPreferences, } from '@/lib/schema/types';
+import type { SearchProfile, UserPreferences, } from '@/lib/schema/types';
 import { EloDisplay } from "@/components/EloDisplay";
 import { getUserPreferences } from "@/lib/profile/userPreferences";
 import { NotificationButton } from "@/components/NotificationButton";
@@ -12,12 +12,19 @@ import { LiveElo } from "@/components/LiveElo";
 import { FeaturedProfileScores } from "@/components/FeaturedProfileScores";
 import { DEFAULT_APPEARANCE, PROFILE_ACCENTS } from "@/lib/profile/profileAppearance";
 import { getUserSettings } from "@/lib/profile/userSettings";
+import { getFriendProfiles } from "@/lib/profile/userProfileSearch";
+import UserSearchResult from "@/components/UserSearchResult";
 
 export function UserProfile() {
     const { user, profile, loading } = useAuth();
     const [ userPreferences, setUserPreferences] = useState<UserPreferences>();
     const [ preferredInstrument, setPreferredInstrument ] = useState("");
     const { ratings: eloRatings } = useSkillRatings(user?.uid);
+
+    const [friends, setFriends] = useState<SearchProfile[]>([]);
+    const [friendLoading, setFriendLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     const navigate = useNavigate();
     const [appearance, setAppearance] = useState(DEFAULT_APPEARANCE);
     const uid = user?.uid;
@@ -30,6 +37,62 @@ export function UserProfile() {
         }).catch(() => { /* Older accounts can use the default appearance. */ });
         return () => { cancelled = true; };
     }, [uid]);
+
+    useEffect(() => {
+        if (!user || !profile) {
+            setFriends([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        async function loadFriends() {
+            setFriendLoading(true);
+            setError(null);
+
+            try {
+                const friendProfiles = await getFriendProfiles(
+                    user!.uid,
+                    profile!.friends ?? []
+                );
+
+                if (!cancelled) {
+                    setFriends(friendProfiles);
+                }
+            } catch (err) {
+                console.error("Failed to load friends:", err);
+
+                if (!cancelled) {
+                    setError("Unable to load friends. Please try again.");
+                    setFriends([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setFriendLoading(false);
+                }
+            }
+        }
+
+        loadFriends();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.uid, profile?.friends]);
+
+    useEffect(
+        () => { 
+            if (loading) return; 
+            loadUserPreferences();
+        }, [loading, profile, user]
+    );
+
+    useEffect(
+        () => { 
+            if (!userPreferences) return;
+            setPreferredInstrument( userPreferences?.preferredInstrument ?? "" );
+            }, [userPreferences]
+    );
 
     function formatLabel(value: string) {
         return value
@@ -49,20 +112,6 @@ export function UserProfile() {
             console.error("Failed to load user preferences:", error);
         }
     }
-
-    useEffect(
-        () => { 
-            if (loading) return; 
-            loadUserPreferences();
-        }, [loading, profile, user]
-    );
-
-    useEffect(
-        () => { 
-            if (!userPreferences) return;
-            setPreferredInstrument( userPreferences?.preferredInstrument ?? "" );
-            }, [userPreferences]
-    );
 
     if (loading) { 
         return ( 
@@ -127,7 +176,24 @@ export function UserProfile() {
                     mb-8`
                 } style={{ outlineColor: PROFILE_ACCENTS[appearance.accent] }}>
                     <div className="flex justify-end px-6">
-                        <button type="button" className="cursor-pointer rounded-lg border-2 border-accent-start bg-linear-to-br from-accent-base-start via-accent-base-middle to-accent-base-end px-4 py-2 font-bold text-ink transition duration-200 hover:scale-105 active:scale-95" onClick={() => navPortal('/profile/edit_profile?section=appearance')}>
+                        <button 
+                            type="button" 
+                            onClick={() => navPortal('/profile/edit_profile?section=appearance')}
+                            className={`
+                                cursor-pointer 
+                                rounded-lg
+                                border-2 border-contrast-start 
+                                bg-linear-to-br 
+                                from-contrast-start 
+                                via-contrast-middle 
+                                to-contrast-end 
+                                px-4 py-2 
+                                font-bold text-ink 
+                                transition duration-200 
+                                hover:scale-105 
+                                active:scale-95
+                            `}   
+                        >
                             Customize Profile
                         </button>
                     </div>
@@ -230,7 +296,69 @@ export function UserProfile() {
                     py-8
                     mb-8`
                 }>
-                    Friends
+                    <h2 className="mx-6 text-4xl font-bold border-b-4 border-contrast-start">Your Friends:</h2>
+                    {friendLoading && (
+                        <div className="flex h-full flex-col items-center justify-center gap-4">
+                            <div className="h-32 w-32 animate-spin rounded-full border-10 border-accent-start border-t-transparent"></div>
+                            <p className="text-center text-4xl py-4">
+                                Loading friends...
+                            </p>
+                        </div>
+                    )}
+
+                    {error && (
+                        <p className="text-center text-2xl py-4">
+                            {error}
+                        </p>
+                    )}
+
+                    {!friendLoading && !error && friends.length === 0 && (
+                        <div className="flex flex-col items-center gap-2">
+                            <p className="text-center text-2xl py-4">
+                                No friends found to be associated with your account!
+                            </p>
+                            <button 
+                                className={`
+                                    rounded-lg
+                                    bg-linear-to-b 
+                                    from-accent-start
+                                    via-accent-middle 
+                                    to-accent-end
+                                    outline-3
+                                    outline-accent-middle
+                                    text-ink
+                                    hover:brightness-125
+                                    active:scale-95 
+                                    px-6 
+                                    py-4
+                                `} 
+                                onClick={() => navigate("/friends/find_friends")}
+                            >
+                                Add a Friend
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="
+                        flex-1
+                        min-h-0
+                        overflow-y-auto
+                        overscroll-contain
+                        mx-12
+                    ">
+                        {!friendLoading && !error && friends.length > 0 && (
+                            <div className="space-y-2 p-4">
+                                {friends.map(profile => (
+                                    <UserSearchResult
+                                        key={profile.uid}
+                                        profile={profile}
+                                        invertColor={true}
+                                        communitySearch={false}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className={` 

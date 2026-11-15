@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router"
 import { BackButton } from "@/components/BackButton"
 import { ProfileButton } from "@/components/ProfileButton"
-import type { PublicProfile } from '@/lib/schema/types';
+import type { PublicProfile, SearchProfile } from '@/lib/schema/types';
 import { EloDisplay } from "@/components/EloDisplay";
 import { useAuth } from "@/lib/auth/useAuth";
 import { getPublicProfile } from "@/lib/profile/publicProfile";
@@ -16,14 +16,21 @@ import { NotificationButton } from "@/components/NotificationButton";
 import { LiveElo } from "@/components/LiveElo";
 import { FeaturedProfileScores } from "@/components/FeaturedProfileScores";
 import { PROFILE_ACCENTS } from "@/lib/profile/profileAppearance";
+import { getPublicFriendProfiles } from "@/lib/profile/userProfileSearch";
+import UserSearchResult from "@/components/UserSearchResult";
 
 
 export function PublicProfile() {
     const { user, profile, loading } = useAuth();
     const { uid } = useParams<{ uid: string }>();
+
     const [loadedProfile, setUserProfile] = useState<PublicProfile>();
     const userProfile = loadedProfile?.uid === uid ? loadedProfile : undefined;
     const [profileLoading, setProfileLoading] = useState(true);
+
+    const [friends, setFriends] = useState<SearchProfile[]>([]);
+    const [friendLoading, setFriendLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const currentUid = profile?.uid;
     const isOwnProfile = currentUid === uid;
@@ -82,6 +89,48 @@ export function PublicProfile() {
             cancelled = true;
         };
     }, [uid]);
+
+    useEffect(() => {
+        if (!profile || !loadedProfile) {
+            setFriends([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        async function loadFriends() {
+            setFriendLoading(true);
+            setError(null);
+
+            try {
+                const friendProfiles = await getPublicFriendProfiles(
+                    profile!.uid,
+                    loadedProfile!.friends ?? []
+                );
+
+                if (!cancelled) {
+                    setFriends(friendProfiles);
+                }
+            } catch (err) {
+                console.error("Failed to load friends:", err);
+
+                if (!cancelled) {
+                    setError("Unable to load friends. Please try again.");
+                    setFriends([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setFriendLoading(false);
+                }
+            }
+        }
+
+        loadFriends();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [profile, loadedProfile?.friends]);
 
     if (loading || profileLoading) { 
         return ( 
@@ -409,41 +458,45 @@ export function PublicProfile() {
                     py-8
                     mb-8`
                 }>
-                    <h1 className="ml-4 text-2xl">{userProfile?.displayName}'s Friends:</h1>
-                    <div className="flex flex-col items-center">
-                        {userProfile?.friends && userProfile?.friends?.length > 0 ? (
-                            userProfile.friends.map((friend) => (
-                                <div
-                                    key={friend}
-                                    className={`
-                                        w-fit
-                                        select-none
-                                        bg-linear-to-b
-                                        from-contrast-start
-                                        via-contrast-middle
-                                        to-contrast-end
-                                        rounded-full
-                                        px-4 py-2
-                                    `}
-                                >
-                                    {friend}
-                                </div>
-                            ))
-                        ) : (
-                            <div
-                                className={`
-                                    w-fit
-                                    select-none
-                                    bg-linear-to-b
-                                    from-contrast-start
-                                    via-contrast-middle
-                                    to-contrast-end
-                                    rounded-full
-                                    text-2xl
-                                    px-4 py-2
-                                `}
-                            >
-                                No Friends Associated With User Profile
+                    <h2 className="mx-6 text-4xl font-bold border-b-4 border-contrast-start">{userProfile?.displayName}'s Friends:</h2>
+                    {friendLoading && (
+                        <div className="flex h-full flex-col items-center justify-center gap-4">
+                            <div className="h-32 w-32 animate-spin rounded-full border-10 border-accent-start border-t-transparent"></div>
+                            <p className="text-center text-4xl py-4">
+                                Loading friends...
+                            </p>
+                        </div>
+                    )}
+
+                    {error && (
+                        <p className="text-center text-2xl py-4">
+                            {error}
+                        </p>
+                    )}
+
+                    {!friendLoading && !error && friends.length === 0 && (
+                        <p className="text-center text-2xl py-4">
+                            No friends found to be associated with your account!
+                        </p>
+                    )}
+
+                    <div className="
+                        flex-1
+                        min-h-0
+                        overflow-y-auto
+                        overscroll-contain
+                        mx-12
+                    ">
+                        {!friendLoading && !error && friends.length > 0 && (
+                            <div className="space-y-2 p-4">
+                                {friends.map(profile => (
+                                    <UserSearchResult
+                                        key={profile.uid}
+                                        profile={profile}
+                                        invertColor={true}
+                                        communitySearch={false}
+                                    />
+                                ))}
                             </div>
                         )}
                     </div>
