@@ -32,6 +32,7 @@ vi.mock('firebase/firestore', () => {
 })
 
 import { findPublicProfile, updateEloPublicity, updatePublicProfile } from './publicProfile'
+import { deleteDoc, updateDoc } from 'firebase/firestore';
 
 const featuredScores = [{ runId: 'run', scenarioId: 'scenario', finalScore: 900 }]
 
@@ -53,9 +54,18 @@ it('restores the saved appearance when a private profile becomes public again', 
 
   await publish(true)
 
-  expect(store.writes).toHaveLength(1)
-  expect(store.writes[0].path).toBe('publicProfile/player')
-  expect(store.writes[0].data).toMatchObject({
+  expect(store.writes).toHaveLength(2)
+  expect(store.writes).toContainEqual({
+    kind: 'update',
+    path: 'users/player',
+    data: { isProfilePublic: true },
+  })
+
+  const publicWrite = store.writes.find(
+    write => write.kind === 'set' && write.path === 'publicProfile/player',
+  )
+
+  expect(publicWrite?.data).toMatchObject({
     friends: [],
     communities: [],
     profileAppearance: { accent: 'Green', featuredScores },
@@ -83,4 +93,24 @@ it('saves publicity settings without touching a public document that does not ex
   await updateEloPublicity('player', ['piano'])
 
   expect(store.writes.map(({ path }) => path)).toEqual(['userSettings/player'])
+})
+
+it('marks the user private and deletes the public profile', async () => {
+  store.docs.set('users/player', {
+    isProfilePublic: true,
+    friends: [],
+    communities: [],
+  })
+  store.docs.set('publicProfile/player', { uid: 'player' })
+
+  await updatePublicProfile(
+    'player', 'Player', false, true, 'Bio', true, 'piano',
+    true, ['jazz'], [], true, 'avatar.png', true,
+  )
+
+  expect(updateDoc).toHaveBeenCalledWith(
+    { path: 'users/player' },
+    { isProfilePublic: false, friends: [], communities: [] },
+  )
+  expect(deleteDoc).toHaveBeenCalledWith({ path: 'publicProfile/player' })
 })
