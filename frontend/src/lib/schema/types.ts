@@ -570,7 +570,7 @@ export interface CommunityAnnouncement {
 }
 
 export interface CommunityRequest {
-  memberUid: string
+  memberUid: string | null
   outsiderUid: string
   requestType: string
   status: CommunityState

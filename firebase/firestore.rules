@@ -527,6 +527,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // --------------------------------------------------
+    // Communities
+    // --------------------------------------------------
+
+    match /{path=**}/requests/{requestId} {
+      allow list: if signedIn()
+        && resource.data.outsiderUid == request.auth.uid
+        && resource.data.status == 'pending'
+        && resource.data.requestType in [
+          'community_knock_request',
+          'community_invitation_request'
+        ];
+    }
+
     match /communities/{communityId} {
       allow read: if resource.data.isPublic == true || signedIn();
       allow create: if isSelf(request.resource.data.ownerUid);
@@ -561,45 +575,135 @@ service cloud.firestore {
       }
 
       match /requests/{requestId} {
-        allow read: if signedIn() && (
-          isSelf(resource.data.memberUid)
-          || isSelf(resource.data.outsiderUid)
-          || isSelf(
-            get(/databases/$(database)/documents/communities/$(communityId))
-              .data.ownerUid
-          )
-          || isAdmin()
-        );
+        function isApplicantRequest() {
+          return signedIn()
+            && requestId == communityId + '_' + request.auth.uid;
+        }
 
-        allow create: if signedIn() && (
-          isSelf(request.resource.data.memberUid)
-          || isSelf(request.resource.data.outsiderUid)
-          || isSelf(
-            get(/databases/$(database)/documents/communities/$(communityId))
-              .data.ownerUid
-          )
-          || isAdmin()
-        );
+        function community() {
+          return get(
+            /databases/$(database)/documents/communities/$(communityId)
+          ).data;
+        }
 
-        allow update: if signedIn() && (
-          isSelf(resource.data.memberUid)
-          || isSelf(resource.data.outsiderUid)
-          || isSelf(
-            get(/databases/$(database)/documents/communities/$(communityId))
-              .data.ownerUid
-          )
-          || isAdmin()
-        );
+        function canReviewKnocks() {
+          return signedIn() && (
+            community().ownerUid == request.auth.uid
+            || get(
+              /databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)
+            ).data.role == 'moderator'
+          );
+        }
 
-        allow delete: if signedIn() && (
-          isSelf(resource.data.memberUid)
-          || isSelf(resource.data.outsiderUid)
+        function canSendInvitation() {
+          return signedIn() && (
+            community().ownerUid == request.auth.uid
+            || exists(
+              /databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)
+            )
+          );
+        }
+
+        function validPendingRequest() {
+          let next = request.resource.data;
+          return signedIn()
+            && next.keys().hasOnly([
+              'memberUid', 'outsiderUid', 'requestType', 'status', 'createdAt'
+            ])
+            && next.outsiderUid is string
+            && next.outsiderUid.size() > 0
+            && requestId == communityId + '_' + next.outsiderUid
+            && next.status == 'pending'
+            && next.createdAt == request.time
+            && (
+              (
+                next.requestType == 'community_knock_request'
+                && next.outsiderUid == request.auth.uid
+                && next.memberUid == null
+                && community().isPublic == false
+              )
+              || (
+                next.requestType == 'community_invitation_request'
+                && next.memberUid == request.auth.uid
+                && next.outsiderUid != request.auth.uid
+                && canSendInvitation()
+              )
+            );
+        }
+
+        function cancelsKnock() {
+          return isApplicantRequest()
+            && resource.data.outsiderUid == request.auth.uid
+            && resource.data.requestType == 'community_knock_request'
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'canceled'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status']);
+        }
+
+        function declinesKnock() {
+          return canReviewKnocks()
+            && resource.data.requestType == 'community_knock_request'
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'declined'
+            && request.resource.data.memberUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'memberUid']);
+        }
+
+        function acceptsKnock() {
+          return canReviewKnocks()
+            && resource.data.requestType == 'community_knock_request'
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'accepted'
+            && request.resource.data.memberUid == request.auth.uid
+        }
+
+        function declinesInvitation() {
+          return isApplicantRequest()
+            && resource.data.outsiderUid == request.auth.uid
+            && resource.data.requestType == 'community_invitation_request'
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'declined'
+        }
+
+        function acceptsInvitation() {
+          return isApplicantRequest()
+            && resource.data.outsiderUid == request.auth.uid
+            && resource.data.requestType == 'community_invitation_request'
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'accepted'
+        }
+
+        function reopensRequest() {
+          return resource.data.status in ['declined', 'canceled']
+            && request.resource.data.outsiderUid == resource.data.outsiderUid
+            && validPendingRequest();
+        }
+
+        allow get: if isApplicantRequest()
+          || canReviewKnocks()
+          || (signedIn() && resource.data.memberUid == request.auth.uid);
+
+        allow list: if canReviewKnocks()
+          && resource.data.requestType == 'community_knock_request'
+          && resource.data.status == 'pending';
+
+        allow create: if validPendingRequest();
+
+        allow update: if cancelsKnock()
+          || declinesKnock()
+          || acceptsKnock()
+          || declinesInvitation()
+          || acceptsInvitation()
+          || reopensRequest();
+
+        allow delete: if isAdmin()
           || isSelf(
-            get(/databases/$(database)/documents/communities/$(communityId))
-              .data.ownerUid
-          )
-          || isAdmin()
-        );
+                get(/databases/$(database)/documents/communities/$(communityId))
+                    .data.ownerUid
+            )
+          || isApplicantRequest();
       }
     }
 

@@ -1,8 +1,12 @@
 import { doc, runTransaction, arrayUnion, getDoc, collection, setDoc, increment, arrayRemove, updateDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { COLLECTIONS, newCommunity, communityMembersPath, newCommunityMembership, communityAnnouncementsPath, newCommunityAnnouncement } from "@/lib/schema/collections";
+import { COLLECTIONS, newCommunity, communityMembersPath, newCommunityMembership, communityAnnouncementsPath, newCommunityAnnouncement, communityRequestsPath } from "@/lib/schema/collections";
 import type { CommunityMembership, CommunityRole } from "@/lib/schema/types";
 import { getPublicProfile } from '@/lib/profile/publicProfile'
+
+function requestId(communityId: string, uid: string) {
+    return [communityId, uid].join('_')
+}
 
 export async function getCommunityMembership(communityId: string, uid: string): Promise<CommunityMembership | null> {
     const communityMemberPath = communityMembersPath(communityId);
@@ -46,6 +50,7 @@ export async function leaveCommunity(communityId: string, uid: string) {
 
     const communityRef = doc(db, COLLECTIONS.communities, communityId);
     const communityMemberRef = doc(db, communityMembersPath(communityId), uid);
+    const communityRequestRef = doc(db, communityRequestsPath(communityId), requestId(communityId, uid))
 
     const communitySnapshot = await getDoc(communityRef);
     if (!communitySnapshot.exists()) {
@@ -57,6 +62,7 @@ export async function leaveCommunity(communityId: string, uid: string) {
         transaction.update(publicRef, {communities: arrayRemove(communityId)});
         transaction.update(communityRef, {memberCount: increment(-1)});
         transaction.delete(communityMemberRef);
+        transaction.delete(communityRequestRef);
     })
 }
 

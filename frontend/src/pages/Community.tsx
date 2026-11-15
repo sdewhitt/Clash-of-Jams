@@ -16,6 +16,12 @@ import type { LeaderboardResponse } from "@/lib/leaderboards";
 import { LeaderboardRow, LeaderboardStat, MyStanding } from "@/components/Leaderboard";
 import { CommunityInviteCard } from "@/components/CommunityInviteCard";
 import type { ChangeEvent } from "react";
+import { collection, onSnapshot, query, Timestamp, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { communityMembersPath, communityRequestsPath, } from "@/lib/schema/collections";
+import type { CommunityRequest } from "@/lib/schema/types";
+import { getFriendName } from "@/lib/friendship/friendRequests";
+import { acceptCommunityRequest, declineCommunityRequest } from "@/lib/communities/communityRequests";
 
 type CommunitySections =
     | "announcements"
@@ -34,12 +40,197 @@ type CommunityContentProps = {
     selectedSetting: CommunitySections;
     activeUid: string;
     community: Community;
-    members: CommunityMembership[]
+    members: CommunityMembership[];
+    memberLoading: boolean;
+    memberError: string | null;
     onRoleChange: (uid: string, role: CommunityRole) => Promise<void>;
     refreshData: () => void;
 };
 
-function CommunityContent({selectedSetting, activeUid, community, members, onRoleChange, refreshData} : CommunityContentProps) {
+type PendingKnockRow = Pick<CommunityRequest, "outsiderUid"> & {
+    id: string;
+    name: string;
+    requestCreated: Timestamp;
+};
+
+function PendingKnocks({ communityId, onAccept, onDecline, }: { communityId: string; onAccept: (outsiderUid: string) => Promise<void>; onDecline: (outsiderUid: string) => Promise<void>; }) {
+    const navigate = useNavigate();
+    
+    const [rows, setRows] = useState<PendingKnockRow[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
+    const [processingId, setProcessingId] = useState<string | null>(null);
+
+    useEffect(() => {
+        let revision = 0;
+
+        const pendingKnocks = query(
+            collection(db, communityRequestsPath(communityId)),
+            where("requestType", "==", "community_knock_request"),
+            where("status", "==", "pending"),
+        );
+
+        const unsubscribe = onSnapshot(
+            pendingKnocks,
+            async snapshot => {
+                const current = ++revision;
+                const nextRows = await Promise.all(
+                    snapshot.docs.map(async requestDoc => {
+                        const { outsiderUid, createdAt } = requestDoc.data() as CommunityRequest;
+                        const profile = await getFriendName(outsiderUid).catch(() => null);
+
+                        return {
+                            id: requestDoc.id,
+                            outsiderUid,
+                            name: profile?.displayName || outsiderUid,
+                            requestCreated: createdAt,
+                        };
+                    }),
+                );
+
+                if (current !== revision) return;
+                setRows(nextRows);
+                setLoading(false);
+            },
+            (err) => {
+                ++revision;
+                console.error("Failed to listen for pending knocks:", err);
+                setRows([]);
+                setLoadError("Unable to load pending join requests.");
+                setLoading(false);
+            },
+        );
+
+        return () => {
+            ++revision;
+            unsubscribe();
+        };
+    }, [communityId]);
+
+    async function handleDecision(row: PendingKnockRow, decide: (outsiderUid: string) => Promise<void>,) {
+        if (processingId) return;
+
+        setProcessingId(row.id);
+        setActionError(null);
+
+        try {
+            await decide(row.outsiderUid);
+        } catch (err) {
+            setActionError(
+                err instanceof Error ? err.message : "Unable to process this request.",
+            );
+        } finally {
+            setProcessingId(null);
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-accent-start border-t-transparent" />
+    
+                <h1 className="text-3xl font-bold text-ink">
+                    Loading pending requests...
+                </h1>
+            </div>
+        );
+    }
+    if (loadError) {
+        return (
+            <p role="alert">{loadError}</p>
+        );
+    }
+
+    return (
+        <div className="space-y-3 overflow-y-auto">
+            {actionError && (
+                <p role="alert">{actionError}</p>
+            )}
+            {rows.length === 0 && (
+                <p>No pending join requests.</p>
+            )}
+
+            {rows.map(row => (
+                <div 
+                    key={row.id}
+                    onClick={() => {                    
+                        navigate(`/profile/${encodeURIComponent(row.outsiderUid)}`, {
+                            replace: true,
+                        });
+                    }}
+                    className="
+                        rounded-lg
+                        flex flex-row
+                        items-center
+                        justify-between
+                        gap-4
+                        bg-radial
+                        from-accent-start
+                        via-accent-middle
+                        to-accent-end
+                        border border-line
+                        py-3 px-6
+                        cursor-pointer
+                        transition
+                        hover:brightness-110
+                    "
+                >
+                    <div className="flex flex-col min-w-0">
+                        <div className="text-xl font-semibold truncate">
+                            {row.name}
+                        </div>
+
+                        <div className="text-sm">
+                            Request Sent:{" "}
+                            {row.requestCreated.toDate().toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div className="flex flex-row gap-4">
+                        <button
+                            type="button"
+                            disabled={processingId !== null}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                void handleDecision(row, onAccept)
+                            }}
+                            className={`
+                                rounded-lg
+                                px-4 py-2
+                                bg-linear-to-r from-emerald-600 to-green-500
+                                border-2 border-ink
+                                hover:from-emerald-500 hover:to-green-400
+                                text-white
+                            `}
+                        >
+                            Accept
+                        </button>
+                        <button
+                            type="button"
+                            disabled={processingId !== null}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                void handleDecision(row, onDecline)
+                            }}
+                            className={`
+                                rounded-lg
+                                px-4 py-2
+                                bg-linear-to-r from-red-700 to-rose-600
+                                border-2 border-ink
+                                hover:from-red-600 hover:to-rose-500
+                                text-white
+                            `}
+                        >
+                            Decline
+                        </button>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function CommunityContent({selectedSetting, activeUid, community, members, memberLoading, memberError, onRoleChange, refreshData} : CommunityContentProps) {
     const navigate = useNavigate();
 
     const [communityIcon, setCommunityIcon] = useState<string | null>(community.communityIcon);
@@ -72,11 +263,13 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
 
     const [showInviteMembers, setShowInviteMembers] = useState(false);
 
-    const currentMembership = members.find(
-        (member) => member.uid === activeUid
-    );
+    const [membersView, setMembersView] = useState<"members" | "pending">("members");
 
+    const currentMembership = members.find( (member) => member.uid === activeUid );
     const memberRole = currentMembership?.role;
+
+    const canReviewKnocks = community.ownerUid === activeUid || memberRole === "moderator";
+    const showingPending = canReviewKnocks && membersView === "pending";
 
     async function handleUpload( event: ChangeEvent<HTMLInputElement> ) {
         const file = event.target.files?.[0];
@@ -471,128 +664,217 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
         case "members":
             return (
                 <div className="w-full h-full rounded-lg bg-radial from-accent-base-start via-accent-base-middle to-accent-base-end border-2 border-accent-start inset-shadow-sm">
-                    <div className="flex flex-col overflow-y-auto overscroll-contain gap-4 m-6">
-                        {members.map((member) => {
-                            const isCommunityOwner = member.uid === community.ownerUid;
-                            const canModifyRoles = community.ownerUid === activeUid && !isCommunityOwner;
-
-                            return (
-                                <div
-                                    key={member.uid}
-                                    onClick={() => {
-                                        if (member.uid === activeUid) return;
-                                    
-                                        navigate(`/profile/${encodeURIComponent(member.uid)}`, {
-                                            replace: true,
-                                        });
-                                    }}
-                                    className="
-                                        rounded-lg
-                                        flex flex-row
-                                        items-center
-                                        justify-between
-                                        gap-4
-                                        bg-radial
-                                        from-accent-start
-                                        via-accent-middle
-                                        to-accent-end
-                                        border border-line
-                                        py-3 px-6
-                                        cursor-pointer
+                    <div className="flex flex-col gap-4 m-6">
+                        {canReviewKnocks && (
+                            <div role="group" aria-label="Friend list view" className="flex flex-row items-center gap-4 mx-6">
+                                <button
+                                    type="button"
+                                    aria-pressed={membersView === "members"}
+                                    onClick={() => setMembersView("members")}
+                                    className={`
+                                        w-1/2
+                                        rounded-lg 
+                                        px-4 py-2 
+                                        bg-linear-to-b
+                                        from-contrast-start
+                                        via-contrast-middle
+                                        to-contrast-end
+                                        border-2 border-contrast-start
+                                        brightness-80
+                                        aria-pressed:brightness-100
+                                        text-ink
+                                        hover:scale-102
+                                        hover:brightness-120
+                                        active:scale-99
+                                        active:opacity-30%
+                                        active:brightness-60
                                         transition
-                                        hover:brightness-110
-                                    "
+                                        duration-200
+                                    `}
                                 >
-                                    <div className="flex flex-col min-w-0">
-                                        <div className="text-xl font-semibold truncate">
-                                            {member.userDisplayName}
-                                        </div>
-
-                                        <div className="text-sm">
-                                            Member Since:{" "}
-                                            {member.joinedAt.toDate().toLocaleDateString()}
-                                        </div>
+                                    Members
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={membersView === "pending"}
+                                    onClick={() => setMembersView("pending")}
+                                    className={`
+                                        w-1/2
+                                        rounded-lg
+                                        px-4 py-2
+                                        bg-linear-to-b
+                                        from-contrast-start
+                                        via-contrast-middle
+                                        to-contrast-end
+                                        border-2 border-contrast-start
+                                        brightness-80
+                                        aria-pressed:brightness-100
+                                        text-ink
+                                        hover:scale-102
+                                        hover:brightness-120
+                                        active:scale-99
+                                        active:opacity-30%
+                                        active:brightness-60
+                                        transition
+                                        duration-200
+                                    `}
+                                >
+                                    Pending requests
+                                </button>
+                            </div>
+                        )}
+                        {showingPending ? (
+                            <div className="overflow-y-auto overscroll-contain">
+                                <PendingKnocks
+                                    key={`${community.id}:${activeUid}`}
+                                    communityId={community.id}
+                                    onDecline={outsiderUid => declineCommunityRequest(community.id, activeUid, activeUid, outsiderUid)}
+                                    onAccept={outsiderUid => acceptCommunityRequest(community.id, activeUid, activeUid, outsiderUid)}
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                {memberLoading && (
+                                    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+                                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-accent-start border-t-transparent" />
+                            
+                                        <h1 className="text-3xl font-bold text-ink">
+                                            Loading members...
+                                        </h1>
                                     </div>
+                                )}
+                                {memberError && (
+                                    <p role="alert">{memberError}</p>
+                                )}
+                                <div className="flex flex-col overflow-y-auto overscroll-contain gap-2">
+                                    {!memberLoading && !memberError && (
+                                        members.map((member) => {
+                                            const isCommunityOwner = member.uid === community.ownerUid;
+                                            const canModifyRoles = community.ownerUid === activeUid && !isCommunityOwner;
 
-                                    {canModifyRoles ? (
-                                        <div
-                                            className="shrink-0 w-32 h-10"
-                                            onClick={(event) => event.stopPropagation()}
-                                        >
-                                            <select
-                                                value={member.role}
-                                                onChange={(event) =>
-                                                    handleRoleChange(
-                                                        member.uid,
-                                                        event.target.value as CommunityRole
-                                                    )
-                                                }
-                                                className="
-                                                    w-full h-full
-                                                    rounded-full
-                                                    border-2 border-ink
-                                                    bg-radial
-                                                    from-contrast-start
-                                                    via-contrast-middle
-                                                    to-contrast-end
-                                                    text-ink
-                                                    text-sm font-semibold
-                                                    text-center
-                                                    cursor-pointer
-                                                    outline-none
-                                                    focus:border-accent-soft
-                                                    hover:brightness-125
-                                                    transition
-                                                "
-                                            >
-                                                <option value="member">Member</option>
-                                                <option value="moderator">Moderator</option>
-                                            </select>
-                                        </div>
-                                    ) : (
-                                        <div
-                                            className="
-                                                shrink-0
-                                                inline-flex
-                                                items-center
-                                                justify-center
-                                                h-10 w-32
-                                                rounded-full
-                                                border-2 border-ink
-                                                bg-radial
-                                                from-contrast-start
-                                                via-contrast-middle
-                                                to-contrast-end
-                                                text-ink
-                                                text-sm font-semibold
-                                                capitalize
-                                            "
-                                        >
-                                            {member.role}
-                                        </div>
+                                            return (
+                                                <div
+                                                    key={member.uid}
+                                                    onClick={() => {
+                                                        if (member.uid === activeUid) return;
+                                                    
+                                                        navigate(`/profile/${encodeURIComponent(member.uid)}`, {
+                                                            replace: true,
+                                                        });
+                                                    }}
+                                                    className="
+                                                        rounded-lg
+                                                        flex flex-row
+                                                        items-center
+                                                        justify-between
+                                                        gap-4
+                                                        bg-radial
+                                                        from-accent-start
+                                                        via-accent-middle
+                                                        to-accent-end
+                                                        border border-line
+                                                        py-3 px-6
+                                                        cursor-pointer
+                                                        transition
+                                                        hover:brightness-110
+                                                    "
+                                                >
+                                                    <div className="flex flex-col min-w-0">
+                                                        <div className="text-xl font-semibold truncate">
+                                                            {member.userDisplayName}
+                                                        </div>
+
+                                                        <div className="text-sm">
+                                                            Member Since:{" "}
+                                                            {member.joinedAt.toDate().toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+
+                                                    {canModifyRoles ? (
+                                                        <div
+                                                            className="shrink-0 w-32 h-10"
+                                                            onClick={(event) => event.stopPropagation()}
+                                                        >
+                                                            <select
+                                                                value={member.role}
+                                                                onChange={(event) =>
+                                                                    handleRoleChange(
+                                                                        member.uid,
+                                                                        event.target.value as CommunityRole
+                                                                    )
+                                                                }
+                                                                className="
+                                                                    w-full h-full
+                                                                    rounded-full
+                                                                    border-2 border-ink
+                                                                    bg-radial
+                                                                    from-contrast-start
+                                                                    via-contrast-middle
+                                                                    to-contrast-end
+                                                                    text-ink
+                                                                    text-sm font-semibold
+                                                                    text-center
+                                                                    cursor-pointer
+                                                                    outline-none
+                                                                    focus:border-accent-soft
+                                                                    hover:brightness-125
+                                                                    transition
+                                                                "
+                                                            >
+                                                                <option value="member">Member</option>
+                                                                <option value="moderator">Moderator</option>
+                                                            </select>
+                                                        </div>
+                                                    ) : (
+                                                        <div
+                                                            className="
+                                                                shrink-0
+                                                                inline-flex
+                                                                items-center
+                                                                justify-center
+                                                                h-10 w-32
+                                                                rounded-full
+                                                                border-2 border-ink
+                                                                bg-radial
+                                                                from-contrast-start
+                                                                via-contrast-middle
+                                                                to-contrast-end
+                                                                text-ink
+                                                                text-sm font-semibold
+                                                                capitalize
+                                                            "
+                                                        >
+                                                            {member.role}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })
+                                    
                                     )}
                                 </div>
-                            );
-                        })}
-                        <button
-                            type="button"
-                            onClick={() => setShowInviteMembers(true)}
-                            className={`
-                                rounded-lg
-                                border border-line
-                                bg-radial
-                                from-contrast-start
-                                via-contrast-middle
-                                to-contrast-end
-                                text-lg font-semibold
-                                hover:brightness-110
-                                active:brightness-90
-                                active:scale-99
-                                p-2
-                            `}
-                        >
-                            + Invite Users to {community.name}
-                        </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowInviteMembers(true)}
+                                    className={`
+                                        w-fill
+                                        rounded-lg
+                                        border border-line
+                                        bg-radial
+                                        from-contrast-start
+                                        via-contrast-middle
+                                        to-contrast-end
+                                        text-lg font-semibold
+                                        hover:brightness-110
+                                        active:brightness-90
+                                        active:scale-99
+                                        p-2
+                                    `}
+                                >
+                                    + Invite Users to {community.name}
+                                </button>
+                            </div>
+                        )}
                     </div>
                     {showInviteMembers && (
                         <CommunityInviteCard
@@ -806,6 +1088,9 @@ export function UserCommunity() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const [membersLoading, setMembersLoading] = useState(true);
+    const [membersError, setMembersError] = useState<string | null>(null);
+
     async function handleMemberRoleChange( uid: string, role: CommunityRole ) {
         if (!community || !profile) {
             throw new Error("Community information is unavailable.");
@@ -844,18 +1129,18 @@ export function UserCommunity() {
             setError(null);
 
             try {
-                const information = await getCommunityInformation(communityId);
+                const community = await getCommunityInformation(communityId);
 
                 if (!isActive) return;
 
-                if (!information) {
+                if (!community) {
                     setError("Community not found.");
                     return;
                 }
 
-                setCommunity(information.community);
-                setMembers(information.members);
-                setInitials(information.community.name.charAt(0))
+                setCommunity(community);
+                // setMembers(information.members);
+                setInitials(community.name.charAt(0))
 
             } catch (err) {
                 console.error("Failed to retrieve community:", err);
@@ -876,6 +1161,33 @@ export function UserCommunity() {
             isActive = false;
         };
     }, [communityId, refreshTrigger]);
+
+    useEffect(() => {
+        setMembers([]);
+        setMembersError(null);
+        setMembersLoading(Boolean(communityId && profile?.uid));
+
+        if (!communityId || !profile?.uid) {
+            return;
+        }
+
+        return onSnapshot(
+            collection(db, communityMembersPath(communityId)),
+            snapshot => {
+                setMembers(snapshot.docs.map(memberDoc => ({
+                    ...memberDoc.data(),
+                    uid: memberDoc.id,
+                } as CommunityMembership)));
+                setMembersLoading(false);
+            },
+            (err) => {
+                console.error("Failed to listen for community members:", err);
+                setMembers([]);
+                setMembersError("Unable to load community members.");
+                setMembersLoading(false);
+            },
+        );
+    }, [communityId, profile?.uid]);
 
     return (
         <main className="h-screen flex flex-col overflow-hidden">
@@ -1025,6 +1337,8 @@ export function UserCommunity() {
                             activeUid={profile.uid}
                             community={community}
                             members={members}
+                            memberLoading={membersLoading}
+                            memberError={membersError}
                             onRoleChange={handleMemberRoleChange}
                             refreshData={() => setRefreshTrigger(prev => prev + 1)}
                         />
