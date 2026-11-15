@@ -545,7 +545,7 @@ export function newCommunityAnnouncement(args: {
 }
 
 export function newCommunityRequest(args: {
-  memberUid: string
+  memberUid: string | null
   outsiderUid: string
   requestType: string
 }): WithFieldValue<CommunityRequest> {

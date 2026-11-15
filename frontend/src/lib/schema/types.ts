@@ -81,7 +81,7 @@ export type InvitationState = (typeof INVITATION_STATES)[number]
 
 export const REQUEST_STATES = ['pending', 'accepted', 'declined', 'blocked'] as const
 export type FriendshipState = (typeof REQUEST_STATES)[number]
-export type  CommunityState = (typeof REQUEST_STATES)[number]
+export type CommunityState = (typeof REQUEST_STATES)[number]
 
 export const COMMUNITY_ROLES = ['owner', 'moderator', 'member'] as const
 export type CommunityRole = (typeof COMMUNITY_ROLES)[number]
@@ -92,6 +92,12 @@ export type HitVerdict = (typeof HIT_VERDICTS)[number]
 export type ModerationTargetType = 'user' | 'scenario' | 'recording'
 
 export type RelationshipStatus = 'friend' | 'friendOfFriend' | 'none'
+
+export type PendingFriendRow = {
+  profile: SearchProfile;
+  initiatorUid: FriendRequest["initiatorUid"];
+  createdAt: FriendRequest["createdAt"];
+};
 
 /* ------------------------------------------------------- primary database */
 
@@ -564,7 +570,7 @@ export interface CommunityAnnouncement {
 }
 
 export interface CommunityRequest {
-  memberUid: string
+  memberUid: string | null
   outsiderUid: string
   requestType: string
   status: CommunityState

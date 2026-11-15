@@ -72,7 +72,7 @@ export async function updatePublicProfile( uid: string, savedUsername: string, p
                 })
             );
 
-            await updateDoc(userRef, { friends: [], communities: [] });
+            await updateDoc(userRef, { isProfilePublic: false, friends: [], communities: [] });
         }
 
         await deleteDoc(docRef);
@@ -83,6 +83,8 @@ export async function updatePublicProfile( uid: string, savedUsername: string, p
         const snapshot = await transaction.get(docRef);
         const settings = await transaction.get(doc(db, COLLECTIONS.userSettings, uid));
         const appearance = (settings.data() as UserSettings | undefined)?.profileAppearance ?? DEFAULT_APPEARANCE;
+
+        transaction.update(userRef, {isProfilePublic: publicToggle})
 
         transaction.set(docRef, {
             ...(snapshot.exists() ? {} : { friends: [], communities: [] }),
