@@ -77,7 +77,14 @@ it('keeps featured scores off the public document while play history is private'
 
   await publish(false)
 
-  expect(store.writes[0].data.profileAppearance).toEqual({ accent: 'Green', featuredScores: [] })
+  const publicWrite = store.writes.find(
+    write => write.kind === 'set' && write.path === 'publicProfile/player',
+  )
+  
+  expect(publicWrite?.data.profileAppearance).toEqual({
+    accent: 'Green',
+    featuredScores: [],
+  })
 })
 
 it('does not reset friends and communities on a profile that is already public', async () => {
