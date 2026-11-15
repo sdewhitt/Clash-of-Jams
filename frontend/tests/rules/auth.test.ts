@@ -2,15 +2,28 @@
  * User story #67, the database side: what the rules let a signed-in account
  * do with its own entry, and where the admin/standard line is enforced.
  */
-import { doc, getDoc, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
+import {
+  Timestamp,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  writeBatch,
+} from 'firebase/firestore'
 import { describe, expect, it } from 'vitest'
 
 import {
   COLLECTIONS,
   newModerationAction,
+  newPublicProfile,
+  newScenarioTheme,
   newSkillRating,
+  newUserPreferences,
   newUserSettings,
+  newUserStatus,
   newUsernameReservation,
+  scenarioThemesPath,
   skillRatingsPath,
   usernameKey,
 } from '../../src/lib/schema/collections.ts'
@@ -37,6 +50,7 @@ const adminProfile = () => ({
   role: 'admin',
 })
 
+/** Every document writeAccountDocuments in src/lib/auth/account.ts creates; keep the two in step. */
 function firstSignInBatch(uid: string, username: string) {
   const db = as(env(), uid)
   const batch = writeBatch(db)
@@ -48,7 +62,17 @@ function firstSignInBatch(uid: string, username: string) {
     doc(db, `${COLLECTIONS.usernames}/${usernameKey(username)}`),
     newUsernameReservation({ uid, username }),
   )
+  batch.set(
+    doc(db, COLLECTIONS.publicProfile, uid),
+    newPublicProfile({ uid, username, displayName: username, acceptingFriends: true }),
+  )
   batch.set(doc(db, path.settings(uid)), newUserSettings({ uid }))
+  batch.set(doc(db, COLLECTIONS.userPreferences, uid), newUserPreferences())
+  batch.set(
+    doc(db, scenarioThemesPath(uid), 'Purdue_Pete'),
+    newScenarioTheme({ uid, themeName: 'Purdue_Pete', themeUrl: 'data:image/jpeg;base64,' }),
+  )
+  batch.set(doc(db, COLLECTIONS.userStatus, uid), newUserStatus())
   for (const instrument of INSTRUMENTS) {
     batch.set(doc(db, skillRatingsPath(uid), instrument), newSkillRating({ uid, instrument }))
   }
@@ -101,6 +125,57 @@ describe('skill ratings', () => {
     await assertSucceeds(firstSignInBatch(ALICE, 'Alice').commit())
 
     await assertFails(updateDoc(doc(as(env(), ALICE), rating(ALICE, 'piano')), { elo: 2400 }))
+  })
+})
+
+describe('presence', () => {
+  const status = (uid: string) => `${COLLECTIONS.userStatus}/${uid}`
+
+  it('is created at sign-up with do-not-disturb off', async () => {
+    await assertSucceeds(firstSignInBatch(ALICE, 'Alice').commit())
+
+    const snapshot = await getDoc(doc(as(env(), ALICE), status(ALICE)))
+    expect(snapshot.get('dnd')).toBe(false)
+  })
+
+  it('can be created by the heartbeat alone, for accounts that predate it', async () => {
+    await assertSucceeds(
+      setDoc(
+        doc(as(env(), ALICE), status(ALICE)),
+        { lastHeartbeat: serverTimestamp() },
+        { merge: true },
+      ),
+    )
+  })
+
+  it('lets the owner toggle do-not-disturb without touching the heartbeat', async () => {
+    await assertSucceeds(firstSignInBatch(ALICE, 'Alice').commit())
+
+    await assertSucceeds(updateDoc(doc(as(env(), ALICE), status(ALICE)), { dnd: true }))
+    await assertSucceeds(
+      setDoc(
+        doc(as(env(), ALICE), status(ALICE)),
+        { lastHeartbeat: serverTimestamp() },
+        { merge: true },
+      ),
+    )
+  })
+
+  it('rejects a client-chosen heartbeat, a non-boolean dnd or an extra field', async () => {
+    await assertSucceeds(firstSignInBatch(ALICE, 'Alice').commit())
+    const ref = doc(as(env(), ALICE), status(ALICE))
+
+    await assertFails(updateDoc(ref, { lastHeartbeat: Timestamp.fromMillis(0) }))
+    await assertFails(updateDoc(ref, { dnd: 'yes' }))
+    await assertFails(updateDoc(ref, { online: true }))
+    await assertFails(setDoc(doc(as(env(), BOB), status(BOB)), { ...newUserStatus(), dnd: 'yes' }))
+  })
+
+  it('cannot be written by anyone else', async () => {
+    await assertSucceeds(firstSignInBatch(ALICE, 'Alice').commit())
+
+    await assertFails(updateDoc(doc(as(env(), BOB), status(ALICE)), { dnd: true }))
+    await assertFails(setDoc(doc(as(env(), BOB), status(ALICE)), newUserStatus()))
   })
 })
 
