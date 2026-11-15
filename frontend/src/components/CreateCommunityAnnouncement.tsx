@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { createCommunityNotification } from "@/lib/communities/communityNotifications";
+import { createCommunityAnnouncement } from "@/lib/communities/communityNotifications";
 
 type CreateCommunityAnnouncementProps = {
     communityId: string;
@@ -31,10 +31,10 @@ export function CreateCommunityAnnouncement(props: CreateCommunityAnnouncementPr
             }
 
             if (announcementForAll) {
-                await createCommunityNotification(props.communityId, props.announcerUid, announcementTitle, announcement, ['owner', 'moderator', 'member']);
+                await createCommunityAnnouncement(props.communityId, props.announcerUid, announcementTitle, announcement, ['owner', 'moderator', 'member']);
             }
             else {
-                await createCommunityNotification(props.communityId, props.announcerUid, announcementTitle, announcement, ['owner', 'moderator']);
+                await createCommunityAnnouncement(props.communityId, props.announcerUid, announcementTitle, announcement, ['owner', 'moderator']);
             }
 
             props.onClose();

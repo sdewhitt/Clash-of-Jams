@@ -8,7 +8,7 @@ import { LiveElo } from "@/components/LiveElo";
 import { useEffect, useState } from "react";
 import { INSTRUMENTS, type Community, type CommunityMembership, type CommunityRole, type Instrument, } from "@/lib/schema/types";
 import { updateCommunity, updateCommunityMemberRole } from "@/lib/communities/communityManagement";
-import { deleteCommunityNotification, subscribeCommunityNotifications, type CommunityNotification } from "@/lib/communities/communityNotifications";
+import { deleteCommunityAnnouncement, subscribeCommunityAnnouncements, type CommunityNotification } from "@/lib/communities/communityNotifications";
 import { getCommunityInformation } from "@/lib/communities/communitySearch";
 import { processImage } from "@/lib/profile/userProfile";
 import { CreateCommunityAnnouncement } from "@/components/CreateCommunityAnnouncement";
@@ -164,7 +164,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
         setNotificationsLoading(true);
         setNotificationsError(null);
     
-        const unsubscribe = subscribeCommunityNotifications(
+        const unsubscribe = subscribeCommunityAnnouncements(
             community.id,
             memberRole,
             (updatedNotifications) => {
@@ -291,7 +291,7 @@ function CommunityContent({selectedSetting, activeUid, community, members, onRol
                                                 </h3>
                                                 {memberRole && memberRole !== 'member' && (
                                                     <button
-                                                        onClick={() => deleteCommunityNotification(community.id, notification.id)}
+                                                        onClick={() => deleteCommunityAnnouncement(community.id, notification.id)}
                                                         className="text-lg text-ink hover:text-muted"
                                                     >
                                                         X
