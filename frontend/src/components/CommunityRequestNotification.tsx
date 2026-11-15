@@ -1,8 +1,9 @@
 
 import { useEffect, useState } from "react";
 import type { AppNotification } from "@/lib/schema/types";
-import { acceptCommunityRequest, declineCommunityRequest, getFriendName, } from "@/lib/communities/communityRequests";
+import { acceptCommunityRequest, declineCommunityRequest, } from "@/lib/communities/communityRequests";
 import { deleteNotification } from "@/lib/notifications/readNotifications";
+import { getFriendName } from "@/lib/friendship/friendRequests";
 
 interface CommunityRequestNotificationProps {
     activeUid: string;
