@@ -530,7 +530,9 @@ export function PublicProfile() {
                         {uid && userProfile?.publicHistory === true ? (
                             <PublicRecentActivity key={uid} uid={uid} />
                         ) : (
-                            <p>This player’s history is private.</p>
+                            <p className="text-2xl text-center text-ink">
+                                This player’s history is private!
+                            </p>
                         )}
                     </div>
                 </div>
