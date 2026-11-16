@@ -8,9 +8,10 @@ import { SpectateTab } from '@/components/SpectateTab'
 import { NotificationButton } from '@/components/NotificationButton'
 
 export function Home() {
-  const navigate = useNavigate()
   const { user, profile } = useAuth()
   const activeMatch = useActiveMatch(user?.uid)
+  
+  const navigate = useNavigate()
 
   function navPortal(location: string) {
     navigate(location)

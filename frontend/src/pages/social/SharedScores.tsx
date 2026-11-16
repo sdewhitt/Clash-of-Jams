@@ -33,7 +33,7 @@ export function SharedScores() {
           to-accent-base-end to-90% py-6"
       >
         <div className="ml-12 flex">
-          <BackButton onClick={() => navigate('/friends/my_friends')} />
+          <BackButton onClick={() => navigate('/social/my_friends')} />
           <h1 className="ml-4 text-4xl font-bold text-ink">Shared With You</h1>
         </div>
         <div className="mr-6">

@@ -407,18 +407,17 @@ export function UserProfile() {
                                         className={`
                                             rounded-lg
                                             bg-linear-to-b 
-                                            from-accent-start
-                                            via-accent-middle 
-                                            to-accent-end
-                                            outline-3
-                                            outline-accent-middle
+                                            from-contrast-start
+                                            via-contrast-middle 
+                                            to-contrast-end
+                                            outline-3 outline-contrast-middle
                                             text-ink
                                             hover:brightness-125
                                             active:scale-95 
                                             px-6 
                                             py-4
                                         `} 
-                                        onClick={() => navigate("/friends/find_friends")}
+                                        onClick={() => navigate("/social/find_friends")}
                                     >
                                         Add a Friend
                                     </button>

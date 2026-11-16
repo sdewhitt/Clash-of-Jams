@@ -29,8 +29,9 @@ import { EloLeaderboard } from '@/pages/EloLeaderboard'
 import { RatingHistory } from '@/pages/RatingHistory'
 import OnlineStatusManager from '@/context/StatusManager'
 import { PublicProfile } from '@/pages/user-profiles/PublicProfile'
-import { FriendMatchWaiting } from './pages/FriendMatchWaiting'
-import { UserCommunity } from './pages/Community'
+import { FriendMatchWaiting } from '@/pages/FriendMatchWaiting'
+import { UserCommunity } from '@/pages/Community'
+import { Notifications } from '@/pages/Notifications'
 
 /** Everything behind RequireAuth; /login and /signup are the only public routes. */
 const PROTECTED_ROUTES = [
@@ -38,11 +39,11 @@ const PROTECTED_ROUTES = [
   { path: '/profile', element: <UserProfile /> },
   { path: '/profile/:uid', element: <PublicProfile />},
   { path: '/profile/edit_profile', element: <EditProfile /> },
-  { path: '/friends/my_friends', element: <MyFriends /> },
-  { path: '/friends/find_friends', element: <FindFriends /> },
-  { path: '/friends/my_communities', element: <MyCommunities /> },
-  { path: '/friends/find_communities', element: <FindCommunities /> },
-  { path: '/friends/shared_scores', element: <SharedScores /> },
+  { path: '/social/my_friends', element: <MyFriends /> },
+  { path: '/social/find_friends', element: <FindFriends /> },
+  { path: '/social/my_communities', element: <MyCommunities /> },
+  { path: '/social/find_communities', element: <FindCommunities /> },
+  { path: '/social/shared_scores', element: <SharedScores /> },
   { path: '/community/:communityId', element: <UserCommunity /> },
   { path: '/settings', element: <Settings /> },
   { path: '/tuner', element: <Tuner /> },
@@ -61,6 +62,7 @@ const PROTECTED_ROUTES = [
   { path: '/leaderboards', element: <EloLeaderboard /> },
   { path: '/recent_matches', element: <RatingHistory /> },
   { path: '/ratings', element: <Navigate to="/recent_matches" replace /> },
+  { path: '/notifications', element: <Notifications />}
 ]
 
 /** The route table, separate from the router so tests can mount it in a MemoryRouter. */

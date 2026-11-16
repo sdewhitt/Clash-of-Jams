@@ -1,5 +1,38 @@
 @import 'tailwindcss';
 
+.notification-bell {
+  transform-origin: 50% 15%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .group:hover .notification-bell {
+    animation: notification-bell-swing 650ms ease-in-out;
+  }
+}
+
+@keyframes notification-bell-swing {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(22deg); }
+  30% { transform: rotate(-18deg); }
+  45% { transform: rotate(13deg); }
+  60% { transform: rotate(-9deg); }
+  75% { transform: rotate(5deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .notification-delete:enabled:is(:hover, :focus-visible) .notification-delete-icon {
+    transform-origin: 50% 85%;
+    animation: notification-trash-wiggle 380ms ease-in-out;
+  }
+}
+
+@keyframes notification-trash-wiggle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-3px) rotate(-14deg); }
+  60% { transform: translateY(-1px) rotate(9deg); }
+  80% { transform: translateY(0) rotate(-4deg); }
+}
+
 /*
   'Light Mode' associated with the Clash of Jams application
 */

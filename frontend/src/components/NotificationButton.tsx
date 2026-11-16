@@ -1,22 +1,22 @@
-import { useState } from "react";
 import { Bell } from "lucide-react";
 import { useNotifications } from "@/lib/notifications/useNotifications";
-import { NotificationDropdown } from "./NotificationDropdown";
+import { useNavigate } from "react-router";
 
 interface NotificationButtonProps {
   uid: string;
 }
 
 export function NotificationButton({ uid }: NotificationButtonProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const { notifications, unreadCount, loading, error, } = useNotifications(uid);
+    const navigate = useNavigate()
+    const { unreadCount } = useNotifications(uid);
 
     return (
         <div className="relative">
             <button
-                onClick={() => setIsOpen((prev) => !prev)}
+                onClick={() => navigate('/notifications')}
                 className="
                     relative
+                    group
                     flex
                     items-center
                     justify-center
@@ -27,41 +27,48 @@ export function NotificationButton({ uid }: NotificationButtonProps) {
                     transition
                 "
                 aria-label="Notifications"
-                aria-expanded={isOpen}
             >
-                <Bell size={24} />
+                <Bell size={36} className="notification-bell" aria-hidden="true"/>
 
                 {unreadCount > 0 && (
-                    <span className="
-                    absolute
-                    -right-1
-                    -top-1
-                    flex
-                    h-5
-                    min-w-5
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-red-500
-                    px-1
-                    text-xs
-                    font-bold
-                    text-white
-                    ">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                    </span>
+                    <>
+                        <span
+                            className="
+                                absolute
+                                -right-1
+                                top-8
+                                flex
+                                h-5
+                                min-w-5
+                                items-center
+                                justify-center
+                                rounded-full
+                                bg-contrast-middle
+                                px-1
+                                animate-ping
+                            "
+                        />
+                        <span className="
+                            absolute
+                            -right-1
+                            top-8
+                            flex
+                            h-5
+                            min-w-5
+                            items-center
+                            justify-center
+                            rounded-full
+                            bg-contrast-middle
+                            px-1
+                            text-xs
+                            font-bold
+                            text-white
+                        ">
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                    </>
                 )}
             </button>
-
-            {isOpen && (
-                <NotificationDropdown
-                    uid={uid}
-                    notifications={notifications}
-                    loading={loading}
-                    error={error}
-                    onClose={() => setIsOpen(false)}
-                />
-            )}
         </div>
     );
 }

@@ -47,7 +47,7 @@ export default function CommunitySearchResult({ community, activeUid, activeDisp
 
             await leaveCommunity(community.id, activeUid);
 
-            navigate(`/friends/my_communities`);
+            navigate(`/social/my_communities`);
         } catch (err) {
             console.error("Failed to leave community:",  err );
 

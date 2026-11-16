@@ -301,7 +301,7 @@ export function MyFriends() {
                                         px-3 
                                         py-3`
                                     } 
-                                    onClick={() => navigate("/friends/find_friends")}
+                                    onClick={() => navigate("/social/find_friends")}
                                 >
                                     Add a Friend
                                 </button>
@@ -320,7 +320,7 @@ export function MyFriends() {
                                         px-3
                                         py-3`
                                     }
-                                    onClick={() => navigate("/friends/shared_scores")}
+                                    onClick={() => navigate("/social/shared_scores")}
                                 >
                                     Shared With You
                                 </button>
@@ -503,7 +503,7 @@ export function MyFriends() {
                                 px-6 
                                 py-4
                             `} 
-                            onClick={() => navigate("/friends/find_friends")}
+                            onClick={() => navigate("/social/find_friends")}
                         >
                             Add a Friend
                         </button>
