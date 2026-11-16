@@ -28,6 +28,74 @@ from app.schemas import (
 router = APIRouter(prefix="/history", tags=["history"])
 db = get_firestore_client()
 
+@router.get("/public/{uid}")
+def get_public_activity(uid: str):
+    profile = db.collection("publicProfile").document(uid).get()
+
+    if not profile.exists or profile.to_dict().get("publicHistory") is not True:
+        raise HTTPException(status_code=404, detail="Public activity is unavailable")
+
+    scenarios = db.collection("scenarios")
+    matches = db.collection("matches")
+    ratings = db.collection("users").document(uid).collection("skillRatings")
+
+    entries = []
+    public_titles: dict[str, str | None] = {}
+
+    def public_title(scenario_id: str) -> str | None:
+        if scenario_id not in public_titles:
+            snapshot = scenarios.document(scenario_id).get()
+            scenario = snapshot.to_dict() or {}
+            public_titles[scenario_id] = (
+                scenario.get("title")
+                if scenario.get("visibility") == Visibility.PUBLIC
+                else None
+            )
+        return public_titles[scenario_id]
+
+    runs = db.collection("runs").where(filter=FieldFilter("userUid", "==", uid))
+    for snapshot in runs.stream():
+        run = snapshot.to_dict()
+        if run.get("matchId") or run.get("validation") != RunValidation.ACCEPTED:
+            continue
+
+        title = public_title(run["scenarioId"])
+        if title is None:
+            continue
+
+        entries.append({
+            "id": f"run:{snapshot.id}",
+            "kind": "solo",
+            "scenarioTitle": title,
+            "instrument": run["instrument"],
+            "playedAt": run["playedAt"],
+            "score": run["finalScore"],
+        })
+
+    for instrument in Instrument:
+        for snapshot in ratings.document(instrument.value).collection("history").stream():
+            event = snapshot.to_dict()
+            match = matches.document(event["matchId"]).get().to_dict() or {}
+            if match.get("state") != "complete":
+                continue
+
+            title = public_title(match["scenarioId"])
+            if title is None:
+                continue
+
+            entries.append({
+                "id": f"match:{snapshot.id}",
+                "kind": "multiplayer",
+                "scenarioTitle": title,
+                "instrument": instrument.value,
+                "playedAt": event["appliedAt"],
+                "score": event["score"],
+                "outcome": event["outcome"],
+            })
+
+    entries.sort(key=lambda entry: (entry["playedAt"], entry["id"]), reverse=True)
+    return {"entries": entries[:10]}
+
 @router.get("", response_model=PlayHistoryResponse)
 def get_play_history(
     user: CurrentUserDep,

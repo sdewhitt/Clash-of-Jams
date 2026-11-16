@@ -168,6 +168,48 @@ export function ProfileButton({ username, userAvatar, className = "w-50" }: Prof
                     <div className="mx-1 border-t-4 border-contrast-middle"></div>
                     <button
                         className="group relative py-1 overflow-hidden cursor-pointer transition-all"
+                        onClick={() => navPortal("/playlists")}
+                    >
+                        <span
+                            className="
+                            absolute inset-0
+                            bg-linear-to-b
+                            from-contrast-start from-50
+                            via-contrast-middle
+                            to-contrast-end to-70
+                            brightness-85
+                            group-hover:brightness-125
+                            transition-[filter]
+                            "
+                        />
+                        <span className="relative text-ink group-hover:brightness-125">
+                            My Playlists
+                        </span>
+                    </button>
+                    <div className="mx-1 border-t-4 border-contrast-middle"></div>
+                    <button
+                        className="group relative py-1 overflow-hidden cursor-pointer transition-all"
+                        onClick={() => navPortal("/play_history")}
+                    >
+                        <span
+                            className="
+                            absolute inset-0
+                            bg-linear-to-b
+                            from-contrast-start from-50
+                            via-contrast-middle
+                            to-contrast-end to-70
+                            brightness-85
+                            group-hover:brightness-125
+                            transition-[filter]
+                            "
+                        />
+                        <span className="relative text-ink group-hover:brightness-125">
+                            My Play History
+                        </span>
+                    </button>
+                    <div className="mx-1 border-t-4 border-contrast-middle"></div>
+                    <button
+                        className="group relative py-1 overflow-hidden cursor-pointer transition-all"
                         onClick={handleSignOut}
                     >
                         <span

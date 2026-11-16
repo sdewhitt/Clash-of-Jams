@@ -333,6 +333,7 @@ export function CommunityInviteCard(props: CreateCommunityCardProps) {
                                             <UserSearchResult
                                                 key={profile.uid}
                                                 profile={profile}
+                                                invertColor={false}
                                                 communitySearch={true}
                                                 communityFunction={() => handleInvite(profile.uid)}
                                             />
