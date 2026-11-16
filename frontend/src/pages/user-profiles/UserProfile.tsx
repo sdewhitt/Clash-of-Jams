@@ -14,6 +14,7 @@ import { DEFAULT_APPEARANCE, PROFILE_ACCENTS } from "@/lib/profile/profileAppear
 import { getUserSettings } from "@/lib/profile/userSettings";
 import { getFriendProfiles } from "@/lib/profile/userProfileSearch";
 import UserSearchResult from "@/components/UserSearchResult";
+import { RecentPlayHistory } from '@/components/RecentPlayHistory'
 
 export function UserProfile() {
     const { user, profile, loading } = useAuth();
@@ -28,6 +29,8 @@ export function UserProfile() {
     const navigate = useNavigate();
     const [appearance, setAppearance] = useState(DEFAULT_APPEARANCE);
     const uid = user?.uid;
+
+    const [view, setView] = useState<"friends" | "history">("friends");
 
     useEffect(() => {
         if (!uid) return;
@@ -294,86 +297,164 @@ export function UserProfile() {
                     outline-accent-end
                     rounded-lg
                     py-8
-                    mb-8`
-                }>
-                    <h2 className="mx-6 text-4xl font-bold border-b-4 border-contrast-start">Your Friends:</h2>
-                    {friendLoading && (
-                        <div className="flex h-full flex-col items-center justify-center gap-4">
-                            <div className="h-32 w-32 animate-spin rounded-full border-10 border-accent-start border-t-transparent"></div>
-                            <p className="text-center text-4xl py-4">
-                                Loading friends...
-                            </p>
-                        </div>
-                    )}
-
-                    {error && (
-                        <p className="text-center text-2xl py-4">
-                            {error}
-                        </p>
-                    )}
-
-                    {!friendLoading && !error && friends.length === 0 && (
-                        <div className="flex flex-col items-center gap-2">
-                            <p className="text-center text-2xl py-4">
-                                No friends found to be associated with your account!
-                            </p>
-                            <button 
+                    mb-8
+                `}>
+                    <div
+                        className={`
+                            flex flex-col
+                            rounded-lg
+                            mx-4 py-2 mb-4
+                            bg-linear-to-b
+                            from-contrast-start
+                            via-contrast-middle
+                            to-contrast-end
+                            border-2 border-contrast-start
+                        `}
+                    >
+                        <>
+                        </>
+                        <h2 className="mx-6 text-2xl font-bold border-b-4 border-accent-start">Set Profile View:</h2>
+                        <div 
+                            role="group" 
+                            aria-label="Profile list view" 
+                            className={`
+                                flex flex-row 
+                                items-center 
+                                gap-4 px-4
+                            `}
+                        >
+                            <button
+                                type="button"
+                                aria-pressed={view === "friends"}
+                                onClick={() => setView("friends")}
                                 className={`
+                                    w-1/2
                                     rounded-lg
-                                    bg-linear-to-b 
+                                    px-4 py-2 my-2
+                                    bg-linear-to-b
                                     from-accent-start
-                                    via-accent-middle 
+                                    via-accent-middle
                                     to-accent-end
-                                    outline-3
-                                    outline-accent-middle
+                                    border-2 border-accent-start
+                                    brightness-80
+                                    aria-pressed:brightness-100
                                     text-ink
-                                    hover:brightness-125
-                                    active:scale-95 
-                                    px-6 
-                                    py-4
-                                `} 
-                                onClick={() => navigate("/friends/find_friends")}
+                                    hover:scale-102
+                                    hover:brightness-120
+                                    active:scale-99
+                                    active:opacity-30%
+                                    active:brightness-60
+                                    transition
+                                    duration-200
+                                `}
                             >
-                                Add a Friend
+                                View Your Friends
+                            </button>
+                            <button
+                                type="button"
+                                aria-pressed={view === "history"}
+                                onClick={() => setView("history")}
+                                className={`
+                                    w-1/2
+                                    rounded-lg
+                                    px-4 py-2 my-2
+                                    bg-linear-to-b
+                                    from-accent-start
+                                    via-accent-middle
+                                    to-accent-end
+                                    border-2 border-accent-start
+                                    brightness-80
+                                    aria-pressed:brightness-100
+                                    text-ink
+                                    hover:scale-102
+                                    hover:brightness-120
+                                    active:scale-99
+                                    active:opacity-30%
+                                    active:brightness-60
+                                    transition
+                                    duration-200
+                                `}
+                            >
+                                View Your History
                             </button>
                         </div>
+                    </div>
+
+                    {view === "friends" && (
+                        <>
+                            <h2 className="mx-6 text-4xl font-bold border-b-4 border-contrast-start">Your Friends:</h2>
+                            {friendLoading && (
+                                <div className="flex h-full flex-col items-center justify-center gap-4">
+                                    <div className="h-32 w-32 animate-spin rounded-full border-10 border-accent-start border-t-transparent"></div>
+                                    <p className="text-center text-4xl py-4">
+                                        Loading friends...
+                                    </p>
+                                </div>
+                            )}
+
+                            {error && (
+                                <p className="text-center text-2xl py-4">
+                                    {error}
+                                </p>
+                            )}
+
+                            {!friendLoading && !error && friends.length === 0 && (
+                                <div className="flex flex-col items-center gap-2">
+                                    <p className="text-center text-2xl py-4">
+                                        No friends found to be associated with your account!
+                                    </p>
+                                    <button 
+                                        className={`
+                                            rounded-lg
+                                            bg-linear-to-b 
+                                            from-accent-start
+                                            via-accent-middle 
+                                            to-accent-end
+                                            outline-3
+                                            outline-accent-middle
+                                            text-ink
+                                            hover:brightness-125
+                                            active:scale-95 
+                                            px-6 
+                                            py-4
+                                        `} 
+                                        onClick={() => navigate("/friends/find_friends")}
+                                    >
+                                        Add a Friend
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="
+                                flex-1
+                                min-h-0
+                                overflow-y-auto
+                                overscroll-contain
+                                mx-12
+                            ">
+                                {!friendLoading && !error && friends.length > 0 && (
+                                    <div className="space-y-2 p-4">
+                                        {friends.map(profile => (
+                                            <UserSearchResult
+                                                key={profile.uid}
+                                                profile={profile}
+                                                invertColor={true}
+                                                communitySearch={false}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
                     )}
 
-                    <div className="
-                        flex-1
-                        min-h-0
-                        overflow-y-auto
-                        overscroll-contain
-                        mx-12
-                    ">
-                        {!friendLoading && !error && friends.length > 0 && (
-                            <div className="space-y-2 p-4">
-                                {friends.map(profile => (
-                                    <UserSearchResult
-                                        key={profile.uid}
-                                        profile={profile}
-                                        invertColor={true}
-                                        communitySearch={false}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className={` 
-                    w-full 
-                    bg-linear-to-b
-                    from-accent-start from-50
-                    via-accent-middle
-                    to-accent-end to-70
-                    outline-4
-                    outline-accent-end
-                    rounded-lg
-                    py-8
-                    mb-8`
-                }>
-                    Activity
+                    {view === "history" && (
+                        <>
+                            {uid && (
+                                <RecentPlayHistory key={uid}/>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
         </main>

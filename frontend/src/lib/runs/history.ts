@@ -32,9 +32,11 @@ export interface PlayHistoryPage {
 }
 
 /** One page of the caller's runs, newest first, starting after `before` when given. */
-export function fetchPlayHistory(before?: string | null): Promise<PlayHistoryPage> {
+export function fetchPlayHistory(before?: string | null, limit?: number,): Promise<PlayHistoryPage> {
   const params = new URLSearchParams()
   if (before) params.set('before', before)
+  if (limit !== undefined) params.set('limit', String(limit))
+
   const query = params.toString()
   return apiFetch<PlayHistoryPage>(`/history${query ? `?${query}` : ''}`)
 }
@@ -125,6 +127,10 @@ export interface ScoreTrendFilters {
   /** ISO timestamps bounding when the runs were played. */
   playedAfter?: string | null
   playedBefore?: string | null
+}
+
+export function formatPlayedAt(playedAt: string): string {
+  return new Date(playedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 /** Each scenario's best and average score per day, grouped by the browser's own timezone. */

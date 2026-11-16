@@ -10,14 +10,10 @@ import { ProfileButton } from '@/components/ProfileButton'
 import { ScoreTrendsChart } from '@/components/ScoreTrendsChart'
 import { useAuth } from '@/lib/auth/useAuth'
 import { fetchPlayHistory, type PlayHistoryEntry } from '@/lib/runs/history'
-import { MAX_SCORE } from '@/scoring/score'
+import { HistoryRow } from '@/components/HistoryRow'
 
 const buttonClass =
   'cursor-pointer rounded-lg border-2 border-accent-start px-4 py-2 font-bold active:scale-95 disabled:cursor-not-allowed disabled:opacity-50'
-
-function formatPlayedAt(playedAt: string): string {
-  return new Date(playedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-}
 
 export function PlayHistory() {
   const { user, profile } = useAuth()
@@ -123,61 +119,5 @@ export function PlayHistory() {
         )}
       </div>
     </main>
-  )
-}
-
-function HistoryRow({
-  entry,
-  onOpen,
-  onPlay,
-}: {
-  entry: PlayHistoryEntry
-  onOpen: () => void
-  onPlay: () => void
-}) {
-  const title = entry.scenarioTitle ?? 'Unavailable scenario'
-  const notes = [
-    entry.matchId && 'Multiplayer match',
-    entry.validation === 'rejected' && 'Not accepted for the leaderboard',
-    entry.scenarioAvailable && !entry.isCurrentVersion && 'Scenario updated since this run',
-    !entry.scenarioAvailable && 'This scenario was deleted or made private',
-  ].filter(Boolean)
-
-  return (
-    <li className="flex flex-wrap items-center gap-4 rounded-xl border-3 border-accent-start bg-linear-to-r from-accent-base-start via-accent-base-middle to-accent-base-end px-5 py-3">
-      <div className="min-w-0 flex-1">
-        {entry.scenarioAvailable ? (
-          <button
-            type="button"
-            onClick={onOpen}
-            className="cursor-pointer truncate text-left text-xl font-bold hover:underline"
-          >
-            {title}
-          </button>
-        ) : (
-          <p className="truncate text-xl font-bold text-muted">{title}</p>
-        )}
-        <p className="text-sm text-muted">
-          <span className="capitalize">{entry.instrument}</span> · {formatPlayedAt(entry.playedAt)}
-        </p>
-        {notes.map((note) => (
-          <p key={String(note)} className="text-xs text-muted">
-            {note}
-          </p>
-        ))}
-      </div>
-
-      <div className="text-right">
-        <div className="text-2xl font-bold tabular-nums">{entry.finalScore.toLocaleString()}</div>
-        <div className="text-xs text-muted">/ {MAX_SCORE.toLocaleString()}</div>
-      </div>
-
-      {/* Always the scenario's current version: an older one is never offered for play. */}
-      {entry.scenarioAvailable && (
-        <button type="button" onClick={onPlay} className={`${buttonClass} bg-accent-start`}>
-          {entry.isCurrentVersion ? 'Play again' : 'Play latest'}
-        </button>
-      )}
-    </li>
   )
 }

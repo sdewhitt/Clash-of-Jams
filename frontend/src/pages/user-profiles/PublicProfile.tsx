@@ -18,6 +18,7 @@ import { FeaturedProfileScores } from "@/components/FeaturedProfileScores";
 import { PROFILE_ACCENTS } from "@/lib/profile/profileAppearance";
 import { getPublicFriendProfiles } from "@/lib/profile/userProfileSearch";
 import UserSearchResult from "@/components/UserSearchResult";
+import { PublicRecentActivity } from "@/components/PublicRecentPlayHistory";
 
 
 export function PublicProfile() {
@@ -515,37 +516,22 @@ export function PublicProfile() {
                     py-8
                     mb-8`
                 }>
-                    <h1 className="ml-4 text-2xl">{userProfile?.displayName}'s Activity:</h1>
-                    <div className="flex flex-col items-center">
-                        {userProfile?.publicHistory ? 
-                            <div className={` 
-                                w-fit
-                                select-none
-                                bg-linear-to-b
-                                from-contrast-start
-                                via-contrast-middle
-                                to-contrast-end
-                                rounded-full
-                                text-2xl
-                                px-4 py-2
-                            `}>
-                                User Activity
-                            </div>
-                            :
-                            <div className={` 
-                                w-fit
-                                select-none
-                                bg-linear-to-b
-                                from-contrast-start
-                                via-contrast-middle
-                                to-contrast-end
-                                rounded-full
-                                text-2xl
-                                px-4 py-2
-                            `}>
-                                User's History is not Public
-                            </div>
-                        }
+                    <h1 className="mx-6 text-4xl font-bold border-b-4 border-contrast-start">{userProfile?.displayName}'s Activity:</h1>
+                    <div 
+                        className={`
+                            flex-1
+                            min-h-0
+                            overflow-y-auto
+                            overscroll-contain
+                            my-4
+                            mx-12
+                        `}
+                    >
+                        {uid && userProfile?.publicHistory === true ? (
+                            <PublicRecentActivity key={uid} uid={uid} />
+                        ) : (
+                            <p>This player’s history is private.</p>
+                        )}
                     </div>
                 </div>
             </div>}
