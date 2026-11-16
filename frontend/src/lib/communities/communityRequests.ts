@@ -1,4 +1,4 @@
-import { collection, doc, runTransaction, arrayUnion, increment, onSnapshot } from 'firebase/firestore'
+import { collection, doc, runTransaction, arrayUnion, increment, onSnapshot, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { COLLECTIONS, communityMembersPath, communityRequestsPath, newAppNotification, newCommunityMembership, newCommunityRequest } from '@/lib/schema/collections';
 import { useState, useEffect } from 'react';
@@ -7,6 +7,22 @@ import type { CommunityRequest } from '@/lib/schema/types';
 function requestId(communityId: string, uid: string) {
     return [communityId, uid].join('_')
 }
+
+export async function checkCommunityRequest (communityId: string, requestId: string, ) {
+    const requestRef = doc(db, communityRequestsPath(communityId), requestId);
+
+    const snapshot = await getDoc(requestRef);
+    if (!snapshot.exists()) {
+        return false;
+    }
+    
+    if (snapshot.data().status === "pending") {
+        return true;
+    }
+
+    return false;
+}
+
 
 export function useRequestStatus(communityId: string, outsiderUid: string, activeUid: string,) {
     const [request, setRequest] = useState<CommunityRequest | null>(null);

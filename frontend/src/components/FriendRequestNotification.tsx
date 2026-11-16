@@ -3,25 +3,24 @@ import { getFriendName } from "@/lib/friendship/friendRequests";
 import { useNavigate } from "react-router";
 import { markNotificationRead } from "@/lib/notifications/readNotifications";
 import { deleteNotification } from "@/lib/notifications/readNotifications";
+import type { AppNotification } from "@/lib/schema/types";
+import { Trash } from "lucide-react";
 
 interface FriendRequestNotificationProps {
-    notificationId: string;
-    notificationType: string;
-    notifierUid: string;
-    requestId: string;
-    uid: string;
-    read: boolean;
+    notification: AppNotification;
+    activeUid: string;
 }
 
-export function FriendRequestNotification({ notificationId, notificationType, notifierUid, requestId, uid, read, }: FriendRequestNotificationProps) {
+export function FriendRequestNotification({ notification, activeUid, }: FriendRequestNotificationProps) {
+    const navigate = useNavigate();
+
     const [friendUid, setFriendUid] = useState<string | null>(null);
     const [friendName, setFriendName] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const navigate = useNavigate();
 
     async function handleNotificationClick() {
-        markNotificationRead(notificationId);
+        markNotificationRead(notification.id ?? "");
         navigate(`/profile/${friendUid}`);
     }
 
@@ -30,10 +29,10 @@ export function FriendRequestNotification({ notificationId, notificationType, no
 
         async function fetchFriend() {
             try {
-                const friendNameReq = await getFriendName(notifierUid);
+                const friendNameReq = await getFriendName(notification.notifierUid);
 
                 if (!cancelled) {
-                    setFriendUid(notifierUid ?? null);
+                    setFriendUid(notification.notifierUid);
                     setFriendName(friendNameReq.displayName ?? null);
                 }
             } catch (err) {
@@ -52,14 +51,25 @@ export function FriendRequestNotification({ notificationId, notificationType, no
         return () => {
             cancelled = true;
         };
-    }, [requestId, uid]);
+    }, [notification.requestId, activeUid]);
 
     if (loading) {
-        return <p className="p-4 text-sm text-muted">Loading...</p>;
+        return (
+            <div className="flex h-full flex-row items-center bg-linear-to-b from-contrast-start from-50 via-contrast-middle to-contrast-end to-70 brightness-80  justify-center gap-4">
+                <div className="h-8 w-8 animate-spin rounded-full border-6 border-accent-start border-t-transparent"></div>
+                <p className="text-center text-2xl py-4">
+                    Loading friend request data...
+                </p>
+            </div>
+        );
     }
 
     if (error) {
-        return <p className="p-4 text-sm text-red-400">{error}</p>;
+        return (
+            <div className="flex h-full flex-row items-center bg-linear-to-b from-contrast-start from-50 via-contrast-middle to-contrast-end to-70 brightness-80  justify-center gap-4">
+                <p className="p-4 text-center text-4xl text-accent-start" role="alert">{error}</p>
+            </div>
+        );
     }
 
     return (
@@ -67,71 +77,87 @@ export function FriendRequestNotification({ notificationId, notificationType, no
             className={`
                 w-full
                 flex flex-row
-                justify-between
                 bg-linear-to-b
                 from-contrast-start from-50
                 via-contrast-middle
                 to-contrast-end to-70
-                brightness-80
+                brightness-80     
                 border-b border-line 
-                gap-2
+                gap-4
                 p-4
                 hover:brightness-110
             `}
         >
             <button
-                id="delete_notification"
                 type="button"
-                onClick={() => deleteNotification(notificationId)}
-                className={`
-                    text-2xl text-inverse-ink 
-                    group-hover:text-muted
-                `}
+                aria-label="Delete notification"
+                disabled={!notification.id}
+                onClick={() => {
+                    if (notification.id) void deleteNotification(notification.id);
+                }}
+                className="notification-delete grid size-9 place-items-center self-center rounded-md text-inverse-ink hover:bg-accent-middle/30 hover:text-accent-middle"
             >
-                X
+                <Trash className="notification-delete-icon" size={24} aria-hidden="true" />
             </button>
             <button 
                 type="button"
                 onClick={() => handleNotificationClick()}
+                className="flex flex-1 flex-row justify-between"
             >
-                <div className="flex flex-col">
-                    {notificationType === 'friend_request_sent' && (
+                <div className="flex flex-1 flex-col items-start justify-center">
+                    {notification.notificationType === 'friend_request_sent' && (
                         <p className="font-semibold text-ink">
                             {friendName} sent you a friend request
                         </p>
                     )}
 
-                    {notificationType === 'friend_request_accepted' && (
+                    {notification.notificationType  === 'friend_request_accepted' && (
                         <p className="font-semibold text-ink">
                             {friendName} accepted your friend request
                         </p>
                     )}
 
-                    {notificationType === 'friend_request_canceled' && (
+                    {notification.notificationType  === 'friend_request_canceled' && (
                         <p className="font-semibold text-ink">
                             {friendName} canceled their friend request
                         </p>
                     )}
 
-                    {notificationType === 'friend_request_declined' && (
+                    {notification.notificationType  === 'friend_request_declined' && (
                         <p className="font-semibold text-ink">
                             {friendName} declined your friend request
                         </p>
                     )}
 
-                    {!read && (
-                        <span className="mt-2 inline-block text-xs font-semibold text-accent-soft">
-                            Unread
-                        </span>
-                    )}
+                    <p className="text-sm text-inverse-ink">
+                        Notification Sent: {notification.createdAt?.toDate().toLocaleDateString()}
+                    </p>
                 </div>
-
-                <span 
-                    id="navigate_to_user"
-                    className="text-2xl text-inverse-ink"
-                >
-                    →
-                </span>
+                
+                <div className="flex flex-1 flex-row gap-4 items-center justify-end">
+                    <div
+                        className={`
+                            rounded-full
+                            bg-radial
+                            from-accent-start
+                            via-accent-middle
+                            to-accent-end
+                            outline-4
+                            brightness-120
+                            opacity-85
+                            px-4 py-2
+                            ${notification.read ? "outline-accent-start" : "animate-pulse outline-ink"}
+                        `}
+                    >
+                        {notification.read ? "Read" : "Unread"}
+                    </div>
+                    <span 
+                        id="navigate_to_user"
+                        className="text-2xl text-inverse-ink"
+                    >
+                        →
+                    </span>
+                </div>
             </button>
         </div>
     );
