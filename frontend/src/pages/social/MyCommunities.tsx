@@ -292,7 +292,7 @@ export function MyCommunities() {
                                         px-3 
                                         py-3`
                                     } 
-                                    onClick={() => navigate("/friends/find_communities")}
+                                    onClick={() => navigate("/social/find_communities")}
                                 >
                                     Add a Community
                                 </button>
@@ -383,9 +383,12 @@ export function MyCommunities() {
                 </div>
 
                 {visibleLoading && (
-                    <p className="py-4 text-center">
+                    <div className="flex h-full flex-col items-center justify-center gap-4">
+                        <div className="h-32 w-32 animate-spin rounded-full border-10 border-accent-start border-t-transparent"></div>
+                        <p className="text-center text-4xl py-4">
                         {showingPending ? "Loading pending requests..." : "Loading communities..."}
-                    </p>
+                        </p>
+                    </div>
                 )}
 
                 {visibleError && (

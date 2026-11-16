@@ -165,7 +165,7 @@ export function PublicProfile() {
                 py-6`
             }>
                 <div className="flex ml-12">
-                    {isFriend ? <BackButton onClick={() => navPortal('/friends/my_friends')}></BackButton> : <BackButton onClick={() => navPortal('/friends/find_friends')}></BackButton>}
+                    {isFriend ? <BackButton onClick={() => navPortal('/social/my_friends')}></BackButton> : <BackButton onClick={() => navPortal('/social/find_friends')}></BackButton>}
                     <h1 className="ml-4 text-4xl font-bold text-ink">View Public Profile</h1>
                 </div>
 

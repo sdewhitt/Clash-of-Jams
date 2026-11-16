@@ -126,7 +126,7 @@ export function ProfileButton({ username, userAvatar, className = "w-50" }: Prof
                     <div className="mx-1 border-t-4 border-contrast-middle"></div>
                     <button
                         className="group relative py-1 overflow-hidden cursor-pointer transition-all"
-                        onClick={() => navPortal("/friends/my_friends")}
+                        onClick={() => navPortal("/social/my_friends")}
                     >
                         <span
                             className="
@@ -147,7 +147,7 @@ export function ProfileButton({ username, userAvatar, className = "w-50" }: Prof
                     <div className="mx-1 border-t-4 border-contrast-middle"></div>
                     <button
                         className="group relative py-1 overflow-hidden cursor-pointer transition-all"
-                        onClick={() => navPortal("/friends/my_communities")}
+                        onClick={() => navPortal("/social/my_communities")}
                     >
                         <span
                             className="

@@ -141,7 +141,7 @@ export function FindFriends() {
                 pt-6 pb-5
             `}>
                 <div className="flex ml-12">
-                    <BackButton onClick={() => navPortal('/friends/my_friends')}></BackButton>
+                    <BackButton onClick={() => navPortal('/social/my_friends')}></BackButton>
                     <h1 className="ml-4 text-4xl font-bold text-ink">Find Friends</h1>
                 </div>
                 <div className="ml-auto flex items-center gap-3 sm:gap-4 mr-12">
